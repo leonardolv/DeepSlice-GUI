@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+from functools import lru_cache
 from pathlib import Path
 
 import requests
@@ -17,6 +18,33 @@ def load_config() -> dict:
     with open(path + "config.json", "r") as f:
         config = json.loads(f.read())
     return config, path
+
+
+@lru_cache(maxsize=1)
+def get_cached_config() -> dict:
+    config, _ = load_config()
+    return config
+
+
+def get_species_depth_range(species: str):
+    config = get_cached_config()
+    target_volumes = config.get("target_volumes", {})
+    if species not in target_volumes:
+        raise ValueError(
+            f"Invalid species '{species}'. Expected one of {sorted(target_volumes.keys())}"
+        )
+
+    depth_range = target_volumes[species].get("depth_range")
+    if (
+        not isinstance(depth_range, (list, tuple))
+        or len(depth_range) != 2
+        or depth_range[0] > depth_range[1]
+    ):
+        raise ValueError(
+            f"Invalid depth_range for species '{species}' in metadata/config.json"
+        )
+
+    return int(depth_range[0]), int(depth_range[1])
 
 
 def _file_sha256(path: str, chunk_size: int = 1024 * 1024) -> str:

@@ -15,8 +15,8 @@
         "rat":false
         },
     "target_volumes":{
-        "mouse":{"name":"ABA_Mouse_CCFv3_2017_25um.cutlas","voxel_size_microns":25},
-        "rat": {"name":"WHS_Rat_v4_39um.cutlas", "voxel_size_microns":39}
+        "mouse":{"name":"ABA_Mouse_CCFv3_2017_25um.cutlas","voxel_size_microns":25,"depth_range":[0,528]},
+        "rat": {"name":"WHS_Rat_v4_39um.cutlas", "voxel_size_microns":39,"depth_range":[0,1024]}
         },
     "DeepSlice_version":{
         "stable":"stable_0.3.0",

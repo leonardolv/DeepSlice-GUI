@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from .depth_estimation import calculate_brain_center_depths
 from .plane_alignment_functions import plane_alignment
+from ..metadata import metadata_loader
 
 
 def trim_mean(arr: np.array, percent: int) -> float:
@@ -302,6 +303,10 @@ def set_bad_sections_util(
     else:
         bad_section_indexes = np.array([], dtype=int)
 
+    manual_bad_section_mask = np.zeros(len(df), dtype=bool)
+    if len(bad_section_indexes) > 0:
+        manual_bad_section_mask[bad_section_indexes] = True
+
     if auto:
         df["depths"] = calculate_brain_center_depths(df, species=species)
         x = df["nr"].values
@@ -309,17 +314,17 @@ def set_bad_sections_util(
         m, b = np.polyfit(x, y, 1)
         residuals = y - (m * x + b)
         outliers = np.abs(residuals) > 1.5 * np.std(residuals)
-        df.loc[outliers, "bad_section"] = True
+        df["bad_section"] = df["bad_section"].astype(bool) | outliers
 
-    df.loc[bad_section_indexes, "bad_section"] = True
-    # make the other sections are False
+    df["bad_section"] = df["bad_section"].astype(bool) | manual_bad_section_mask
 
-    bad_sections_found = len(bad_section_indexes)
+    flagged_indexes = np.where(df["bad_section"].to_numpy(dtype=bool))[0]
+    bad_sections_found = len(flagged_indexes)
     # Tell the user which sections were identified as bad
     if bad_sections_found > 0:
         print(
             f"{bad_sections_found} sections out of {len(df)} were marked as bad, \n\
-        They are:\n {df.Filenames[bad_section_indexes]}"
+        They are:\n {df.Filenames.iloc[flagged_indexes]}"
         )
     return df
 
@@ -345,12 +350,7 @@ def calculate_weighted_accuracy(
     :return: List of weighted accuracies
     :rtype: List[float]
     """
-    if species == "mouse":
-        min_depth, max_depth = 0, 528
-    elif species == "rat":
-        min_depth, max_depth = 0, 1024
-    else:
-        raise ValueError("species must be one of 'mouse' or 'rat'")
+    min_depth, max_depth = metadata_loader.get_species_depth_range(species)
 
     if method == "weighted":
         weighted_accuracy = plane_alignment.make_gaussian_weights(max_depth + 1)

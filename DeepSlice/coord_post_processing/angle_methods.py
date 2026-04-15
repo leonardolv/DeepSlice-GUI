@@ -1,6 +1,7 @@
 import numpy as np
 from .plane_alignment_functions import plane_alignment
 from .depth_estimation import calculate_brain_center_depths
+from ..metadata import metadata_loader
 
 
 def calculate_brain_center_coordinate(section, atlas_shape, axis):
@@ -77,12 +78,7 @@ def get_mean_angle(DV_list, ML_list, method, depths=None, species=None):
         ML_angle = np.mean(ML_list)
     elif method == "weighted_mean":
         df_center = depths
-        if species == "mouse":
-            depth_min, depth_max = 0, 528
-        elif species == "rat":
-            depth_min, depth_max = 0, 1024
-        else:
-            raise ValueError("species must be one of 'mouse' or 'rat'")
+        depth_min, depth_max = metadata_loader.get_species_depth_range(species)
         if len(df_center) > 2:
             weighted_accuracy = plane_alignment.make_gaussian_weights(depth_max + 1)
         else:

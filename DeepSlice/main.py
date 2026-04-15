@@ -39,20 +39,9 @@ class DSModel:
         self.species = species
         self.download_callback = download_callback
         self.log_callback = log_callback
-
-        xception_weights = metadata_loader.get_data_path(
-            self.config["weight_file_paths"]["xception_imagenet"],
-            self.metadata_path,
-            download_callback=self.download_callback,
-        )
-        weights = metadata_loader.get_data_path(
-            self.config["weight_file_paths"][self.species]["primary"],
-            self.metadata_path,
-            download_callback=self.download_callback,
-        )
-        self.model = neural_network.initialise_network(
-            xception_weights, weights, self.species
-        )
+        # Lazily initialised when inference is first requested.
+        self.model = None
+        self._model_species = None
 
     @staticmethod
     def _parse_bool(value):
@@ -68,6 +57,26 @@ class DSModel:
             print(message)
             return
         logger(message)
+
+    def _maybe_load_model(self):
+        if self.model is not None and self._model_species == self.species:
+            return self.model
+
+        xception_weights = metadata_loader.get_data_path(
+            self.config["weight_file_paths"]["xception_imagenet"],
+            self.metadata_path,
+            download_callback=self.download_callback,
+        )
+        weights = metadata_loader.get_data_path(
+            self.config["weight_file_paths"][self.species]["primary"],
+            self.metadata_path,
+            download_callback=self.download_callback,
+        )
+        self.model = neural_network.initialise_network(
+            xception_weights, weights, self.species
+        )
+        self._model_species = self.species
+        return self.model
 
     def _ensure_predictions_available(self, action_name: str):
         if not hasattr(self, "predictions") or self.predictions is None:
@@ -165,10 +174,13 @@ class DSModel:
                 callback=log_callback,
             )
             use_secondary_model = False
+
+        model = self._maybe_load_model()
+
         if use_secondary_model:
             self._log("Using secondary model", callback=log_callback)
             predictions = neural_network.predictions_util(
-                self.model,
+                model,
                 image_generator,
                 secondary_weights,
                 None,
@@ -179,7 +191,7 @@ class DSModel:
             )
         else:
             predictions = neural_network.predictions_util(
-                self.model,
+                model,
                 image_generator,
                 primary_weights,
                 secondary_weights,
@@ -188,8 +200,10 @@ class DSModel:
                 progress_callback=progress_callback,
                 log_callback=log_callback,
             )
-        predictions["width"] = width
-        predictions["height"] = height
+        if "width" not in predictions.columns:
+            predictions["width"] = width
+        if "height" not in predictions.columns:
+            predictions["height"] = height
         if section_numbers:
             predictions["nr"] = spacing_and_indexing.number_sections(
                 predictions["Filenames"], legacy_section_numbers
@@ -329,20 +343,10 @@ class DSModel:
         else:
             raise ValueError("File must be a JSON or XML")
         self.predictions = predictions
-        if (not hasattr(self, "model")) or (original_species != self.species):
-            xception_weights = metadata_loader.get_data_path(
-                self.config["weight_file_paths"]["xception_imagenet"],
-                self.metadata_path,
-                download_callback=self.download_callback,
-            )
-            weights = metadata_loader.get_data_path(
-                self.config["weight_file_paths"][self.species]["primary"],
-                self.metadata_path,
-                download_callback=self.download_callback,
-            )
-            self.model = neural_network.initialise_network(
-                xception_weights, weights, self.species
-            )
+        if original_species != self.species:
+            # Force reload only if inference is requested later.
+            self.model = None
+            self._model_species = None
 
     def save_predictions(self, filename, output_format="json"):
         """

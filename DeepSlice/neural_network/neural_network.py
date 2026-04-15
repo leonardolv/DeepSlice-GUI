@@ -90,22 +90,35 @@ def load_xception_weights(model, weights, species="mouse"):
             # RatModelInProgress.h5 has an "input_2" layer at index 0, so we need to adjust the indices<
             xception_idx = 1
             dense_idx = 2
+        else:
+            raise ValueError("species must be one of 'mouse' or 'rat'")
+
+        dense_layers_updated = 0
 
         model.layers[dense_idx].set_weights(
             [new["dense"]["dense"]["kernel:0"], new["dense"]["dense"]["bias:0"]]
         )
+        dense_layers_updated += 1
         model.layers[dense_idx + 1].set_weights(
             [new["dense_1"]["dense_1"]["kernel:0"], new["dense_1"]["dense_1"]["bias:0"]]
         )
+        dense_layers_updated += 1
         model.layers[dense_idx + 2].set_weights(
             [new["dense_2"]["dense_2"]["kernel:0"], new["dense_2"]["dense_2"]["bias:0"]]
         )
+        dense_layers_updated += 1
+
+        if dense_layers_updated != 3:
+            raise RuntimeError(
+                f"Expected to set 3 dense layers, but set {dense_layers_updated}"
+            )
 
         # Set the weights of the xception model
         weight_names = new["xception"].attrs["weight_names"].tolist()
-        weight_names_layers = [
+        weight_names_layers = {
             name.decode("utf-8").split("/")[0] for name in weight_names
-        ]
+        }
+        updated_xception_layers = set()
 
         for i in range(len(model.layers[xception_idx].layers)):
             name_of_layer = model.layers[xception_idx].layers[i].name
@@ -122,6 +135,18 @@ def load_xception_weights(model, weights, species="mouse"):
                 h5_group = new["xception"][name_of_layer]
                 weights_list = [np.array(h5_group[kk]) for kk in layer_weight_names]
                 model.layers[xception_idx].layers[i].set_weights(weights_list)
+                updated_xception_layers.add(name_of_layer)
+
+        if len(updated_xception_layers) != len(weight_names_layers):
+            missing_layers = sorted(weight_names_layers - updated_xception_layers)
+            missing_preview = ", ".join(missing_layers[:10])
+            if len(missing_layers) > 10:
+                missing_preview += f", ... (+{len(missing_layers) - 10} more)"
+            raise RuntimeError(
+                "Xception weight loading incomplete. "
+                f"Updated {len(updated_xception_layers)}/{len(weight_names_layers)} layers. "
+                f"Missing layers: {missing_preview}"
+            )
     return model
 
 
@@ -156,6 +181,9 @@ def _create_image_generator(images: list, batch_size: int = 16) -> np.ndarray:
             shuffle=False,
             class_mode=None,
         )
+    image_generator.deepslice_width = width
+    image_generator.deepslice_height = height
+    image_generator.deepslice_paths = list(images)
     return image_generator, width, height
 
 
@@ -277,11 +305,39 @@ def predictions_util(
     if not np.isfinite(predictions).all():
         raise RuntimeError("Inference produced non-finite coordinates (NaN/Inf)")
 
-    filenames = image_generator.filenames
-    filenames = [os.path.basename(i) for i in filenames]
+    source_paths = getattr(image_generator, "deepslice_paths", None)
+    if source_paths is None or len(source_paths) != len(image_generator.filenames):
+        source_paths = getattr(image_generator, "filepaths", None)
+    if source_paths is None or len(source_paths) != len(image_generator.filenames):
+        directory = getattr(image_generator, "directory", None)
+        if directory:
+            source_paths = [
+                os.path.join(directory, relative_path)
+                for relative_path in image_generator.filenames
+            ]
+        else:
+            source_paths = list(image_generator.filenames)
+    else:
+        source_paths = list(source_paths)
+
+    width = getattr(image_generator, "deepslice_width", None)
+    height = getattr(image_generator, "deepslice_height", None)
+    if (
+        width is None
+        or height is None
+        or len(width) != len(source_paths)
+        or len(height) != len(source_paths)
+    ):
+        sizes = [get_image_size(path) for path in source_paths]
+        width = [size[0] for size in sizes]
+        height = [size[1] for size in sizes]
+
+    filenames = [os.path.basename(path) for path in source_paths]
     predictions_df = pd.DataFrame(
         {
             "Filenames": filenames,
+            "width": width,
+            "height": height,
             "ox": predictions[:, 0],
             "oy": predictions[:, 1],
             "oz": predictions[:, 2],
