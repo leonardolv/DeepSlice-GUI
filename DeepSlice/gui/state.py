@@ -189,7 +189,13 @@ class DeepSliceAppState:
         volume = self._atlas_cache[cache_key]
         if depth_value is None:
             if self.predictions is not None and len(self.predictions) > 0:
-                depth_value = float(np.median(calculate_brain_center_depths(self.predictions)))
+                depth_value = float(
+                    np.median(
+                        calculate_brain_center_depths(
+                            self.predictions, species=self.species
+                        )
+                    )
+                )
             else:
                 depth_value = float(volume.shape[1] / 2.0)
 
@@ -451,7 +457,9 @@ class DeepSliceAppState:
             return None
         if len(self.predictions) < 2:
             return None
-        depths = np.array(calculate_brain_center_depths(self.predictions))
+        depths = np.array(
+            calculate_brain_center_depths(self.predictions, species=self.species)
+        )
         return spacing_and_indexing.determine_direction_of_indexing(depths)
 
     def estimate_section_thickness_um(self) -> float:
@@ -466,7 +474,9 @@ class DeepSliceAppState:
         if "bad_section" in self.predictions.columns:
             bad_sections = self.predictions["bad_section"].astype(bool).values
 
-        depths = np.array(calculate_brain_center_depths(self.predictions))
+        depths = np.array(
+            calculate_brain_center_depths(self.predictions, species=self.species)
+        )
         thickness_voxels = spacing_and_indexing.calculate_average_section_thickness(
             section_numbers=self.predictions["nr"],
             section_depth=depths,
@@ -505,7 +515,10 @@ class DeepSliceAppState:
         else:
             x_values = np.arange(1, len(predictions) + 1, dtype=float)
 
-        y_values = np.array(calculate_brain_center_depths(predictions), dtype=float)
+        y_values = np.array(
+            calculate_brain_center_depths(predictions, species=self.species),
+            dtype=float,
+        )
         if len(y_values) > 1:
             slope, intercept = np.polyfit(x_values, y_values, 1)
             trend = slope * x_values + intercept

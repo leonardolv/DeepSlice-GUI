@@ -1,4 +1,5 @@
 from typing import Union
+import numpy as np
 
 # Allow "Run Python File" on DeepSlice/main.py in VS Code.
 # When executed as a script, launch the GUI entrypoint from package context
@@ -27,11 +28,17 @@ class DSModel:
         :param species: the species of the brain to be processed, must be one of "mouse", "rat"
         :type species: str
         """
+        self.config, self.metadata_path = metadata_loader.load_config()
+        valid_species = set(self.config.get("target_volumes", {}).keys())
+        if species not in valid_species:
+            raise ValueError(
+                f"Invalid species '{species}'. Expected one of {sorted(valid_species)}"
+            )
+
         self.species = species
         self.download_callback = download_callback
         self.log_callback = log_callback
 
-        self.config, self.metadata_path = metadata_loader.load_config()
         xception_weights = metadata_loader.get_data_path(
             self.config["weight_file_paths"]["xception_imagenet"],
             self.metadata_path,
@@ -109,11 +116,20 @@ class DSModel:
             download_callback=self.download_callback,
         )
 
-        secondary_weights = metadata_loader.get_data_path(
-            self.config["weight_file_paths"][self.species]["secondary"],
-            self.metadata_path,
-            download_callback=self.download_callback,
-        )
+        secondary_weights = None
+        if ensemble or use_secondary_model:
+            secondary_config = self.config["weight_file_paths"][self.species][
+                "secondary"
+            ]
+            secondary_path = str(secondary_config.get("path", "")).strip().lower()
+            if secondary_path == "none":
+                secondary_weights = "None"
+            else:
+                secondary_weights = metadata_loader.get_data_path(
+                    secondary_config,
+                    self.metadata_path,
+                    download_callback=self.download_callback,
+                )
 
         if secondary_weights == "None":
             self._log(f"ensemble is not available for {self.species}", callback=log_callback)
@@ -178,7 +194,7 @@ class DSModel:
         :type bad_sections: list
         """
         self.predictions = spacing_and_indexing.set_bad_sections_util(
-            self.predictions, bad_sections, auto
+            self.predictions, bad_sections, auto, species=self.species
         )
 
     def enforce_index_order(self):
@@ -186,7 +202,7 @@ class DSModel:
         reorders the section depths (oy) in the predictions such that they align with the section indexes
         """
         self.predictions = spacing_and_indexing.enforce_section_ordering(
-            self.predictions
+            self.predictions, species=self.species
         )
 
     def enforce_index_spacing(
@@ -224,11 +240,24 @@ class DSModel:
         """
         Calculates the average Mediolateral and Dorsoventral angles for all sections.
         """
-        ##needs to be run twice as adjusting the angle in one plane bumps the other out slightly.
-        for i in range(2):
+        coordinate_columns = ["ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz"]
+        max_iterations = 6
+        tolerance = 1e-3
+
+        for _ in range(max_iterations):
+            previous_coordinates = self.predictions[coordinate_columns].to_numpy(
+                dtype=float
+            )
             self.predictions = angle_methods.propagate_angles(
                 self.predictions, method, self.species
             )
+            updated_coordinates = self.predictions[coordinate_columns].to_numpy(
+                dtype=float
+            )
+            if np.allclose(
+                updated_coordinates, previous_coordinates, atol=tolerance, rtol=0
+            ):
+                break
 
     def load_QUINT(self, filename):
         """
@@ -237,6 +266,7 @@ class DSModel:
         :param filename: the name of the file to load
         :type filename: str
         """
+        original_species = self.species
         if filename.lower().endswith(".json"):
             predictions, target = QuickNII_functions.read_QUINT_JSON(filename)
             if target == "ABA_Mouse_CCFv3_2017_25um.cutlas" and self.species != "mouse":
@@ -250,19 +280,20 @@ class DSModel:
         else:
             raise ValueError("File must be a JSON or XML")
         self.predictions = predictions
-        xception_weights = metadata_loader.get_data_path(
-            self.config["weight_file_paths"]["xception_imagenet"],
-            self.metadata_path,
-            download_callback=self.download_callback,
-        )
-        weights = metadata_loader.get_data_path(
-            self.config["weight_file_paths"][self.species]["primary"],
-            self.metadata_path,
-            download_callback=self.download_callback,
-        )
-        self.model = neural_network.initialise_network(
-            xception_weights, weights, self.species
-        )
+        if (not hasattr(self, "model")) or (original_species != self.species):
+            xception_weights = metadata_loader.get_data_path(
+                self.config["weight_file_paths"]["xception_imagenet"],
+                self.metadata_path,
+                download_callback=self.download_callback,
+            )
+            weights = metadata_loader.get_data_path(
+                self.config["weight_file_paths"][self.species]["primary"],
+                self.metadata_path,
+                download_callback=self.download_callback,
+            )
+            self.model = neural_network.initialise_network(
+                xception_weights, weights, self.species
+            )
 
     def save_predictions(self, filename, output_format="json"):
         """

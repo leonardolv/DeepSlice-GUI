@@ -14,6 +14,9 @@ import h5py
 from PIL import Image
 
 
+VALID_IMAGE_FORMATS = (".jpg", ".jpeg", ".png", ".tif", ".tiff")
+
+
 class PredictionProgressCallback(tf.keras.callbacks.Callback):
     """Keras callback used to expose prediction progress to the GUI."""
 
@@ -69,7 +72,7 @@ def initialise_network(xception_weights: str, weights: str, species: str) -> Seq
         model.add(Dense(256, activation="relu"))
         model.add(Dense(9, activation="linear"))
 
-    if weights != None:
+    if weights is not None:
         model = load_xception_weights(model, weights, species)
     return model
 
@@ -119,30 +122,21 @@ def load_xception_weights(model, weights, species="mouse"):
     return model
 
 
-def load_images_from_path(image_path: str) -> np.ndarray:
-    """
-    Load the images from the given path
-    :param image_path: The path to the images
-    :type image_path: str
-    :return: an Image generator for the found images
-    :rtype: keras.preprocessing.image.ImageDataGenerator
-    """
-    if not os.path.isdir(image_path):
-        raise ValueError("The path provided is not a directory")
-    valid_formats = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
-    images = glob(image_path + "/*")
-
-    images = [i for i in images if os.path.splitext(i)[1].lower() in valid_formats]
+def _create_image_generator(images: list) -> np.ndarray:
+    images = [i for i in images if os.path.splitext(i)[1].lower() in VALID_IMAGE_FORMATS]
     sizes = [get_image_size(i) for i in images]
     width = [i[0] for i in sizes]
     height = [i[1] for i in sizes]
     if len(images) == 0:
         raise ValueError(
-            f"No images found in the directory, please ensure image files are one of the following formats: {', '.join(valid_formats)}"
+            "No images found. Ensure files are one of: "
+            + ", ".join(VALID_IMAGE_FORMATS)
         )
+
     image_df = pd.DataFrame({"Filenames": images})
     with warnings.catch_warnings():
-        ##throws warning about samplewise_std_normalization conflicting with samplewise_center which we don't use.
+        # throws warning about samplewise_std_normalization conflicting with
+        # samplewise_center, which is not used here.
         warnings.simplefilter("ignore")
         image_generator = ImageDataGenerator(
             preprocessing_function=gray_scale, samplewise_std_normalization=True
@@ -157,6 +151,20 @@ def load_images_from_path(image_path: str) -> np.ndarray:
             class_mode=None,
         )
     return image_generator, width, height
+
+
+def load_images_from_path(image_path: str) -> np.ndarray:
+    """
+    Load the images from the given path
+    :param image_path: The path to the images
+    :type image_path: str
+    :return: an Image generator for the found images
+    :rtype: keras.preprocessing.image.ImageDataGenerator
+    """
+    if image_path is None or not os.path.isdir(image_path):
+        raise ValueError("The path provided is not a directory")
+    images = glob(os.path.join(image_path, "*"))
+    return _create_image_generator(images)
 
 
 def load_images_from_list(image_list: list) -> np.ndarray:
@@ -167,32 +175,9 @@ def load_images_from_list(image_list: list) -> np.ndarray:
     :return: an Image generator for the found images
     :rtype: keras.preprocessing.image.ImageDataGenerator
     """
-    valid_formats = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
-    images = [i for i in image_list if os.path.splitext(i)[1].lower() in valid_formats]
-    sizes = [get_image_size(i) for i in images]
-    width = [i[0] for i in sizes]
-    height = [i[1] for i in sizes]
-    if len(images) == 0:
-        raise ValueError(
-            f"No images found in the directory, please ensure image files are one of the following formats: {', '.join(valid_formats)}"
-        )
-    image_df = pd.DataFrame({"Filenames": images})
-    with warnings.catch_warnings():
-        ##throws warning about samplewise_std_normalization conflicting with samplewise_center which we don't use.
-        warnings.simplefilter("ignore")
-        image_generator = ImageDataGenerator(
-            preprocessing_function=gray_scale, samplewise_std_normalization=True
-        ).flow_from_dataframe(
-            image_df,
-            x_col="Filenames",
-            y_col=None,
-            target_size=(299, 299),
-            batch_size=1,
-            colormode="rgb",
-            shuffle=False,
-            class_mode=None,
-        )
-    return image_generator, width, height
+    if image_list is None:
+        raise ValueError("image_list must not be None")
+    return _create_image_generator(image_list)
 
 
 def predictions_util(
@@ -258,7 +243,6 @@ def predictions_util(
             callbacks=callbacks,
         )
         predictions = np.mean([predictions, secondary_predictions], axis=0)
-        model = load_xception_weights(model, primary_weights, species)
     filenames = image_generator.filenames
     filenames = [os.path.basename(i) for i in filenames]
     predictions_df = pd.DataFrame(

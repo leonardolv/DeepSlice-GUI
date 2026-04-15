@@ -38,7 +38,7 @@ setup(
     include_package_data=True,
     author_email="harry.carey@medisin.uio.no",
     url="https://github.com/PolarBean/DeepSlice",
-    download_url="https://github.com/PolarBean/DeepSlice/archive/refs/tags/{{VERSION_PLACEHOLDER}}.tar.gz",
+    download_url=f"https://github.com/PolarBean/DeepSlice/archive/refs/tags/{version}.tar.gz",
     keywords=["histology", "brain", "atlas", "alignment"],
     install_requires=[
         "numpy>=1.24",

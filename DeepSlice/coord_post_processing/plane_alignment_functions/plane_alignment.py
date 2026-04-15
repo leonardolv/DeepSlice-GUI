@@ -52,7 +52,13 @@ def get_angle(inp, cross, k, direction):
         c = b + [0, 100]
     ba = a - b
     bc = c - b
-    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    ba_norm = np.linalg.norm(ba)
+    bc_norm = np.linalg.norm(bc)
+    if np.isclose(ba_norm, 0.0) or np.isclose(bc_norm, 0.0):
+        raise ValueError("Cannot compute angle for a degenerate section geometry")
+
+    cosine_angle = np.dot(ba, bc) / (ba_norm * bc_norm)
+    cosine_angle = np.clip(cosine_angle, -1.0, 1.0)
     # This looks redundant, needs to be tested
     angle = np.arccos(cosine_angle)
     angle = np.degrees(angle)

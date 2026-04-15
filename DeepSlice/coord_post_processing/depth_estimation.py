@@ -2,7 +2,13 @@ import numpy as np
 from .plane_alignment_functions import plane_alignment
 
 
-def calculate_brain_center_depth(section):
+ATLAS_DIMS = {
+    "mouse": (528, 320, 456),
+    "rat": (512, 1024, 512),
+}
+
+
+def calculate_brain_center_depth(section, species="mouse"):
     """
     Calculates the depth of the brain center for a given section
 
@@ -11,8 +17,12 @@ def calculate_brain_center_depth(section):
     :return: the depth of the brain center
     :rtype: float
     """
+    if species not in ATLAS_DIMS:
+        raise ValueError("species must be one of 'mouse' or 'rat'")
+
     cross, k = plane_alignment.find_plane_equation(section)
-    translated_volume = np.array((456, 0, 320))
+    atlas_x, _, atlas_z = ATLAS_DIMS[species]
+    translated_volume = np.array((atlas_x, 0, atlas_z))
     linear_point = (
         ((translated_volume[0] / 2) * cross[0])
         + ((translated_volume[2] / 2) * cross[2])
@@ -21,7 +31,7 @@ def calculate_brain_center_depth(section):
     return depth
 
 
-def calculate_brain_center_depths(predictions):
+def calculate_brain_center_depths(predictions, species="mouse"):
     """
     Calculates the depths of the brain center for a series of predictions
 
@@ -34,5 +44,5 @@ def calculate_brain_center_depths(predictions):
     for prediction in predictions[
         ["ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz"]
     ].values:
-        depths.append(calculate_brain_center_depth(prediction))
+        depths.append(calculate_brain_center_depth(prediction, species=species))
     return depths

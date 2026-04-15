@@ -18,9 +18,18 @@ def trim_mean(arr: np.array, percent: int) -> float:
     :return: the trimmed mean
     :rtype: float
     """
+    if not 0 <= percent < 100:
+        raise ValueError("percent must be in range [0, 100)")
+
+    arr = np.sort(np.asarray(arr, dtype=float))
     n = len(arr)
-    k = int(round(n * (float(percent) / 100) / 2))
-    return np.mean(arr[k + 1 : n - k])
+    if n == 0:
+        raise ValueError("arr must contain at least one value")
+
+    k = int(np.floor(n * (float(percent) / 100) / 2))
+    if (2 * k) >= n:
+        raise ValueError("percent trims all values; provide a smaller percent")
+    return float(np.mean(arr[k : n - k]))
 
 
 def calculate_average_section_thickness(
@@ -42,8 +51,15 @@ def calculate_average_section_thickness(
     """
     # inter section number differences
     if bad_sections is not None:
-        section_numbers = section_numbers[bad_sections == False].reset_index(drop=True)
-        section_depth = section_depth[bad_sections == False]
+        good_mask = np.logical_not(np.asarray(bad_sections, dtype=bool))
+        section_numbers = section_numbers[good_mask].reset_index(drop=True)
+        section_depth = section_depth[good_mask]
+
+    if len(section_numbers) < 2:
+        raise ValueError(
+            "At least two valid sections are required to calculate section thickness"
+        )
+
     number_spacing = section_numbers[:-1].values - section_numbers[1:].values
     # inter section depth differences
     depth_spacing = section_depth[:-1] - section_depth[1:]
@@ -52,7 +68,15 @@ def calculate_average_section_thickness(
         section_numbers, section_depth, species, None, method
     )
     section_thicknesses = depth_spacing / number_spacing
-    average_thickness = np.average(section_thicknesses, weights=weighted_accuracy[1:])
+    thickness_weights = np.asarray(weighted_accuracy[1:], dtype=float)
+    if len(thickness_weights) != len(section_thicknesses):
+        raise ValueError(
+            "Internal weighting error: section thicknesses and weights are mismatched"
+        )
+    if np.all(thickness_weights == 0):
+        thickness_weights = np.ones_like(section_thicknesses, dtype=float)
+
+    average_thickness = np.average(section_thicknesses, weights=thickness_weights)
     return average_thickness
 
 
@@ -108,7 +132,7 @@ def determine_direction_of_indexing(depth: List[Union[int, float]]) -> str:
     return direction
 
 
-def enforce_section_ordering(predictions):
+def enforce_section_ordering(predictions, species="mouse"):
     """
     Ensures that the predictions are ordered by section number
 
@@ -117,18 +141,18 @@ def enforce_section_ordering(predictions):
     :return: the input dataframe ordered by section number
     :rtype: pandas.DataFrame
     """
+    if "nr" not in predictions:
+        raise ValueError(
+            "No section indexes found, cannot enforce index order. You likely did not run predict() with section_numbers=True"
+        )
     predictions = predictions.sort_values(by=["nr"], ascending=True).reset_index(
         drop=True
     )
     if len(predictions) == 1:
         raise ValueError("Only one section found, cannot space according to index")
-    if "nr" not in predictions:
-        raise ValueError(
-            "No section indexes found, cannot enforce index order. You likely did not run predict() with section_numbers=True"
-        )
     else:
         predictions = predictions.reset_index(drop=True)
-        depths = calculate_brain_center_depths(predictions)
+        depths = calculate_brain_center_depths(predictions, species=species)
         depths = np.array(depths)
         direction = determine_direction_of_indexing(depths)
         predictions["depths"] = depths
@@ -138,7 +162,7 @@ def enforce_section_ordering(predictions):
             ascending = False
         if direction == "rostro-caudal":
             ascending = True
-        if "bad_section" in temp:
+        if "bad_section" in temp.columns:
             temp_good = temp[temp["bad_section"] == False].copy().reset_index(drop=True)
             temp_good_copy = temp_good.copy()
             temp_good_copy = temp_good_copy.sort_values(
@@ -175,7 +199,7 @@ def space_according_to_index(
     :return: the input dataframe with evenly spaced sections
     :rtype: pandas.DataFrame
     """
-    if voxel_size == None:
+    if voxel_size is None:
         raise ValueError("voxel_size must be specified")
     if section_thickness is not None:
         section_thickness /= voxel_size
@@ -187,12 +211,12 @@ def space_according_to_index(
             "No section indexes found, cannot space according to a missing index. You likely did not run predict() with section_numbers=True"
         )
     else:
-        if "bad_section" in predictions:
+        if "bad_section" in predictions.columns:
             bad_sections = predictions["bad_section"].values
         else:
             bad_sections = None
-        predictions = enforce_section_ordering(predictions)
-        depths = calculate_brain_center_depths(predictions)
+        predictions = enforce_section_ordering(predictions, species=species)
+        depths = calculate_brain_center_depths(predictions, species=species)
         depths = np.array(depths)
         if not section_thickness:
             section_thickness = calculate_average_section_thickness(
@@ -240,13 +264,11 @@ def number_sections(filenames: List[str], legacy=False) -> List[int]:
             match = re.sub("[^0-9]", "", filename)
             ###this gets the three numbers closest to the end
             section_numbers.append(match[-3:])
-    if len(section_numbers) == 0:
-        raise ValueError("No section numbers found in filenames")
     return section_numbers
 
 
 def set_bad_sections_util(
-    df: pd.DataFrame, bad_sections: List[str], auto=False
+    df: pd.DataFrame, bad_sections: List[str], auto=False, species="mouse"
 ) -> pd.DataFrame:
     """
     Sets the damaged sections and sections which deepslice may not perform well on for a series of predictions
@@ -279,7 +301,7 @@ def set_bad_sections_util(
 
     df.loc[~df.index.isin(bad_section_indexes), "bad_section"] = False
     if auto:
-        df["depths"] = calculate_brain_center_depths(df)
+        df["depths"] = calculate_brain_center_depths(df, species=species)
         x = df["nr"].values
         y = df["depths"].values
         m, b = np.polyfit(x, y, 1)
@@ -294,7 +316,7 @@ def set_bad_sections_util(
     # Tell the user which sections were identified as bad
     if bad_sections_found > 0:
         print(
-            f"{bad_sections_found} sections out of {len(bad_sections)} were marked as bad, \n\
+            f"{bad_sections_found} sections out of {len(df)} were marked as bad, \n\
         They are:\n {df.Filenames[bad_section_indexes]}"
         )
     return df
@@ -322,23 +344,31 @@ def calculate_weighted_accuracy(
     :rtype: List[float]
     """
     if species == "mouse":
-        min, max = 0, 528
+        min_depth, max_depth = 0, 528
     elif species == "rat":
-        min, max = 0, 1024
+        min_depth, max_depth = 0, 1024
+    else:
+        raise ValueError("species must be one of 'mouse' or 'rat'")
+
     if method == "weighted":
-        weighted_accuracy = plane_alignment.make_gaussian_weights(max + 1)
+        weighted_accuracy = plane_alignment.make_gaussian_weights(max_depth + 1)
         depths = np.array(depths)
-        depths[depths < min] = min
-        depths[depths > max] = max
+        depths[depths < min_depth] = min_depth
+        depths[depths > max_depth] = max_depth
         weighted_accuracy = [weighted_accuracy[int(y)] for y in depths]
     elif method is None:
-        weighted_accuracy = [1 for y in section_numbers]
+        weighted_accuracy = [1.0 for _ in section_numbers]
+    else:
+        raise ValueError("method must be one of 'weighted' or None")
+
     if len(section_numbers) <= 2:
-        weighted_accuracy = [0.5, 0.5]
+        weighted_accuracy = [1.0 for _ in section_numbers]
 
     if bad_sections is not None:
+        if len(bad_sections) != len(weighted_accuracy):
+            raise ValueError("bad_sections and section_numbers must have the same length")
         weighted_accuracy = [
-            x if y == False else 0 for x, y in zip(weighted_accuracy, bad_sections)
+            x if y is False else 0.0 for x, y in zip(weighted_accuracy, bad_sections)
         ]
 
     return weighted_accuracy
