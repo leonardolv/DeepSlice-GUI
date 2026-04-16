@@ -21,6 +21,7 @@ ALIGNMENT_COLUMNS = ["ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz"]
 
 @dataclass
 class DeepSliceAppState:
+    is_dirty: bool = False
     species: str = "mouse"
     image_paths: List[str] = field(default_factory=list)
     predictions: Optional[pd.DataFrame] = None
@@ -74,6 +75,7 @@ class DeepSliceAppState:
         return self.model
 
     def set_images(self, image_paths: List[str]):
+        self.is_dirty = True
         deduplicated = []
         seen = set()
         for path in image_paths:
@@ -87,10 +89,17 @@ class DeepSliceAppState:
         self.image_paths = deduplicated
 
     def add_images(self, image_paths: List[str]):
+        self.is_dirty = True
         self.set_images(self.image_paths + image_paths)
 
     def clear_images(self):
+        self.is_dirty = True
         self.image_paths = []
+
+    def remove_image(self, path: str):
+        if path in self.image_paths:
+            self.image_paths.remove(path)
+            self.is_dirty = True
 
     def image_format_report(self) -> Dict[str, List[str]]:
         supported, unsupported = [], []
@@ -283,6 +292,7 @@ class DeepSliceAppState:
             self.model.predictions = self.predictions.copy()
 
     def undo(self):
+        self.is_dirty = True
         if len(self.undo_stack) == 0:
             raise ValueError("Nothing to undo")
         if self.predictions is not None:
@@ -291,6 +301,7 @@ class DeepSliceAppState:
         self._sync_model_predictions()
 
     def redo(self):
+        self.is_dirty = True
         if len(self.redo_stack) == 0:
             raise ValueError("Nothing to redo")
         if self.predictions is not None:
@@ -307,6 +318,7 @@ class DeepSliceAppState:
         progress_callback=None,
         log_callback=None,
     ) -> Dict[str, object]:
+        self.is_dirty = True
         if len(self.image_paths) == 0:
             raise ValueError("No images selected")
 
@@ -348,6 +360,7 @@ class DeepSliceAppState:
         }
 
     def load_quint(self, filename: str, log_callback=None) -> Dict[str, object]:
+        self.is_dirty = False
         model = self.ensure_model(log_callback=log_callback)
         model.load_QUINT(filename)
         self.species = model.species
@@ -383,6 +396,7 @@ class DeepSliceAppState:
         model.save_predictions(filename_without_extension, output_format=output_format)
 
     def set_bad_sections(self, bad_sections: List[str], auto: bool = False):
+        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         self.snapshot_predictions()
@@ -392,6 +406,7 @@ class DeepSliceAppState:
         self.predictions = model.predictions.copy()
 
     def apply_manual_order(self, ordered_row_indices: List[int]):
+        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         if len(ordered_row_indices) != len(self.predictions):
@@ -409,6 +424,7 @@ class DeepSliceAppState:
         self._sync_model_predictions()
 
     def propagate_angles(self):
+        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         self.snapshot_predictions()
@@ -418,6 +434,7 @@ class DeepSliceAppState:
         self.predictions = model.predictions.copy()
 
     def adjust_angles(self, ml_angle: float, dv_angle: float):
+        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         self.snapshot_predictions()
@@ -427,6 +444,7 @@ class DeepSliceAppState:
         self.predictions = model.predictions.copy()
 
     def enforce_index_order(self):
+        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         self.snapshot_predictions()
@@ -436,6 +454,7 @@ class DeepSliceAppState:
         self.predictions = model.predictions.copy()
 
     def enforce_index_spacing(self, section_thickness_um: Optional[float] = None):
+        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         self.snapshot_predictions()
@@ -696,6 +715,7 @@ class DeepSliceAppState:
         }
 
     def load_session_dict(self, payload: Dict[str, object]):
+        self.is_dirty = False
         self.species = payload.get("species", "mouse")
         self.image_paths = payload.get("image_paths", [])
         self.section_numbers = bool(payload.get("section_numbers", True))

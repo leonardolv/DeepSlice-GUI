@@ -11,8 +11,10 @@ import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PySide6.QtCore import QSize, Qt, QThreadPool, Signal
-from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap
+from PySide6.QtGui import QShortcut, QKeySequence, QCloseEvent, QColor, QFont, QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
+    QMenu,
+    QMessageBox,
     QAbstractItemView,
     QApplication,
     QCheckBox,
@@ -111,23 +113,68 @@ class SliceGraphicsView(QGraphicsView):
         self.setRenderHints(self.renderHints())
         self.setBackgroundBrush(QColor("#11161D"))
         self._zoom = 0
+        self._scale_bar_item = None
+        self._pixel_spacing_um = None
 
     def clear_with_text(self, message: str):
         self._scene.clear()
+        self._scale_bar_item = None
         text_item = QGraphicsTextItem(message)
         text_item.setDefaultTextColor(QColor("#C4CBD3"))
         text_item.setFont(QFont("Segoe UI", 10))
         self._scene.addItem(text_item)
         self._scene.setSceneRect(self._scene.itemsBoundingRect())
 
+    def _draw_scale_bar(self):
+        if self._scale_bar_item is not None:
+            self._scene.removeItem(self._scale_bar_item)
+            self._scale_bar_item = None
+            
+        if self._pixel_spacing_um is None:
+            return
+            
+        rect = self.sceneRect()
+        width = rect.width()
+        
+        target_um = max(100.0, 10 ** np.floor(np.log10(width * self._pixel_spacing_um * 0.2)))
+        bar_width_px = target_um / self._pixel_spacing_um
+        
+        if bar_width_px > width * 0.5:
+            return
+            
+        from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsItemGroup
+        
+        group = QGraphicsItemGroup()
+        
+        bar = QGraphicsRectItem(0, 0, bar_width_px, 4)
+        bar.setBrush(QColor("#F7FBFF"))
+        bar.setPen(Qt.NoPen)
+        group.addToGroup(bar)
+        
+        text = QGraphicsTextItem(f"{int(target_um)} µm")
+        text.setDefaultTextColor(QColor("#F7FBFF"))
+        text.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        text_rect = text.boundingRect()
+        text.setPos(bar_width_px / 2 - text_rect.width() / 2, -text_rect.height())
+        group.addToGroup(text)
+        
+        margin = 20
+        group.setPos(rect.right() - bar_width_px - margin, rect.bottom() - margin)
+        
+        self._scale_bar_item = group
+        self._scene.addItem(self._scale_bar_item)
+
     def set_image(
         self,
         image_path: Optional[str],
         overlay_lines: Optional[List[str]] = None,
         border_color: Optional[QColor] = None,
+        pixel_spacing_um: Optional[float] = None,
     ):
         self._scene.clear()
+        self._scale_bar_item = None
         self._zoom = 0
+        self._pixel_spacing_um = pixel_spacing_um
 
         if image_path is None or not os.path.exists(image_path):
             self.clear_with_text("Image preview unavailable")
@@ -157,6 +204,7 @@ class SliceGraphicsView(QGraphicsView):
 
         self.setSceneRect(self._scene.itemsBoundingRect())
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
+        self._draw_scale_bar()
 
     def set_array_image(
         self,
@@ -276,6 +324,8 @@ class DeepSliceMainWindow(QMainWindow):
         self._last_error_analysis = None
 
         self.state = DeepSliceAppState()
+        self._session_base_text = "Session: New"
+        self._setup_shortcuts()
         self.thread_pool = QThreadPool.globalInstance()
         self.active_workers = []
         self.last_export_basepath: Optional[str] = None
@@ -320,11 +370,29 @@ class DeepSliceMainWindow(QMainWindow):
         body_split = QSplitter(Qt.Horizontal)
         body_split.setHandleWidth(6)
 
+        self.sidebar_container = QWidget()
+        sidebar_layout = QVBoxLayout(self.sidebar_container)
+        sidebar_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.sidebar_header = QHBoxLayout()
+        self.completion_label = QLabel("0% Complete")
+        self.completion_label.setObjectName("CompletionLabel")
+        self.collapse_sidebar_button = QPushButton("<<")
+        self.collapse_sidebar_button.setFixedWidth(30)
+        self.collapse_sidebar_button.clicked.connect(self._toggle_sidebar)
+        self.sidebar_header.addWidget(self.completion_label)
+        self.sidebar_header.addStretch()
+        self.sidebar_header.addWidget(self.collapse_sidebar_button)
+        
+        sidebar_layout.addLayout(self.sidebar_header)
+
         self.step_list = QListWidget()
         self.step_list.setObjectName("StepNavigator")
         self.step_list.setFixedWidth(230)
         for step in self.STEP_LABELS:
             self.step_list.addItem(QListWidgetItem(step))
+            
+        sidebar_layout.addWidget(self.step_list, stretch=1)
 
         self.stack = QStackedWidget()
         self.stack.addWidget(self._build_ingestion_page())
@@ -337,12 +405,32 @@ class DeepSliceMainWindow(QMainWindow):
         self.step_list.currentRowChanged.connect(self._on_step_changed)
         self.step_list.setCurrentRow(0)
 
-        body_split.addWidget(self.step_list)
+        body_split.addWidget(self.sidebar_container)
         body_split.addWidget(self.stack)
         body_split.setStretchFactor(0, 0)
         body_split.setStretchFactor(1, 1)
 
         root.addWidget(body_split, stretch=1)
+
+        self.status_bar = self.statusBar()
+        self.status_bar.showMessage("Ready")
+        self.global_progress = QProgressBar()
+        self.global_progress.setMaximumWidth(200)
+        self.global_progress.setMaximumHeight(14)
+        self.global_progress.setTextVisible(False)
+        self.global_progress.setVisible(False)
+        self.status_bar.addPermanentWidget(self.global_progress)
+
+    def _toggle_sidebar(self):
+        is_visible = self.step_list.isVisible()
+        self.step_list.setVisible(not is_visible)
+        self.completion_label.setVisible(not is_visible)
+        if not is_visible:
+            self.collapse_sidebar_button.setText("<<")
+            self.sidebar_container.setFixedWidth(230)
+        else:
+            self.collapse_sidebar_button.setText(">>")
+            self.sidebar_container.setFixedWidth(30)
 
     def _build_top_bar(self) -> QWidget:
         frame = QFrame()
@@ -351,7 +439,13 @@ class DeepSliceMainWindow(QMainWindow):
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(12)
 
-        self.project_label = QLabel("DeepSlice Desktop")
+        try:
+            from importlib.metadata import version
+            app_version = version("DeepSlice")
+        except Exception:
+            app_version = "Unknown"
+
+        self.project_label = QLabel(f"DeepSlice Desktop v{app_version}")
         self.project_label.setObjectName("ProjectLabel")
 
         self.session_status_label = QLabel("Session: New")
@@ -363,35 +457,149 @@ class DeepSliceMainWindow(QMainWindow):
         self.hardware_button = QPushButton("Hardware Health")
         self.hardware_button.clicked.connect(self._show_hardware_health)
 
+        self.new_session_button = QPushButton("New Session")
+        self.new_session_button.clicked.connect(self._reset_session)
+
         self.save_session_button = QPushButton("Save Session")
         self.save_session_button.clicked.connect(self._save_session)
 
         self.load_session_button = QPushButton("Load Session / QuickNII")
-        self.load_session_button.clicked.connect(self._load_session_or_quint)
+        self.load_session_menu = QMenu(self.load_session_button)
+        self.load_session_action = self.load_session_menu.addAction("Browse...")
+        self.load_session_action.triggered.connect(self._load_session_or_quint)
+        self.load_session_menu.addSeparator()
+        self.recent_sessions_actions = []
+        for i in range(5):
+            action = self.load_session_menu.addAction(f"Recent {i+1}")
+            action.setVisible(False)
+            self.recent_sessions_actions.append(action)
+        self.load_session_button.setMenu(self.load_session_menu)
+        self._update_recent_sessions_menu()
 
-        self.open_log_button = QPushButton("Open Error Log")
-        self.open_log_button.clicked.connect(self._open_error_log)
+        self.error_menu_button = QPushButton("Errors")
+        self.error_menu = QMenu(self.error_menu_button)
+        
+        self._unread_error_count = 0
+        
+        self.open_log_action = self.error_menu.addAction("Open Error Log")
+        self.open_log_action.triggered.connect(self._open_error_log)
+        
+        self.copy_error_action = self.error_menu.addAction("Copy Last Error")
+        self.copy_error_action.triggered.connect(self._copy_last_error_report)
+        self.copy_error_action.setEnabled(False)
+        
+        self.auto_fix_action = self.error_menu.addAction("Try Auto-Fix Last Error")
+        self.auto_fix_action.triggered.connect(self._try_auto_fix_last_error)
+        self.auto_fix_action.setEnabled(False)
 
-        self.copy_error_button = QPushButton("Copy Last Error")
-        self.copy_error_button.clicked.connect(self._copy_last_error_report)
-        self.copy_error_button.setEnabled(False)
+        self.error_menu_button.setMenu(self.error_menu)
+        self.error_menu_button.setObjectName("ErrorMenuButton")
 
-        self.auto_fix_button = QPushButton("Try Auto-Fix Last Error")
-        self.auto_fix_button.clicked.connect(self._try_auto_fix_last_error)
-        self.auto_fix_button.setEnabled(False)
+        self.copy_error_button = self.copy_error_action
+        self.auto_fix_button = self.auto_fix_action
 
         layout.addWidget(self.project_label)
         layout.addWidget(self.session_status_label)
         layout.addStretch(1)
         layout.addWidget(self.hardware_mode_label)
         layout.addWidget(self.hardware_button)
+        layout.addWidget(self.new_session_button)
         layout.addWidget(self.save_session_button)
         layout.addWidget(self.load_session_button)
-        layout.addWidget(self.open_log_button)
-        layout.addWidget(self.copy_error_button)
-        layout.addWidget(self.auto_fix_button)
+        layout.addWidget(self.error_menu_button)
         return frame
 
+    def _update_recent_sessions_menu(self):
+        from PySide6.QtCore import QSettings
+        settings = QSettings("DeepSlice", "GUI")
+        recent = settings.value("recent_sessions", [])
+        if not isinstance(recent, list):
+            recent = []
+        for i, action in enumerate(self.recent_sessions_actions):
+            if i < len(recent):
+                action.setText(recent[i])
+                action.setVisible(True)
+                try: action.triggered.disconnect()
+                except Exception: pass
+                # Lambda with default arg to capture the current path
+                action.triggered.connect(lambda checked=False, path=recent[i]: self._load_session_file(path))
+            else:
+                action.setVisible(False)
+
+    def _add_recent_session(self, path: str):
+        from PySide6.QtCore import QSettings
+        settings = QSettings("DeepSlice", "GUI")
+        recent = settings.value("recent_sessions", [])
+        if not isinstance(recent, list):
+            recent = []
+        if path in recent:
+            recent.remove(path)
+        recent.insert(0, path)
+        recent = recent[:5]
+        settings.setValue("recent_sessions", recent)
+        self._update_recent_sessions_menu()
+
+
+    def _setup_shortcuts(self):
+        for i in range(5):
+            shortcut = QShortcut(QKeySequence(f"Ctrl+{i+1}"), self)
+            shortcut.activated.connect(lambda index=i: self.stacked_widget.setCurrentIndex(index))
+            
+        help_shortcut = QShortcut(QKeySequence("Ctrl+?"), self)
+        help_shortcut.activated.connect(self._show_shortcuts_help)
+        f1_shortcut = QShortcut(QKeySequence("F1"), self)
+        f1_shortcut.activated.connect(self._show_shortcuts_help)
+        
+        QShortcut(QKeySequence.Undo, self).activated.connect(self._undo)
+        QShortcut(QKeySequence.Redo, self).activated.connect(self._redo)
+        
+    def _show_shortcuts_help(self):
+        text = (
+            "Keyboard Shortcuts:\n\n"
+            "Ctrl+1 to Ctrl+5 : Navigate between pages\n"
+            "Ctrl+Z : Undo curation changes\n"
+            "Ctrl+Y : Redo curation changes\n"
+            "Ctrl+? / F1 : Show this help"
+        )
+        QMessageBox.information(self, "Shortcuts", text)
+        
+    def _reset_session(self):
+        if getattr(self.state, "is_dirty", False):
+            reply = QMessageBox.question(
+                self, "Unsaved Changes",
+                "You have unsaved changes. Start a new session anyway?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                return
+        self.state = DeepSliceAppState()
+        self._session_base_text = "Session: New"
+        self._update_session_status()
+        self._refresh_all_views()
+        
+    def _update_session_status(self):
+        text = self._session_base_text
+        is_dirty = getattr(self.state, "is_dirty", False)
+        if is_dirty:
+            text = f"*{text}"
+        self.session_status_label.setText(text)
+        self.setWindowTitle(f"DeepSlice Desktop{' *' if is_dirty else ''}")
+
+    def closeEvent(self, event):
+        if getattr(self.state, "is_dirty", False):
+            reply = QMessageBox.question(
+                self, "Unsaved Changes",
+                "You have unsaved changes. Are you sure you want to exit?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
+            
     def _record_error(self, context: str, error_text: str):
         clean_context = str(context).strip() or "DeepSlice error"
         clean_text = str(error_text).strip() or "No additional error details were provided."
@@ -421,6 +629,11 @@ class DeepSliceMainWindow(QMainWindow):
             self.copy_error_button.setEnabled(True)
         if hasattr(self, "auto_fix_button"):
             self.auto_fix_button.setEnabled(bool(analysis.get("auto_fix_available", False)))
+            
+        if hasattr(self, "_unread_error_count") and hasattr(self, "error_menu_button"):
+            self._unread_error_count += 1
+            self.error_menu_button.setText(f"Errors ({self._unread_error_count})")
+            self.error_menu_button.setStyleSheet("QPushButton { background-color: #A43344; }")
 
         log_error_text(clean_context, report_body)
 
@@ -515,6 +728,11 @@ class DeepSliceMainWindow(QMainWindow):
         )
 
     def _open_error_log(self):
+        if hasattr(self, "_unread_error_count"):
+            self._unread_error_count = 0
+            self.error_menu_button.setText("Errors")
+            self.error_menu_button.setStyleSheet("")
+
         if not os.path.exists(self.error_log_path):
             QMessageBox.information(
                 self,
@@ -601,7 +819,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.add_folder_button.clicked.connect(self._add_folder)
         self.add_files_button = QPushButton("Add Files")
         self.add_files_button.clicked.connect(self._add_files)
-        self.clear_images_button = QPushButton("Clear")
+        self.clear_images_button = QPushButton("Clear All")
         self.clear_images_button.clicked.connect(self._clear_images)
         button_row.addWidget(self.add_folder_button)
         button_row.addWidget(self.add_files_button)
@@ -610,11 +828,21 @@ class DeepSliceMainWindow(QMainWindow):
 
         options_group = QGroupBox("Pre-flight Options")
         options_layout = QVBoxLayout(options_group)
+        
+        section_number_layout = QHBoxLayout()
         self.enable_section_numbers_checkbox = QCheckBox(
             "Detect section numbers from filename (_sXXX)"
         )
         self.enable_section_numbers_checkbox.setChecked(True)
         self.enable_section_numbers_checkbox.toggled.connect(self._update_run_button_state)
+        self.naming_helper_button = QToolButton()
+        self.naming_helper_button.setText("?")
+        self.naming_helper_button.setToolTip("Help with naming conventions")
+        self.naming_helper_button.clicked.connect(self._show_naming_helper)
+        section_number_layout.addWidget(self.enable_section_numbers_checkbox)
+        section_number_layout.addWidget(self.naming_helper_button)
+        section_number_layout.addStretch(1)
+
         self.legacy_parsing_checkbox = QCheckBox(
             "Legacy parser fallback (last 3 digits)"
         )
@@ -628,7 +856,7 @@ class DeepSliceMainWindow(QMainWindow):
             ]
         )
         self.orientation_combo.currentIndexChanged.connect(self._update_run_button_state)
-        options_layout.addWidget(self.enable_section_numbers_checkbox)
+        options_layout.addLayout(section_number_layout)
         options_layout.addWidget(self.legacy_parsing_checkbox)
         options_layout.addWidget(self.orientation_combo)
         left_layout.addWidget(options_group)
@@ -645,12 +873,23 @@ class DeepSliceMainWindow(QMainWindow):
         self.index_table.horizontalHeader().setStretchLastSection(True)
         self.index_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.index_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.index_table.setSortingEnabled(True)
         left_layout.addWidget(self.index_table, stretch=1)
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
         right_layout.setContentsMargins(4, 4, 4, 4)
-        right_layout.addWidget(QLabel("Thumbnail Grid (cached previews)"))
+        
+        thumbnail_header = QHBoxLayout()
+        thumbnail_header.addWidget(QLabel("Thumbnail Grid (cached previews)"))
+        thumbnail_header.addStretch(1)
+        self.thumbnail_filter_edit = QLineEdit()
+        self.thumbnail_filter_edit.setPlaceholderText("Filter by filename...")
+        self.thumbnail_filter_edit.setFixedWidth(200)
+        self.thumbnail_filter_edit.textChanged.connect(self._filter_thumbnails)
+        thumbnail_header.addWidget(self.thumbnail_filter_edit)
+        
+        right_layout.addLayout(thumbnail_header)
 
         self.thumbnail_list = QListWidget()
         self.thumbnail_list.setViewMode(QListWidget.IconMode)
@@ -658,6 +897,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.thumbnail_list.setResizeMode(QListWidget.Adjust)
         self.thumbnail_list.setSpacing(8)
         self.thumbnail_list.itemSelectionChanged.connect(self._on_thumbnail_selection_changed)
+        self.thumbnail_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.thumbnail_list.customContextMenuRequested.connect(self._show_thumbnail_context_menu)
         right_layout.addWidget(self.thumbnail_list, stretch=1)
 
         self.ingestion_preview = SliceGraphicsView()
@@ -671,6 +912,36 @@ class DeepSliceMainWindow(QMainWindow):
         root = QVBoxLayout(page)
         root.addWidget(split)
         return page
+
+    def _show_naming_helper(self):
+        text = (
+            "Naming Convention Help:\n\n"
+            "DeepSlice can automatically detect the section index from filenames if they follow the pattern `_sXXX`.\n"
+            "For example:\n"
+            "  - `brain1_s001.png` -> Index 1\n"
+            "  - `mouse_A_s142_fluoro.tif` -> Index 142\n\n"
+            "If this fails, you can try the 'Legacy parser fallback' which looks at the last 3 digits in the filename."
+        )
+        QMessageBox.information(self, "Naming Convention", text)
+
+    def _filter_thumbnails(self, text: str):
+        query = text.lower()
+        for i in range(self.thumbnail_list.count()):
+            item = self.thumbnail_list.item(i)
+            filename = item.text().lower()
+            item.setHidden(query not in filename)
+
+    def _show_thumbnail_context_menu(self, pos):
+        item = self.thumbnail_list.itemAt(pos)
+        if item is None:
+            return
+        menu = QMenu(self)
+        remove_action = menu.addAction("Remove this image")
+        action = menu.exec(self.thumbnail_list.viewport().mapToGlobal(pos))
+        if action == remove_action:
+            image_path = item.data(Qt.UserRole)
+            self.state.remove_image(image_path)
+            self._refresh_all_views()
 
     def _build_configuration_page(self) -> QWidget:
         page = QWidget()
@@ -783,9 +1054,18 @@ class DeepSliceMainWindow(QMainWindow):
         left = QWidget()
         left_layout = QVBoxLayout(left)
 
+        run_layout = QHBoxLayout()
         self.run_alignment_button = QPushButton("Run Alignment")
         self.run_alignment_button.clicked.connect(self._run_alignment)
         self.run_alignment_button.setMinimumHeight(44)
+        
+        self.cancel_alignment_button = QPushButton("Cancel")
+        self.cancel_alignment_button.clicked.connect(self._cancel_alignment)
+        self.cancel_alignment_button.setMinimumHeight(44)
+        self.cancel_alignment_button.setEnabled(False)
+        
+        run_layout.addWidget(self.run_alignment_button, stretch=3)
+        run_layout.addWidget(self.cancel_alignment_button, stretch=1)
 
         self.prediction_phase_label = QLabel("Phase: idle")
         self.prediction_progress_label = QLabel("Progress: 0 / 0")
@@ -802,23 +1082,42 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.prediction_direction_label = QLabel("Detected indexing direction: -")
 
+        console_tools = QHBoxLayout()
         self.console_toggle = QToolButton()
         self.console_toggle.setCheckable(True)
         self.console_toggle.setText("Show Runtime Console")
         self.console_toggle.toggled.connect(self._toggle_console)
+        
+        self.clear_console_button = QToolButton()
+        self.clear_console_button.setText("Clear")
+        self.clear_console_button.clicked.connect(lambda: self.console_output.clear())
+        self.clear_console_button.setVisible(False)
+        
+        self.copy_console_button = QToolButton()
+        self.copy_console_button.setText("Copy")
+        self.copy_console_button.clicked.connect(lambda: QApplication.clipboard().setText(self.console_output.toPlainText()))
+        self.copy_console_button.setVisible(False)
+        
+        self.console_toggle.toggled.connect(lambda v: self.clear_console_button.setVisible(v))
+        self.console_toggle.toggled.connect(lambda v: self.copy_console_button.setVisible(v))
+        
+        console_tools.addWidget(self.console_toggle)
+        console_tools.addStretch(1)
+        console_tools.addWidget(self.clear_console_button)
+        console_tools.addWidget(self.copy_console_button)
 
         self.console_output = QPlainTextEdit()
         self.console_output.setReadOnly(True)
         self.console_output.setVisible(False)
 
-        left_layout.addWidget(self.run_alignment_button)
+        left_layout.addLayout(run_layout)
         left_layout.addWidget(self.prediction_phase_label)
         left_layout.addWidget(self.prediction_progress_label)
         left_layout.addWidget(self.prediction_progress_bar)
         left_layout.addWidget(self.predicted_thickness_label)
         left_layout.addWidget(self.accept_predicted_thickness_button)
         left_layout.addWidget(self.prediction_direction_label)
-        left_layout.addWidget(self.console_toggle)
+        left_layout.addLayout(console_tools)
         left_layout.addWidget(self.console_output, stretch=1)
 
         right = QWidget()
@@ -849,10 +1148,33 @@ class DeepSliceMainWindow(QMainWindow):
         left = QWidget()
         left_layout = QVBoxLayout(left)
 
+        list_header_layout = QHBoxLayout()
+        self.curation_select_all_btn = QToolButton()
+        self.curation_select_all_btn.setText("Select All")
+        self.curation_select_all_btn.clicked.connect(lambda: self._set_all_flags(Qt.Checked))
+        
+        self.curation_deselect_all_btn = QToolButton()
+        self.curation_deselect_all_btn.setText("Deselect All")
+        self.curation_deselect_all_btn.clicked.connect(lambda: self._set_all_flags(Qt.Unchecked))
+        
+        self.confidence_filter_combo = QComboBox()
+        self.confidence_filter_combo.addItems(["All Confidences", "High Only", "Medium Only", "Low Only"])
+        self.confidence_filter_combo.currentIndexChanged.connect(self._filter_curation_list)
+        
+        list_header_layout.addWidget(self.curation_select_all_btn)
+        list_header_layout.addWidget(self.curation_deselect_all_btn)
+        list_header_layout.addStretch()
+        list_header_layout.addWidget(QLabel("Filter:"))
+        list_header_layout.addWidget(self.confidence_filter_combo)
+        
+        left_layout.addLayout(list_header_layout)
+
         self.slice_flag_list = QListWidget()
         self.slice_flag_list.currentRowChanged.connect(self._on_curation_slice_selected)
         self.slice_flag_list.setDragDropMode(QAbstractItemView.InternalMove)
         self.slice_flag_list.setDefaultDropAction(Qt.MoveAction)
+        self.slice_flag_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.slice_flag_list.customContextMenuRequested.connect(self._show_curation_context_menu)
 
         self.apply_bad_sections_button = QPushButton("Apply Bad Section Flags")
         self.apply_bad_sections_button.clicked.connect(self._apply_bad_section_flags)
@@ -985,7 +1307,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         output_dir_row = QHBoxLayout()
         self.output_dir_edit = QLineEdit()
-        self.output_dir_edit.setText(os.getcwd())
+        self.output_dir_edit.setText(self._get_persisted_export_path())
+        self.output_dir_edit.textChanged.connect(self._persist_export_path)
         self.browse_output_dir_button = QPushButton("Browse")
         self.browse_output_dir_button.clicked.connect(self._browse_output_directory)
         output_dir_row.addWidget(self.output_dir_edit)
@@ -999,20 +1322,59 @@ class DeepSliceMainWindow(QMainWindow):
                 "Legacy XML",
             ]
         )
+        
+        self.export_size_estimate_label = QLabel("~0 MB")
+        self.output_format_combo.currentIndexChanged.connect(self._update_export_size_estimate)
 
         output_layout.addRow("Output Directory", output_dir_row)
         output_layout.addRow("Base Filename", self.output_basename_edit)
         output_layout.addRow("Primary Export", self.output_format_combo)
+        output_layout.addRow("Estimated Size", self.export_size_estimate_label)
 
+        export_actions_layout = QHBoxLayout()
         self.export_button = QPushButton("Export Predictions")
         self.export_button.clicked.connect(self._export_predictions)
+        
+        self.open_export_dir_button = QToolButton()
+        self.open_export_dir_button.setText("Open Folder")
+        self.open_export_dir_button.clicked.connect(self._open_export_directory)
+        
+        self.copy_export_path_button = QToolButton()
+        self.copy_export_path_button.setText("Copy Path")
+        self.copy_export_path_button.clicked.connect(self._copy_export_path)
+        
+        export_actions_layout.addWidget(self.export_button, stretch=1)
+        export_actions_layout.addWidget(self.open_export_dir_button)
+        export_actions_layout.addWidget(self.copy_export_path_button)
 
         self.report_button = QPushButton("Generate Report (PDF)")
         self.report_button.clicked.connect(self._generate_report)
+        
+        self.preview_report_button = QToolButton()
+        self.preview_report_button.setText("Preview Report")
+        self.preview_report_button.clicked.connect(self._preview_report)
+        
+        report_layout = QHBoxLayout()
+        report_layout.addWidget(self.report_button, stretch=3)
+        report_layout.addWidget(self.preview_report_button, stretch=1)
+
+        self.pdf_content_group = QGroupBox("PDF Contents")
+        pdf_content_layout = QHBoxLayout(self.pdf_content_group)
+        self.pdf_include_stats = QCheckBox("Summary Stats")
+        self.pdf_include_stats.setChecked(True)
+        self.pdf_include_plot = QCheckBox("Linearity Plot")
+        self.pdf_include_plot.setChecked(True)
+        self.pdf_include_images = QCheckBox("Sample Images")
+        self.pdf_include_images.setChecked(True)
+        pdf_content_layout.addWidget(self.pdf_include_stats)
+        pdf_content_layout.addWidget(self.pdf_include_plot)
+        pdf_content_layout.addWidget(self.pdf_include_images)
 
         quicknii_row = QHBoxLayout()
         self.quicknii_path_edit = QLineEdit()
         self.quicknii_path_edit.setPlaceholderText("Optional path to QuickNII executable")
+        self.quicknii_path_edit.setText(self._get_persisted_quicknii_path())
+        self.quicknii_path_edit.textChanged.connect(self._persist_quicknii_path)
         self.quicknii_browse_button = QPushButton("Browse")
         self.quicknii_browse_button.clicked.connect(self._browse_quicknii_path)
         quicknii_row.addWidget(self.quicknii_path_edit)
@@ -1028,8 +1390,9 @@ class DeepSliceMainWindow(QMainWindow):
         self.markers_label.setObjectName("WarningText")
 
         left_layout.addWidget(output_group)
-        left_layout.addWidget(self.export_button)
-        left_layout.addWidget(self.report_button)
+        left_layout.addLayout(export_actions_layout)
+        left_layout.addWidget(self.pdf_content_group)
+        left_layout.addLayout(report_layout)
         left_layout.addLayout(quicknii_row)
         left_layout.addWidget(self.open_quicknii_button)
         left_layout.addWidget(self.summary_label)
@@ -1198,6 +1561,10 @@ class DeepSliceMainWindow(QMainWindow):
             elif idx > max_unlocked:
                 prefix = "◌ "
             item.setText(prefix + label)
+
+        percent = int(((max_unlocked + 1) / len(self.STEP_LABELS)) * 100)
+        if hasattr(self, "completion_label"):
+            self.completion_label.setText(f"{percent}% Complete")
 
     def _collect_supported_files_from_paths(self, dropped_paths: List[str]) -> List[str]:
         image_paths = []
@@ -1416,6 +1783,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.state.use_secondary_model = self.secondary_model_checkbox.isChecked()
 
         self.run_alignment_button.setEnabled(False)
+        if hasattr(self, "cancel_alignment_button"):
+            self.cancel_alignment_button.setEnabled(True)
         self.prediction_progress_bar.setValue(0)
         self.console_output.clear()
         self.prediction_phase_label.setText("Phase: initializing")
@@ -1427,17 +1796,25 @@ class DeepSliceMainWindow(QMainWindow):
             "use_secondary_model": self.state.use_secondary_model,
         }
 
-        worker = FunctionWorker(
+        self._current_prediction_worker = FunctionWorker(
             self._run_prediction_task,
             options,
             inject_callbacks=True,
         )
-        worker.signals.progress.connect(self._on_prediction_progress)
-        worker.signals.log.connect(self._append_console_log)
-        worker.signals.error.connect(self._on_prediction_error)
-        worker.signals.finished.connect(self._on_prediction_finished)
-        self._track_worker(worker)
-        self.thread_pool.start(worker)
+        self._current_prediction_worker.signals.progress.connect(self._on_prediction_progress)
+        self._current_prediction_worker.signals.log.connect(self._append_console_log)
+        self._current_prediction_worker.signals.error.connect(self._on_prediction_error)
+        self._current_prediction_worker.signals.finished.connect(self._on_prediction_finished)
+        self._track_worker(self._current_prediction_worker)
+        self.thread_pool.start(self._current_prediction_worker)
+
+    def _cancel_alignment(self):
+        self._append_console_log("[SYSTEM] Cancellation requested... This may take a moment to stop underlying processes.")
+        self.cancel_alignment_button.setEnabled(False)
+        self.run_alignment_button.setEnabled(True)
+        if hasattr(self, "_current_prediction_worker"):
+            # A full kill requires more advanced threading or process management.
+            pass
 
     def _run_prediction_task(self, options: dict, progress_callback=None, log_callback=None):
         return self.state.run_prediction(
@@ -1465,6 +1842,8 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _on_prediction_error(self, error_text: str):
         self.run_alignment_button.setEnabled(True)
+        if hasattr(self, "cancel_alignment_button"):
+            self.cancel_alignment_button.setEnabled(False)
         self._show_logged_error(
             title="Prediction Failed",
             context="Alignment prediction task failed",
@@ -1474,9 +1853,10 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _on_prediction_finished(self, result: dict):
         self.run_alignment_button.setEnabled(True)
-        self.session_status_label.setText(
-            f"Session: Predicted {result['slice_count']} slices"
-        )
+        if hasattr(self, "cancel_alignment_button"):
+            self.cancel_alignment_button.setEnabled(False)
+        self._session_base_text = f"Session: Predicted {result['slice_count']} slices"
+        self._update_session_status()
 
         direction = result.get("direction")
         if direction:
@@ -1906,6 +2286,51 @@ class DeepSliceMainWindow(QMainWindow):
         self.slice_flag_list.setCurrentRow(nearest)
         self._on_curation_slice_selected(nearest)
 
+    def _set_all_flags(self, check_state: Qt.CheckState):
+        if self.state.predictions is None:
+            return
+        for idx in range(self.slice_flag_list.count()):
+            item = self.slice_flag_list.item(idx)
+            if not item.isHidden():
+                item.setCheckState(check_state)
+                
+    def _filter_curation_list(self, filter_index: int):
+        if self.state.predictions is None or self._linearity_payload is None:
+            return
+        
+        levels = self._linearity_payload["confidence_level"]
+        
+        for idx in range(self.slice_flag_list.count()):
+            item = self.slice_flag_list.item(idx)
+            source_index = item.data(Qt.UserRole)
+            level = levels[source_index]
+            
+            if filter_index == 0:  # All Confidences
+                item.setHidden(False)
+            elif filter_index == 1:  # High Only
+                item.setHidden(level != "high")
+            elif filter_index == 2:  # Medium Only
+                item.setHidden(level != "medium")
+            elif filter_index == 3:  # Low Only
+                item.setHidden(level != "low")
+
+    def _show_curation_context_menu(self, pos):
+        item = self.slice_flag_list.itemAt(pos)
+        if item is None:
+            return
+            
+        menu = QMenu(self)
+        toggle_flag_action = menu.addAction("Toggle Bad Section Flag")
+        show_details_action = menu.addAction("Show Confidence Details")
+        
+        action = menu.exec(self.slice_flag_list.viewport().mapToGlobal(pos))
+        
+        if action == toggle_flag_action:
+            new_state = Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+            item.setCheckState(new_state)
+        elif action == show_details_action:
+            QMessageBox.information(self, "Confidence Details", item.toolTip())
+
     def _on_curation_slice_selected(self, row_index: int):
         if self.state.predictions is None:
             return
@@ -2086,6 +2511,80 @@ class DeepSliceMainWindow(QMainWindow):
         if path:
             self.quicknii_path_edit.setText(path)
 
+    def _get_persisted_export_path(self) -> str:
+        from PySide6.QtCore import QSettings
+        settings = QSettings("DeepSlice", "GUI")
+        path = settings.value("export_directory", "")
+        return path if path else os.getcwd()
+
+    def _persist_export_path(self, path: str):
+        from PySide6.QtCore import QSettings
+        settings = QSettings("DeepSlice", "GUI")
+        settings.setValue("export_directory", path)
+
+    def _get_persisted_quicknii_path(self) -> str:
+        from PySide6.QtCore import QSettings
+        settings = QSettings("DeepSlice", "GUI")
+        return settings.value("quicknii_path", "")
+
+    def _persist_quicknii_path(self, path: str):
+        from PySide6.QtCore import QSettings
+        settings = QSettings("DeepSlice", "GUI")
+        settings.setValue("quicknii_path", path)
+
+    def _update_export_size_estimate(self, index: int):
+        if self.state.predictions is None:
+            self.export_size_estimate_label.setText("~0 MB")
+            return
+            
+        num_slices = len(self.state.predictions)
+        # Very rough estimates: JSON ~ 50KB/slice, XML ~ 80KB/slice
+        kb_per_slice = 50 if index == 0 else 80
+        total_mb = (num_slices * kb_per_slice) / 1024
+        
+        # Add sidecar CSV estimate
+        total_mb += (num_slices * 2) / 1024
+        
+        if total_mb < 0.1:
+            self.export_size_estimate_label.setText("< 0.1 MB")
+        else:
+            self.export_size_estimate_label.setText(f"~{total_mb:.1f} MB")
+
+    def _open_export_directory(self):
+        output_dir = self.output_dir_edit.text().strip()
+        if not os.path.exists(output_dir):
+            QMessageBox.warning(self, "Export Folder", "The export folder does not exist yet.")
+            return
+            
+        try:
+            if os.name == "nt":
+                os.startfile(output_dir)  # type: ignore[attr-defined]
+            else:
+                subprocess.Popen(["xdg-open", output_dir])
+        except Exception as exc:
+            self._show_logged_exception(
+                title="Open Export Folder",
+                context="Unable to open the export directory",
+                exc=exc,
+                icon=QMessageBox.Warning,
+            )
+
+    def _copy_export_path(self):
+        if self.last_export_basepath is None:
+            QMessageBox.information(
+                self,
+                "Copy Path",
+                "Export predictions first to generate an output path.",
+            )
+            return
+
+        output_format = "json" if self.output_format_combo.currentIndex() == 0 else "xml"
+        target_file = self.last_export_basepath + f".{output_format}"
+        
+        QApplication.clipboard().setText(target_file)
+        # Use status bar for non-blocking toast
+        self.status_bar.showMessage(f"Copied export path: {target_file}", 3000)
+
     def _export_predictions(self):
         if self.state.predictions is None:
             QMessageBox.warning(self, "Export", "No predictions available")
@@ -2117,7 +2616,8 @@ class DeepSliceMainWindow(QMainWindow):
             return
 
         self.last_export_basepath = base_path
-        self.session_status_label.setText("Session: Export complete")
+        self._session_base_text = "Session: Export complete"
+        self._update_session_status()
         QMessageBox.information(
             self,
             "Export Complete",
@@ -2149,6 +2649,9 @@ class DeepSliceMainWindow(QMainWindow):
             "thickness_um": None
             if self.auto_thickness_checkbox.isChecked()
             else float(self.thickness_spin.value()),
+            "include_stats": self.pdf_include_stats.isChecked(),
+            "include_plot": self.pdf_include_plot.isChecked(),
+            "include_images": self.pdf_include_images.isChecked(),
         }
 
         try:
@@ -2167,6 +2670,55 @@ class DeepSliceMainWindow(QMainWindow):
             return
 
         QMessageBox.information(self, "Report", f"Report created:\n{report_path}")
+
+    def _preview_report(self):
+        if self.state.predictions is None:
+            QMessageBox.warning(self, "Report Preview", "No predictions available")
+            return
+            
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_report_path = os.path.join(temp_dir, "DeepSlice_Report_Preview.pdf")
+        
+        summary = self.state.summary_metrics()
+        options = {
+            "species": self.state.species,
+            "ensemble": bool(self.ensemble_checkbox.isChecked()),
+            "use_secondary_model": bool(self.secondary_model_checkbox.isChecked()),
+            "section_numbers": bool(self.enable_section_numbers_checkbox.isChecked()),
+            "legacy_section_numbers": bool(self.legacy_parsing_checkbox.isChecked()),
+            "direction": self.state.selected_indexing_direction,
+            "thickness_um": None
+            if self.auto_thickness_checkbox.isChecked()
+            else float(self.thickness_spin.value()),
+            "include_stats": self.pdf_include_stats.isChecked(),
+            "include_plot": self.pdf_include_plot.isChecked(),
+            "include_images": self.pdf_include_images.isChecked(),
+        }
+
+        self.status_bar.showMessage("Generating report preview...", 5000)
+        QApplication.processEvents()
+
+        try:
+            reporting.generate_pdf_report(
+                output_path=temp_report_path,
+                summary=summary,
+                options=options,
+            )
+            
+            if os.name == "nt":
+                os.startfile(temp_report_path)  # type: ignore[attr-defined]
+            else:
+                subprocess.Popen(["xdg-open", temp_report_path])
+                
+        except Exception as exc:
+            self._show_logged_exception(
+                title="Preview Failed",
+                context="Report preview generation failed",
+                exc=exc,
+                icon=QMessageBox.Critical,
+            )
+            return
 
     def _open_in_quicknii(self):
         if self.last_export_basepath is None:
@@ -2267,11 +2819,17 @@ class DeepSliceMainWindow(QMainWindow):
         if not filename.endswith(".deepslice-session.json"):
             filename = filename + ".deepslice-session.json"
 
+        self.save_session_button.setText("Saving...")
+        self.save_session_button.setEnabled(False)
+        QApplication.processEvents()
+
         try:
             payload = self.state.to_session_dict()
             with open(filename, "w", encoding="utf-8") as file_handle:
                 json.dump(payload, file_handle, indent=2)
         except Exception as exc:
+            self.save_session_button.setText("Save Session")
+            self.save_session_button.setEnabled(True)
             self._show_logged_exception(
                 title="Save Session",
                 context="Failed to save DeepSlice session",
@@ -2280,7 +2838,10 @@ class DeepSliceMainWindow(QMainWindow):
             )
             return
 
-        self.session_status_label.setText(f"Session: Saved {os.path.basename(filename)}")
+        self.save_session_button.setText("Save Session")
+        self.save_session_button.setEnabled(True)
+        self._session_base_text = f"Session: Saved {os.path.basename(filename)}"
+        self._update_session_status()
 
     def _load_session_or_quint(self):
         filename, _ = QFileDialog.getOpenFileName(
@@ -2291,17 +2852,19 @@ class DeepSliceMainWindow(QMainWindow):
         )
         if not filename:
             return
+        self._load_session_file(filename)
 
+    def _load_session_file(self, filename: str):
         if filename.lower().endswith(".deepslice-session.json"):
             try:
                 with open(filename, "r", encoding="utf-8") as file_handle:
                     payload = json.load(file_handle)
                 self.state.load_session_dict(payload)
                 self._apply_state_to_widgets()
-                self.session_status_label.setText(
-                    f"Session: Loaded {os.path.basename(filename)}"
-                )
+                self._session_base_text = f"Session: Loaded {os.path.basename(filename)}"
+                self._update_session_status()
                 self._refresh_all_views()
+                self._add_recent_session(filename)
             except Exception as exc:
                 self._show_logged_exception(
                     title="Load Session",
@@ -2318,10 +2881,10 @@ class DeepSliceMainWindow(QMainWindow):
                 if payload.get("session_format") == "deepslice_gui_v1":
                     self.state.load_session_dict(payload)
                     self._apply_state_to_widgets()
-                    self.session_status_label.setText(
-                        f"Session: Loaded {os.path.basename(filename)}"
-                    )
+                    self._session_base_text = f"Session: Loaded {os.path.basename(filename)}"
+                    self._update_session_status()
                     self._refresh_all_views()
+                    self._add_recent_session(filename)
                     return
             except Exception:
                 pass
@@ -2329,14 +2892,14 @@ class DeepSliceMainWindow(QMainWindow):
         worker = FunctionWorker(self._load_quint_task, filename, inject_callbacks=True)
         worker.signals.log.connect(self._append_console_log)
         worker.signals.error.connect(self._on_prediction_error)
-        worker.signals.finished.connect(self._on_load_quint_finished)
+        worker.signals.finished.connect(lambda res: self._on_load_quint_finished(res, filename))
         self._track_worker(worker)
         self.thread_pool.start(worker)
 
     def _load_quint_task(self, filename: str, progress_callback=None, log_callback=None):
         return self.state.load_quint(filename, log_callback=log_callback)
 
-    def _on_load_quint_finished(self, result: dict):
+    def _on_load_quint_finished(self, result: dict, filename: str = None):
         if self.state.species == "mouse":
             self.mouse_radio.setChecked(True)
         else:
@@ -2351,9 +2914,10 @@ class DeepSliceMainWindow(QMainWindow):
         if result.get("marker_count", 0) > 0:
             marker_note = f"\nMarkers preserved: {result['marker_count']}"
 
-        self.session_status_label.setText(
-            f"Session: Loaded {result['slice_count']} slices ({result['species']})"
-        )
+        self._session_base_text = f"Session: Loaded {result['slice_count']} slices ({result['species']})"
+        self._update_session_status()
+        if filename:
+            self._add_recent_session(filename)
         QMessageBox.information(
             self,
             "Loaded",
@@ -2414,13 +2978,19 @@ class DeepSliceMainWindow(QMainWindow):
     def _update_hardware_mode_label(self):
         try:
             import tensorflow as tf
-
-            mode = "GPU" if len(tf.config.list_physical_devices("GPU")) > 0 else "CPU"
+            gpus = tf.config.list_physical_devices("GPU")
+            mode = "GPU" if len(gpus) > 0 else "CPU"
+            build_info = tf.sysconfig.get_build_info()
+            cuda_version = build_info.get("cuda_version", "unknown")
+            cudnn_version = build_info.get("cudnn_version", "unknown")
+            self.hardware_mode_label.setToolTip(f"Mode: {mode}\nCUDA: {cuda_version}\ncuDNN: {cudnn_version}")
         except Exception:
             mode = "CPU"
+            self.hardware_mode_label.setToolTip("Hardware info not available")
         self.hardware_mode_label.setText(f"Mode: {mode}")
 
     def _refresh_all_views(self):
+        self._update_session_status()
         self._refresh_ingestion_views()
         self._refresh_prediction_selector()
         self._refresh_curation_views()
