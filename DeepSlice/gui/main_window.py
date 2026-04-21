@@ -2282,7 +2282,7 @@ class DeepSliceMainWindow(QMainWindow):
         prediction_layout = QVBoxLayout(prediction_group)
         ensemble_row = QHBoxLayout()
         self.ensemble_checkbox = QCheckBox("Ensemble prediction (if available)")
-        self.ensemble_checkbox.setChecked(True)
+        self.ensemble_checkbox.setChecked(self.state.supports_ensemble())
         self.ensemble_checkbox.toggled.connect(self._update_processing_estimate)
         self.ensemble_help_button = QToolButton()
         self.ensemble_help_button.setText("?")
@@ -2310,6 +2310,7 @@ class DeepSliceMainWindow(QMainWindow):
         prediction_layout.addWidget(self.secondary_model_checkbox)
         prediction_layout.addWidget(self.legacy_from_config_checkbox)
         left_layout.addWidget(prediction_group)
+        self._update_ensemble_availability()
 
         quality_group = QGroupBox("Quality and Runtime")
         quality_layout = QFormLayout(quality_group)
@@ -3593,8 +3594,28 @@ class DeepSliceMainWindow(QMainWindow):
         self.state.set_species(species)
         self._refresh_atlas_volume_options()
         self._update_anchor_depth_range()
+        self._update_ensemble_availability()
         self._update_processing_estimate()
         self._update_run_button_state()
+
+    def _update_ensemble_availability(self):
+        """Enable or disable the ensemble checkbox based on species config."""
+        if not hasattr(self, "ensemble_checkbox"):
+            return
+        supported = self.state.supports_ensemble()
+        self.ensemble_checkbox.setEnabled(supported)
+        if supported:
+            self.ensemble_checkbox.setToolTip(
+                "Run primary and secondary models and average predictions "
+                "(higher robustness, slower runtime)."
+            )
+        else:
+            if self.ensemble_checkbox.isChecked():
+                self.ensemble_checkbox.setChecked(False)
+            self.ensemble_checkbox.setToolTip(
+                f"Ensemble inference is not yet available for species "
+                f"'{self.state.species}'. Predictions will use the primary model only."
+            )
 
     def _on_auto_thickness_toggled(self, checked: bool):
         self.thickness_spin.setEnabled(not checked)
