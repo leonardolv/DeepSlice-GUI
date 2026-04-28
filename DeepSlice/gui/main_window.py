@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import traceback
 from datetime import datetime
@@ -1326,8 +1327,17 @@ class DeepSliceMainWindow(QMainWindow):
         if curation_sizes and hasattr(self, "curation_vertical_split"):
             self.curation_vertical_split.setSizes(curation_sizes)
 
+        prediction_view_sizes = self._coerce_int_list(
+            settings.value("prediction_view_split_sizes", None)
+        )
+        if prediction_view_sizes and hasattr(self, "prediction_view_split"):
+            self.prediction_view_split.setSizes(prediction_view_sizes)
+
         always_console = self._setting_to_bool(settings.value("console_always_visible", False))
-        if always_console and hasattr(self, "console_toggle"):
+        last_console_visible = self._setting_to_bool(
+            settings.value("console_toggle_visible", always_console)
+        )
+        if hasattr(self, "console_toggle") and (always_console or last_console_visible):
             self.console_toggle.setChecked(True)
 
     def _persist_window_preferences(self):
@@ -1337,6 +1347,12 @@ class DeepSliceMainWindow(QMainWindow):
             settings.setValue("body_split_sizes", self.body_split.sizes())
         if hasattr(self, "curation_vertical_split"):
             settings.setValue("curation_split_sizes", self.curation_vertical_split.sizes())
+        if hasattr(self, "prediction_view_split"):
+            settings.setValue(
+                "prediction_view_split_sizes", self.prediction_view_split.sizes()
+            )
+        if hasattr(self, "console_toggle"):
+            settings.setValue("console_toggle_visible", self.console_toggle.isChecked())
 
     def _open_preferences_dialog(self):
         settings = QSettings("DeepSlice", "GUI")
@@ -1494,6 +1510,32 @@ class DeepSliceMainWindow(QMainWindow):
         redo_shortcut.activated.connect(self._redo)
         self._shortcuts.append(redo_shortcut)
 
+        run_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
+        run_shortcut.activated.connect(self._run_alignment_via_shortcut)
+        self._shortcuts.append(run_shortcut)
+
+        cancel_shortcut = QShortcut(QKeySequence("Esc"), self)
+        cancel_shortcut.activated.connect(self._cancel_alignment_via_shortcut)
+        self._shortcuts.append(cancel_shortcut)
+
+        toggle_console_shortcut = QShortcut(QKeySequence("Ctrl+`"), self)
+        toggle_console_shortcut.activated.connect(self._toggle_console_via_shortcut)
+        self._shortcuts.append(toggle_console_shortcut)
+
+    def _run_alignment_via_shortcut(self):
+        """Trigger the Run Alignment button only when it's enabled."""
+        if hasattr(self, "run_alignment_button") and self.run_alignment_button.isEnabled():
+            self.run_alignment_button.click()
+
+    def _cancel_alignment_via_shortcut(self):
+        """Trigger the Cancel button only when it's enabled (i.e., a run is in flight)."""
+        if hasattr(self, "cancel_alignment_button") and self.cancel_alignment_button.isEnabled():
+            self.cancel_alignment_button.click()
+
+    def _toggle_console_via_shortcut(self):
+        if hasattr(self, "console_toggle"):
+            self.console_toggle.setChecked(not self.console_toggle.isChecked())
+
     def _show_shortcuts_help(self):
         text = (
             "Keyboard Shortcuts:\n\n"
@@ -1502,6 +1544,9 @@ class DeepSliceMainWindow(QMainWindow):
             "Ctrl+S : Save session\n"
             "Ctrl+O : Load session\n"
             "Ctrl+E : Jump to Export page\n"
+            "Ctrl+R : Run Alignment\n"
+            "Esc    : Cancel current alignment run\n"
+            "Ctrl+` : Toggle runtime console\n"
             "Ctrl+Z : Undo curation changes\n"
             "Ctrl+Y : Redo curation changes\n"
             "Ctrl+/ or Ctrl+? : Show shortcuts\n"
@@ -2179,7 +2224,17 @@ class DeepSliceMainWindow(QMainWindow):
         self.console_output.clear()
 
     def _copy_console(self):
-        QApplication.clipboard().setText(self.console_output.toPlainText())
+        text = self.console_output.toPlainText()
+        QApplication.clipboard().setText(text)
+        if not text.strip():
+            self._show_toast("Console is empty", timeout_ms=2000, level="warning")
+        else:
+            line_count = text.count("\n") + 1
+            self._show_toast(
+                f"Copied {line_count} line(s) of console output to clipboard",
+                timeout_ms=2500,
+                level="success",
+            )
 
     @staticmethod
     def _format_duration(total_seconds: int) -> str:
@@ -2338,6 +2393,12 @@ class DeepSliceMainWindow(QMainWindow):
         self.outlier_sigma_spin.setSingleStep(0.1)
         self.outlier_sigma_spin.setValue(float(self.state.outlier_sigma_threshold))
         self.outlier_sigma_spin.setSuffix(" sigma")
+        self.outlier_sigma_spin.setToolTip(
+            "How aggressively to flag outlier sections relative to the linearity fit.\n"
+            "Lower (1.0-1.5): stricter, more sections marked as outliers.\n"
+            "Higher (2.5-3.0): lenient, only severe outliers are flagged.\n"
+            "Default 1.5 is a good starting point for typical histology data."
+        )
         self.outlier_sigma_spin.valueChanged.connect(self._on_quality_controls_changed)
 
         self.confidence_high_spin = QDoubleSpinBox()
@@ -2345,6 +2406,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.confidence_high_spin.setDecimals(2)
         self.confidence_high_spin.setSingleStep(0.01)
         self.confidence_high_spin.setValue(float(self.state.confidence_high_threshold))
+        self.confidence_high_spin.setToolTip(
+            "Threshold above which a section is shown as 'high confidence' (green).\n"
+            "Higher values are stricter - fewer sections will reach this bucket.\n"
+            "Must be above the medium threshold."
+        )
         self.confidence_high_spin.valueChanged.connect(self._on_quality_controls_changed)
 
         self.confidence_medium_spin = QDoubleSpinBox()
@@ -2352,6 +2418,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.confidence_medium_spin.setDecimals(2)
         self.confidence_medium_spin.setSingleStep(0.01)
         self.confidence_medium_spin.setValue(float(self.state.confidence_medium_threshold))
+        self.confidence_medium_spin.setToolTip(
+            "Threshold above which a section is shown as 'medium confidence' (yellow).\n"
+            "Sections below this appear as 'low confidence' (red) and are worth a manual review.\n"
+            "Must be below the high threshold."
+        )
         self.confidence_medium_spin.valueChanged.connect(self._on_quality_controls_changed)
 
         self.inference_batch_spin = QSpinBox()
@@ -2524,6 +2595,7 @@ class DeepSliceMainWindow(QMainWindow):
         prediction_view_split.addWidget(self.prediction_atlas_viewer)
         prediction_view_split.setStretchFactor(0, 1)
         prediction_view_split.setStretchFactor(1, 3)
+        self.prediction_view_split = prediction_view_split
         right_layout.addWidget(prediction_view_split, stretch=1)
 
         split.addWidget(left)
@@ -2897,12 +2969,17 @@ class DeepSliceMainWindow(QMainWindow):
         self.output_dir_edit = QLineEdit()
         self.output_dir_edit.setText(self._get_persisted_export_path())
         self.output_dir_edit.textChanged.connect(self._persist_export_path)
+        self.output_dir_edit.textChanged.connect(self._validate_output_directory)
         self.browse_output_dir_button = QPushButton("Browse")
         self.browse_output_dir_button.clicked.connect(self._browse_output_directory)
         output_dir_row.addWidget(self.output_dir_edit)
         output_dir_row.addWidget(self.browse_output_dir_button)
 
         self.output_basename_edit = QLineEdit("DeepSliceResults")
+        self.output_basename_edit.setToolTip(
+            "Base filename for JSON/XML/CSV outputs. Avoid the characters: < > : \" / \\ | ? *"
+        )
+        self.output_basename_edit.textChanged.connect(self._validate_output_basename)
         self.output_format_combo = QComboBox()
         self.output_format_combo.addItems(
             [
@@ -3019,6 +3096,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         root = QVBoxLayout(page)
         root.addWidget(split)
+        self._validate_output_directory()
+        self._validate_output_basename()
         return page
 
     def _apply_theme(self):
@@ -3770,7 +3849,12 @@ class DeepSliceMainWindow(QMainWindow):
             self.cancel_alignment_button.setEnabled(True)
         self.prediction_progress_bar.setRange(0, max(self._prediction_total * self._phase_total, 1))
         self.prediction_progress_bar.setValue(0)
-        self.console_output.clear()
+        # Keep prior log lines so users can correlate failures across runs;
+        # mark the new run with a clear separator instead of wiping the console.
+        if self.console_output.toPlainText().strip():
+            self._append_console_log(
+                "\n" + "-" * 60 + f"\n[NEW RUN] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n" + "-" * 60
+            )
         self.prediction_phase_label.setText(f"Phase 0/{self._phase_total}: initializing")
         self.prediction_progress_label.setText("Progress: 0 / 0")
         self.prediction_elapsed_label.setText("Elapsed: 00:00")
@@ -5556,6 +5640,41 @@ class DeepSliceMainWindow(QMainWindow):
     def _persist_export_path(self, path: str):
         settings = QSettings("DeepSlice", "GUI")
         settings.setValue("export_directory", path)
+
+    _INVALID_OUTPUT_STYLE = "QLineEdit { border: 2px solid #E05E6E; }"
+
+    def _validate_output_directory(self, *_args):
+        if not hasattr(self, "output_dir_edit"):
+            return
+        path = self.output_dir_edit.text().strip()
+        if not path:
+            self.output_dir_edit.setStyleSheet("")
+            self.output_dir_edit.setToolTip("Choose a writable folder before exporting.")
+            return
+        if os.path.isdir(path) and os.access(path, os.W_OK):
+            self.output_dir_edit.setStyleSheet("")
+            self.output_dir_edit.setToolTip(f"OK: {path} is writable.")
+        else:
+            self.output_dir_edit.setStyleSheet(self._INVALID_OUTPUT_STYLE)
+            self.output_dir_edit.setToolTip(
+                "This folder does not exist or is not writable. "
+                "Pick a different folder before exporting."
+            )
+
+    def _validate_output_basename(self, *_args):
+        if not hasattr(self, "output_basename_edit"):
+            return
+        text = self.output_basename_edit.text()
+        if text and re.search(r'[<>:"/\\|?*]', text):
+            self.output_basename_edit.setStyleSheet(self._INVALID_OUTPUT_STYLE)
+            self.output_basename_edit.setToolTip(
+                "Filename contains characters that are illegal on Windows: < > : \" / \\ | ? *"
+            )
+        else:
+            self.output_basename_edit.setStyleSheet("")
+            self.output_basename_edit.setToolTip(
+                "Base filename for JSON/XML/CSV outputs. Avoid the characters: < > : \" / \\ | ? *"
+            )
 
     def _get_persisted_quicknii_path(self) -> str:
         settings = QSettings("DeepSlice", "GUI")
