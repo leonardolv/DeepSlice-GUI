@@ -56,6 +56,13 @@ class DeepSliceAppState:
             self.model = None
             self._atlas_cache = {}
 
+    def supports_ensemble(self, species: Optional[str] = None) -> bool:
+        """Return True if the given species has ensemble inference enabled in config."""
+        if species is None:
+            species = self.species
+        status = (self._config or {}).get("ensemble_status", {})
+        return bool(status.get(species, False))
+
     def set_quality_controls(
         self,
         outlier_sigma: float,
