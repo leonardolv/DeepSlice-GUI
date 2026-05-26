@@ -10,14 +10,17 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import traceback
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
-# In-memory accumulator, queryable by tooling/agents.
+# In-memory accumulator, queryable by tooling/agents. The lock guards mutation
+# from worker threads invoked by the GUI runtime.
 ISSUES: list[dict] = []
+_ISSUES_LOCK = threading.Lock()
 
 _logger = logging.getLogger("DeepSlice.diagnostics")
 
@@ -178,7 +181,8 @@ def log_issue(
         ),
     }
 
-    ISSUES.append(event)
+    with _ISSUES_LOCK:
+        ISSUES.append(event)
     level = getattr(logging, severity, logging.INFO)
     _logger.log(level, "[%s] %s | %s", rule_id, severity, description)
     return event
@@ -199,7 +203,8 @@ def flush_log(output_path: Optional[str] = None) -> str:
 
 def clear_log() -> None:
     """Clear all accumulated in-memory issues."""
-    ISSUES.clear()
+    with _ISSUES_LOCK:
+        ISSUES.clear()
 
 
 def get_issues_by_severity(severity: str) -> list[dict]:

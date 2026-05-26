@@ -1,7 +1,11 @@
+import logging
+
 import numpy as np
 from .plane_alignment_functions import plane_alignment
 from .depth_estimation import calculate_brain_center_depths
 from ..metadata import metadata_loader
+
+_logger = logging.getLogger(__name__)
 
 
 def calculate_brain_center_coordinate(section, atlas_shape, axis):
@@ -116,7 +120,7 @@ def propagate_angles(df, method, species):
     DV_angle, ML_angle = get_mean_angle(
         DV_angle_list, ML_angle_list, method, depths, species
     )
-    print(f"DV angle: {DV_angle}\nML angle: {ML_angle}")
+    _logger.info("Propagated angles: DV=%s ML=%s", DV_angle, ML_angle)
     # adjust the angles for each section in the dataset
     df = set_angles(df, DV_angle, ML_angle)
     return df

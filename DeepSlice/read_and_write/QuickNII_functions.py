@@ -1,10 +1,13 @@
 import io
 import json
+import logging
 import re
 import xml.etree.ElementTree as ET
 
 import numpy as np
 import pandas as pd
+
+_logger = logging.getLogger(__name__)
 
 
 def write_QuickNII_XML(df: pd.DataFrame, filename: str, aligner: str) -> None:
@@ -43,7 +46,7 @@ def write_QuickNII_XML(df: pd.DataFrame, filename: str, aligner: str) -> None:
             "nr": df_temp.nr,
         }
     )
-    print(f"saving to {filename}.xml")
+    _logger.info("Saving QuickNII XML to %s.xml", filename)
 
     first_nr = str(out_df["nr"].iloc[0]) if len(out_df) else ""
     last_nr = str(out_df["nr"].iloc[-1]) if len(out_df) else ""
@@ -156,7 +159,7 @@ def write_QUINT_JSON(
         "aligner": aligner,
         "slices": alignment_metadata,
     }
-    print(f"saving to {filename}.json")
+    _logger.info("Saving QUINT JSON to %s.json", filename)
     with open(filename + ".json", "w") as f:
         json.dump(QUINT_json, f)
 

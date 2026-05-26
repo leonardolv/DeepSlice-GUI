@@ -29,6 +29,9 @@ class DSModel:
         :param species: the species of the brain to be processed, must be one of "mouse", "rat"
         :type species: str
         """
+        if species is None or str(species).strip() == "":
+            raise ValueError("species must be a non-empty string")
+        species = str(species).strip().lower()
         self.config, self.metadata_path = metadata_loader.load_config()
         valid_species = set(self.config.get("target_volumes", {}).keys())
         if species not in valid_species:
@@ -138,6 +141,13 @@ class DSModel:
         image_list=None,
         use_secondary_model=False,
         batch_size: int = 16,
+        preprocessing_options: dict = None,
+        tta: bool = False,
+        multi_scale: bool = False,
+        fast_fp16: bool = False,
+        section_dropout_passes: int = 0,
+        confidence_weighted_ensemble: bool = True,
+        ensemble_consistency_threshold: float = 0.20,
         progress_callback=None,
         log_callback=None,
         cancel_check=None,
@@ -158,6 +168,10 @@ class DSModel:
 
         if batch_size <= 0:
             raise ValueError("batch_size must be a positive integer")
+        if batch_size > 512:
+            raise ValueError("batch_size must not exceed 512 to avoid out-of-memory errors")
+        if not 0.0 < ensemble_consistency_threshold < 1.0:
+            raise ValueError("ensemble_consistency_threshold must be in (0, 1)")
 
         # We set this to false as predict is the entry point for a new brain and therefore we need to reset all values which may persist from a previous animal.
         self.bad_sections_present = False
@@ -169,6 +183,7 @@ class DSModel:
             image_generator, width, height = neural_network.load_images_from_list(
                 image_list,
                 batch_size=batch_size,
+                preprocessing_options=preprocessing_options,
             )
             if image_directory:
                 self._log(
@@ -179,6 +194,7 @@ class DSModel:
             image_generator, width, height = neural_network.load_images_from_path(
                 image_directory,
                 batch_size=batch_size,
+                preprocessing_options=preprocessing_options,
             )
         primary_weights = metadata_loader.get_data_path(
             self.config["weight_file_paths"][self.species]["primary"],
@@ -231,6 +247,12 @@ class DSModel:
                 progress_callback=progress_callback,
                 log_callback=log_callback,
                 cancel_check=cancel_check,
+                tta=tta,
+                multi_scale=multi_scale,
+                fast_fp16=fast_fp16,
+                section_dropout_passes=section_dropout_passes,
+                confidence_weighted_ensemble=confidence_weighted_ensemble,
+                ensemble_consistency_threshold=ensemble_consistency_threshold,
             )
         else:
             predictions = neural_network.predictions_util(
@@ -243,6 +265,12 @@ class DSModel:
                 progress_callback=progress_callback,
                 log_callback=log_callback,
                 cancel_check=cancel_check,
+                tta=tta,
+                multi_scale=multi_scale,
+                fast_fp16=fast_fp16,
+                section_dropout_passes=section_dropout_passes,
+                confidence_weighted_ensemble=confidence_weighted_ensemble,
+                ensemble_consistency_threshold=ensemble_consistency_threshold,
             )
 
         self._validate_prediction_coordinates(predictions)
@@ -258,7 +286,9 @@ class DSModel:
             predictions["nr"] = predictions["nr"].astype(int)
             predictions = predictions.sort_values(by="nr").reset_index(drop=True)
         else:
-            ###this is just for coronal, change later
+            # Without section numbers, sort by anterior-posterior depth (oy).
+            # This is correct for coronal series; sagittal/horizontal may need
+            # a different axis once orientation detection is implemented.
             predictions = predictions.sort_values(by="oy").reset_index(drop=True)
 
         predictions = self._append_vector_diagnostics(predictions, callback=log_callback)
@@ -326,11 +356,14 @@ class DSModel:
             raise ValueError("ML angle must be within [-90, 90] degrees")
         if not -90 <= DV <= 90:
             raise ValueError("DV angle must be within [-90, 90] degrees")
-        self.predictions = angle_methods.set_angles(self.predictions, DV, ML)
+        self.predictions = angle_methods.set_angles(self.predictions, DV_angle=DV, ML_angle=ML)
 
-    def propagate_angles(self, method="weighted_mean"):
+    def propagate_angles(self, method="weighted_mean") -> bool:
         """
         Calculates the average Mediolateral and Dorsoventral angles for all sections.
+
+        :return: True if the iterative solver converged, False if it reached max_iterations
+        :rtype: bool
         """
         self._ensure_predictions_available("propagate_angles()")
         coordinate_columns = ["ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz"]
@@ -350,7 +383,7 @@ class DSModel:
             if np.allclose(
                 updated_coordinates, previous_coordinates, atol=tolerance, rtol=0
             ):
-                break
+                return True
         else:
             log_issue(
                 "DS-008",
@@ -370,6 +403,7 @@ class DSModel:
             self._log(
                 "WARNING: propagate_angles() did not converge; using best available estimate"
             )
+            return False
 
     def load_QUINT(self, filename):
         """

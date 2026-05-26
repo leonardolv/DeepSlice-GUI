@@ -1,0 +1,16 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include VERSION
+recursive-include DeepSlice/metadata *.json *.txt
+prune docs/_build
+prune .venv
+prune .venv312
+prune TEST IMAGES
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.nii
+global-exclude *.nii.gz
+global-exclude *.h5
+global-exclude *.hdf5

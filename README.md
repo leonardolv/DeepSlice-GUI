@@ -38,6 +38,26 @@ or:
 python -m DeepSlice.gui.app
 ```
 
+Training workflow CLI:
+
+```bash
+deepslice-train --images ./my_dataset/images --output-dir ./training_run --dry-run
+```
+
+Optional supervised baseline fitting (requires label file with columns filename/path + ox..vz):
+
+```bash
+deepslice-train --images ./my_dataset/images --labels ./my_dataset/labels.csv --output-dir ./training_run --epochs 5 --trainer baseline-cnn --batch-size 8
+```
+
+Optional Xception fine-tuning (same labels format):
+
+```bash
+deepslice-train --images ./my_dataset/images --labels ./my_dataset/labels.csv --output-dir ./training_run --epochs 5 --trainer xception-finetune --freeze-base-epochs 1 --finetune-learning-rate 1e-4
+```
+
+The command always writes grouped split and run metadata manifests, and when `--epochs > 0` it trains the selected trainer and saves model/history artifacts.
+
 GUI workflow stages:
 
 1. Ingestion: drag-and-drop folders/files, filename index parsing, pre-flight validation.

@@ -1,22 +1,21 @@
 from setuptools import find_packages, setup
 from pathlib import Path
-import subprocess, os
+import os
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
-# if GH action hasn’t replaced it, grab the latest tag
-version = os.getenv("DEEPSLICE_VERSION", "{{VERSION_PLACEHOLDER}}")
-if version.startswith("{{"):
-    try:
-        version = (
-            subprocess
-            .check_output(["git", "describe", "--tags", "--abbrev=0"], cwd=this_directory)
-            .decode()
-            .strip()
-        )
-    except Exception:
-        version = "0.0.0"
+# Version resolution order:
+#   1. DEEPSLICE_VERSION environment variable (CI tag injection)
+#   2. VERSION file at repo root
+#   3. Fallback to 0.0.0+local (never call git at install time; breaks inside sdists)
+version = os.getenv("DEEPSLICE_VERSION", "").strip()
+if not version or version.startswith("{{"):
+    version_file = this_directory / "VERSION"
+    if version_file.exists():
+        version = version_file.read_text(encoding="utf-8").strip() or "0.0.0+local"
+    else:
+        version = "0.0.0+local"
 
 setup(
     name="DeepSlice",
@@ -45,25 +44,30 @@ setup(
         "pandas>=1.5",
         "scikit-image>=0.22",
         "scipy>=1.10",
-        "tensorflow>=2.13,<3.0",
+        # Keras 3 (TF 2.16+) changed callback APIs we depend on; pin until tested.
+        "tensorflow>=2.13,<2.16",
         "h5py>=3.9",
         "requests>=2.31",
         "protobuf>=4.21",
         "lxml>=4.9",
         "Pillow>=10.0",
-        "nibabel>=5.2",
         "matplotlib>=3.8",
         "PySide6>=6.6",
-        "reportlab>=4.0",
     ],
     extras_require={
+        "atlas": ["nibabel>=5.2"],
+        "pdf": ["reportlab>=4.0"],
         "dev": [
             "pytest>=8.0",
-        ]
+            "pytest-qt>=4.4",
+            "coverage>=7.4",
+        ],
+        "all": ["nibabel>=5.2", "reportlab>=4.0"],
     },
     entry_points={
         "console_scripts": [
             "deepslice-gui=DeepSlice.gui.app:main",
+            "deepslice-train=DeepSlice.training.train_runner:main",
         ]
     },
     classifiers=[

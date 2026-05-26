@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
+import threading
 import traceback
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, Tuple
@@ -78,6 +80,21 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 from PIL import Image
+
+
+def _open_path_in_os(path: str) -> None:
+    """Open a file/folder in the OS-default handler on Windows/macOS/Linux.
+
+    Centralized so we don't repeat platform branching at every call site, and
+    so future tweaks (e.g. logging failures) land in one place.
+    """
+    if os.name == "nt":
+        os.startfile(path)  # type: ignore[attr-defined]
+        return
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", path])
+        return
+    subprocess.Popen(["xdg-open", path])
 
 from ..error_auto_fix import ErrorAutoFixer
 from ..error_logging import (
@@ -189,8 +206,11 @@ class ToastOverlay(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("ToastOverlay")
-        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        # Allow clicks so users can dismiss long messages early instead of
+        # waiting for the timer to expire. Setting WA_TransparentForMouseEvents
+        # blocks that, so leave it off.
         self.setVisible(False)
+        self.setCursor(Qt.PointingHandCursor)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(12, 8, 12, 8)
@@ -260,6 +280,12 @@ class ToastOverlay(QFrame):
         self._fade_in.stop()
         self._fade_out.stop()
         self._fade_out.start()
+
+    def mousePressEvent(self, event):
+        # Clicking the toast dismisses it immediately.
+        self._dismiss_timer.stop()
+        self._start_fade_out()
+        event.accept()
 
     def _reposition(self):
         parent = self.parentWidget()
@@ -522,6 +548,10 @@ class SliceGraphicsView(QGraphicsView):
         if self._zoom < -5:
             self._zoom = -5
             return
+        # Clamp zoom-in so users can't escape the visible canvas.
+        if self._zoom > 20:
+            self._zoom = 20
+            return
         self.scale(zoom_factor, zoom_factor)
         self._emit_transform_changed()
 
@@ -664,7 +694,10 @@ class DeepSliceMainWindow(QMainWindow):
         self._apply_startup_preferences_to_state()
         self._session_base_text = "Session: New"
         self.thread_pool = QThreadPool.globalInstance()
-        self.active_workers = []
+        # Use a set keyed by id() so the same worker can't be double-tracked
+        # if both finished and error fire (shouldn't happen but defends against
+        # signal-storm bugs).
+        self.active_workers: Dict[int, FunctionWorker] = {}
         self.last_export_basepath: Optional[str] = None
         self._linearity_payload = None
         self._atlas_request_token = 0
@@ -680,7 +713,7 @@ class DeepSliceMainWindow(QMainWindow):
         self._prediction_clock_timer = QTimer(self)
         self._prediction_clock_timer.setInterval(1000)
         self._prediction_clock_timer.timeout.connect(self._update_prediction_timing)
-        self._prediction_cancel_requested = False
+        self._prediction_cancel_event = threading.Event()
         self._prediction_total = 0
         self._prediction_completed = 0
         self._prediction_phase = "idle"
@@ -724,7 +757,9 @@ class DeepSliceMainWindow(QMainWindow):
         try:
             callback(message, int(np.clip(percent, 0, 100)))
         except Exception:
-            pass
+            # The splash screen is a best-effort indicator. Failing it should
+            # never abort startup; log so it isn't silently broken in CI.
+            self._logger.debug("Startup progress callback failed", exc_info=True)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -747,7 +782,7 @@ class DeepSliceMainWindow(QMainWindow):
         super().dropEvent(event)
 
     def _track_worker(self, worker: FunctionWorker):
-        self.active_workers.append(worker)
+        self.active_workers[id(worker)] = worker
         self._set_global_busy(True)
         worker.signals.finished.connect(
             lambda _result, tracked_worker=worker: self._release_worker(tracked_worker)
@@ -757,10 +792,7 @@ class DeepSliceMainWindow(QMainWindow):
         )
 
     def _release_worker(self, worker: FunctionWorker):
-        try:
-            self.active_workers.remove(worker)
-        except ValueError:
-            pass
+        self.active_workers.pop(id(worker), None)
         if len(self.active_workers) == 0:
             self._set_global_busy(False)
 
@@ -870,6 +902,9 @@ class DeepSliceMainWindow(QMainWindow):
             "direction_guide_button": "SP_MessageBoxInformation",
             "ensemble_help_button": "SP_MessageBoxInformation",
             "validate_configuration_button": "SP_DialogApplyButton",
+            "preview_training_split_button": "SP_FileDialogDetailedView",
+            "save_training_split_button": "SP_DialogSaveButton",
+            "save_training_metadata_button": "SP_FileDialogInfoView",
 
             "run_alignment_button": "SP_MediaPlay",
             "cancel_alignment_button": "SP_BrowserStop",
@@ -963,6 +998,33 @@ class DeepSliceMainWindow(QMainWindow):
             "confidence_high_spin": "Confidence score threshold for the High confidence bucket.",
             "confidence_medium_spin": "Confidence score threshold for the Medium confidence bucket.",
             "inference_batch_spin": "Inference batch size per model pass. Higher values are faster but use more memory.",
+            "quality_gate_checkbox": "Run quick image-quality checks (resolution, focus, exposure) before prediction and warn on risky inputs.",
+            "tissue_crop_checkbox": "Crop each image to its tissue region before resizing, reducing background influence on the model.",
+            "clahe_checkbox": "Apply adaptive histogram equalization (CLAHE) for low-contrast sections.",
+            "stain_norm_combo": "Select stain normalization method for handling cross-lab contrast/color shifts.",
+            "preserve_color_checkbox": "Keep color channels through preprocessing instead of converting to grayscale-equivalent inputs.",
+            "percentile_norm_checkbox": "Rescale intensities using robust percentile clipping to reduce outlier pixels.",
+            "bilateral_checkbox": "Apply edge-preserving denoise before model inference.",
+            "gamma_spin": "Gamma correction for brightness balancing. 1.0 keeps original brightness response.",
+            "min_resolution_spin": "Minimum allowed width/height in pixels for quality-gate checks.",
+            "blur_threshold_spin": "Minimum Laplacian variance used by quality gate to flag out-of-focus sections.",
+            "tta_checkbox": "Enable test-time augmentation (flip variants) and average predictions for robustness.",
+            "multiscale_checkbox": "Run inference at multiple scales and average outputs.",
+            "fast_fp16_checkbox": "Use float16 input batches for faster throughput on supported hardware.",
+            "section_dropout_spin": "Number of random section-dropout inference passes to estimate stability.",
+            "conf_weighted_ensemble_checkbox": "Weight ensemble models by per-section trend consistency instead of simple mean.",
+            "training_group_mode_combo": "Select how images are grouped before train/validation/test split generation.",
+            "training_seed_spin": "Random seed used for deterministic grouped split generation and reproducible manifests.",
+            "training_train_fraction_spin": "Target fraction for the training split (group-aware; final counts may vary slightly).",
+            "training_val_fraction_spin": "Target fraction for validation split (remaining samples become test split).",
+            "training_patience_spin": "Default ReduceLROnPlateau/EarlyStopping patience value stored in training metadata.",
+            "training_lr_factor_spin": "Learning-rate decay factor to record in metadata for future training runs.",
+            "training_min_lr_spin": "Minimum learning rate to record in metadata for scheduler floor.",
+            "training_mixed_precision_checkbox": "Store whether mixed precision training should be enabled in downstream training scripts.",
+            "preview_training_split_button": "Compute and display grouped split statistics without writing files.",
+            "save_training_split_button": "Write a JSON manifest listing train/val/test image paths using current split settings.",
+            "save_training_metadata_button": "Write a training-run metadata JSON with preprocessing and optimization settings.",
+            "training_split_summary_label": "Shows latest grouped split counts and leakage status.",
             "validate_configuration_button": "Run preflight checks and list blocking errors/warnings before prediction starts.",
             "tech_toggle": "Expand/collapse technical notes describing coordinate vectors, angle propagation, and thickness estimation.",
 
@@ -988,6 +1050,10 @@ class DeepSliceMainWindow(QMainWindow):
             "apply_bad_sections_button": "Commit checked slices as bad_section flags in predictions.",
             "detect_outliers_button": "Auto-detect likely outlier sections from linearity residuals and confidence metrics.",
             "reset_flags_button": "Clear all bad-section checkboxes in the current filtered view.",
+            "auto_flag_low_conf_button": "Automatically flag low-confidence and high-risk slices for review.",
+            "interpolate_bad_depth_button": "Linearly interpolate AP depth for flagged slices using neighboring trusted slices.",
+            "toggle_current_flag_button": "Toggle bad-section flag for the currently selected slice.",
+            "curation_queue_label": "Shows how many slices are currently prioritized in the review queue.",
             "normalize_angles_button": "Propagate and normalize DV/ML angles using Gaussian-weighted center-depth averaging.",
             "enforce_order_button": "Reassign Oy depths to follow detected section index order while preserving spacing trends.",
             "enforce_spacing_button": "Space sections evenly according to index and selected section thickness.",
@@ -1085,7 +1151,18 @@ class DeepSliceMainWindow(QMainWindow):
             QPlainTextEdit,
         )
 
-        for widget in self.findChildren(interactive_types):
+        # Some PySide6 builds reject tuple arguments for QObject.findChildren.
+        # Iterate all QWidget children, then filter by our interactive types.
+        seen = set()
+        for widget in self.findChildren(QWidget):
+            if not isinstance(widget, interactive_types):
+                continue
+
+            widget_id = id(widget)
+            if widget_id in seen:
+                continue
+            seen.add(widget_id)
+
             if widget.focusPolicy() == Qt.NoFocus:
                 continue
 
@@ -1295,6 +1372,124 @@ class DeepSliceMainWindow(QMainWindow):
         except Exception:
             pass
 
+        self.state.quality_gate_enabled = self._setting_to_bool(
+            settings.value("quality_gate_enabled", self.state.quality_gate_enabled)
+        )
+        self.state.tissue_crop_enabled = self._setting_to_bool(
+            settings.value("tissue_crop_enabled", self.state.tissue_crop_enabled)
+        )
+        self.state.clahe_enabled = self._setting_to_bool(
+            settings.value("clahe_enabled", self.state.clahe_enabled)
+        )
+        self.state.stain_normalization_mode = str(
+            settings.value("stain_normalization_mode", self.state.stain_normalization_mode)
+        ).strip().lower()
+        self.state.preserve_color_enabled = self._setting_to_bool(
+            settings.value("preserve_color_enabled", self.state.preserve_color_enabled)
+        )
+        self.state.percentile_normalization_enabled = self._setting_to_bool(
+            settings.value("percentile_normalization_enabled", self.state.percentile_normalization_enabled)
+        )
+        self.state.bilateral_denoise_enabled = self._setting_to_bool(
+            settings.value("bilateral_denoise_enabled", self.state.bilateral_denoise_enabled)
+        )
+        try:
+            self.state.gamma_correction = float(
+                np.clip(float(settings.value("gamma_correction", self.state.gamma_correction)), 0.5, 2.0)
+            )
+        except Exception:
+            pass
+        try:
+            self.state.min_resolution_px = int(
+                max(64, int(settings.value("min_resolution_px", self.state.min_resolution_px)))
+            )
+        except Exception:
+            pass
+        try:
+            self.state.blur_variance_threshold = float(
+                settings.value("blur_variance_threshold", self.state.blur_variance_threshold)
+            )
+        except Exception:
+            pass
+
+        self.state.tta_enabled = self._setting_to_bool(
+            settings.value("tta_enabled", self.state.tta_enabled)
+        )
+        self.state.multiscale_enabled = self._setting_to_bool(
+            settings.value("multiscale_enabled", self.state.multiscale_enabled)
+        )
+        self.state.fast_fp16_enabled = self._setting_to_bool(
+            settings.value("fast_fp16_enabled", self.state.fast_fp16_enabled)
+        )
+        try:
+            self.state.section_dropout_passes = int(
+                max(0, int(settings.value("section_dropout_passes", self.state.section_dropout_passes)))
+            )
+        except Exception:
+            pass
+        self.state.confidence_weighted_ensemble = self._setting_to_bool(
+            settings.value("confidence_weighted_ensemble", self.state.confidence_weighted_ensemble)
+        )
+
+        self.state.training_group_mode = str(
+            settings.value("training_group_mode", self.state.training_group_mode)
+        ).strip().lower()
+        try:
+            self.state.training_seed = int(max(0, int(settings.value("training_seed", self.state.training_seed))))
+        except Exception:
+            pass
+        try:
+            self.state.training_train_fraction = float(
+                np.clip(
+                    float(settings.value("training_train_fraction", self.state.training_train_fraction)),
+                    0.50,
+                    0.90,
+                )
+            )
+        except Exception:
+            pass
+        try:
+            self.state.training_val_fraction = float(
+                np.clip(
+                    float(settings.value("training_val_fraction", self.state.training_val_fraction)),
+                    0.05,
+                    0.40,
+                )
+            )
+        except Exception:
+            pass
+        if self.state.training_train_fraction + self.state.training_val_fraction >= 0.99:
+            self.state.training_val_fraction = max(0.05, 0.98 - self.state.training_train_fraction)
+        try:
+            self.state.training_patience = int(
+                max(1, int(settings.value("training_patience", self.state.training_patience)))
+            )
+        except Exception:
+            pass
+        try:
+            self.state.training_lr_factor = float(
+                np.clip(
+                    float(settings.value("training_lr_factor", self.state.training_lr_factor)),
+                    0.05,
+                    0.95,
+                )
+            )
+        except Exception:
+            pass
+        try:
+            self.state.training_min_lr = float(
+                np.clip(
+                    float(settings.value("training_min_lr", self.state.training_min_lr)),
+                    1e-8,
+                    1e-3,
+                )
+            )
+        except Exception:
+            pass
+        self.state.training_use_mixed_precision = self._setting_to_bool(
+            settings.value("training_use_mixed_precision", self.state.training_use_mixed_precision)
+        )
+
     @staticmethod
     def _coerce_int_list(value) -> Optional[List[int]]:
         if value is None:
@@ -1494,6 +1689,30 @@ class DeepSliceMainWindow(QMainWindow):
         redo_shortcut.activated.connect(self._redo)
         self._shortcuts.append(redo_shortcut)
 
+        curation_next_shortcut = QShortcut(QKeySequence("J"), self)
+        curation_next_shortcut.activated.connect(lambda: self._step_curation_slice(1))
+        self._shortcuts.append(curation_next_shortcut)
+
+        curation_prev_shortcut = QShortcut(QKeySequence("K"), self)
+        curation_prev_shortcut.activated.connect(lambda: self._step_curation_slice(-1))
+        self._shortcuts.append(curation_prev_shortcut)
+
+        toggle_flag_shortcut = QShortcut(QKeySequence("F"), self)
+        toggle_flag_shortcut.activated.connect(self._toggle_current_bad_flag)
+        self._shortcuts.append(toggle_flag_shortcut)
+
+        set_anchor_shortcut = QShortcut(QKeySequence("A"), self)
+        set_anchor_shortcut.activated.connect(self._set_anchor_for_current_slice)
+        self._shortcuts.append(set_anchor_shortcut)
+
+        remove_anchor_shortcut = QShortcut(QKeySequence("D"), self)
+        remove_anchor_shortcut.activated.connect(self._remove_anchor_for_current_slice)
+        self._shortcuts.append(remove_anchor_shortcut)
+
+        apply_flags_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
+        apply_flags_shortcut.activated.connect(self._apply_bad_section_flags)
+        self._shortcuts.append(apply_flags_shortcut)
+
     def _show_shortcuts_help(self):
         text = (
             "Keyboard Shortcuts:\n\n"
@@ -1504,6 +1723,10 @@ class DeepSliceMainWindow(QMainWindow):
             "Ctrl+E : Jump to Export page\n"
             "Ctrl+Z : Undo curation changes\n"
             "Ctrl+Y : Redo curation changes\n"
+            "J / K : Next / previous slice in curation\n"
+            "F : Toggle bad-section flag for current slice\n"
+            "A / D : Set or remove anchor for current slice\n"
+            "Ctrl+Enter : Apply bad-section flags\n"
             "Ctrl+/ or Ctrl+? : Show shortcuts\n"
             "F1 : Open page-specific help"
         )
@@ -1785,10 +2008,7 @@ class DeepSliceMainWindow(QMainWindow):
             return
 
         try:
-            if os.name == "nt":
-                os.startfile(self.error_log_path)  # type: ignore[attr-defined]
-            else:
-                subprocess.Popen(["xdg-open", self.error_log_path])
+            _open_path_in_os(self.error_log_path)
         except Exception as exc:
             self._show_logged_exception(
                 title="Open Error Log",
@@ -2136,6 +2356,13 @@ class DeepSliceMainWindow(QMainWindow):
         elif self.secondary_model_checkbox.isChecked():
             per_slice *= 1.1
 
+        if hasattr(self, "tta_checkbox") and self.tta_checkbox.isChecked():
+            per_slice *= 1.9
+        if hasattr(self, "multiscale_checkbox") and self.multiscale_checkbox.isChecked():
+            per_slice *= 1.7
+        if hasattr(self, "section_dropout_spin"):
+            per_slice *= 1.0 + (0.15 * max(int(self.section_dropout_spin.value()), 0))
+
         batch_size = int(getattr(self, "inference_batch_spin", None).value() if hasattr(self, "inference_batch_spin") else 8)
         batch_scale = 8.0 / float(max(batch_size, 1))
         per_slice *= np.clip(batch_scale, 0.35, 2.0)
@@ -2347,6 +2574,190 @@ class DeepSliceMainWindow(QMainWindow):
         quality_layout.addRow("Inference batch size", self.inference_batch_spin)
         left_layout.addWidget(quality_group)
 
+        preprocessing_group = QGroupBox("Preprocessing and Inference")
+        preprocessing_layout = QFormLayout(preprocessing_group)
+
+        self.quality_gate_checkbox = QCheckBox("Enable input quality gate")
+        self.quality_gate_checkbox.setChecked(bool(self.state.quality_gate_enabled))
+        self.quality_gate_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.tissue_crop_checkbox = QCheckBox("Tissue ROI crop")
+        self.tissue_crop_checkbox.setChecked(bool(self.state.tissue_crop_enabled))
+        self.tissue_crop_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.clahe_checkbox = QCheckBox("CLAHE contrast normalization")
+        self.clahe_checkbox.setChecked(bool(self.state.clahe_enabled))
+        self.clahe_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.stain_norm_combo = QComboBox()
+        self.stain_norm_combo.addItem("None", "none")
+        self.stain_norm_combo.addItem("Reinhard", "reinhard")
+        stain_idx = 1 if str(self.state.stain_normalization_mode).strip().lower() == "reinhard" else 0
+        self.stain_norm_combo.setCurrentIndex(stain_idx)
+        self.stain_norm_combo.currentIndexChanged.connect(self._on_preprocessing_controls_changed)
+
+        self.preserve_color_checkbox = QCheckBox("Preserve color channels")
+        self.preserve_color_checkbox.setChecked(bool(self.state.preserve_color_enabled))
+        self.preserve_color_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.percentile_norm_checkbox = QCheckBox("Percentile intensity normalization")
+        self.percentile_norm_checkbox.setChecked(bool(self.state.percentile_normalization_enabled))
+        self.percentile_norm_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.bilateral_checkbox = QCheckBox("Bilateral denoise")
+        self.bilateral_checkbox.setChecked(bool(self.state.bilateral_denoise_enabled))
+        self.bilateral_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.gamma_spin = QDoubleSpinBox()
+        self.gamma_spin.setRange(0.50, 2.00)
+        self.gamma_spin.setDecimals(2)
+        self.gamma_spin.setSingleStep(0.05)
+        self.gamma_spin.setValue(float(self.state.gamma_correction))
+        self.gamma_spin.valueChanged.connect(self._on_preprocessing_controls_changed)
+
+        self.min_resolution_spin = QSpinBox()
+        self.min_resolution_spin.setRange(64, 8192)
+        self.min_resolution_spin.setSingleStep(32)
+        self.min_resolution_spin.setValue(int(self.state.min_resolution_px))
+        self.min_resolution_spin.valueChanged.connect(self._on_preprocessing_controls_changed)
+
+        self.blur_threshold_spin = QDoubleSpinBox()
+        self.blur_threshold_spin.setRange(0.00001, 0.02)
+        self.blur_threshold_spin.setDecimals(5)
+        self.blur_threshold_spin.setSingleStep(0.00005)
+        self.blur_threshold_spin.setValue(float(self.state.blur_variance_threshold))
+        self.blur_threshold_spin.valueChanged.connect(self._on_preprocessing_controls_changed)
+
+        self.tta_checkbox = QCheckBox("Test-time augmentation (flip)")
+        self.tta_checkbox.setChecked(bool(self.state.tta_enabled))
+        self.tta_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.multiscale_checkbox = QCheckBox("Multi-scale inference")
+        self.multiscale_checkbox.setChecked(bool(self.state.multiscale_enabled))
+        self.multiscale_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.fast_fp16_checkbox = QCheckBox("Fast mode (float16 inputs)")
+        self.fast_fp16_checkbox.setChecked(bool(self.state.fast_fp16_enabled))
+        self.fast_fp16_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        self.section_dropout_spin = QSpinBox()
+        self.section_dropout_spin.setRange(0, 6)
+        self.section_dropout_spin.setValue(int(self.state.section_dropout_passes))
+        self.section_dropout_spin.valueChanged.connect(self._on_preprocessing_controls_changed)
+
+        self.conf_weighted_ensemble_checkbox = QCheckBox("Confidence-weighted ensemble")
+        self.conf_weighted_ensemble_checkbox.setChecked(bool(self.state.confidence_weighted_ensemble))
+        self.conf_weighted_ensemble_checkbox.toggled.connect(self._on_preprocessing_controls_changed)
+
+        preprocessing_layout.addRow(self.quality_gate_checkbox)
+        preprocessing_layout.addRow(self.tissue_crop_checkbox)
+        preprocessing_layout.addRow(self.clahe_checkbox)
+        preprocessing_layout.addRow("Stain normalization", self.stain_norm_combo)
+        preprocessing_layout.addRow(self.preserve_color_checkbox)
+        preprocessing_layout.addRow(self.percentile_norm_checkbox)
+        preprocessing_layout.addRow(self.bilateral_checkbox)
+        preprocessing_layout.addRow("Gamma", self.gamma_spin)
+        preprocessing_layout.addRow("Min resolution (px)", self.min_resolution_spin)
+        preprocessing_layout.addRow("Blur threshold", self.blur_threshold_spin)
+        preprocessing_layout.addRow(self.tta_checkbox)
+        preprocessing_layout.addRow(self.multiscale_checkbox)
+        preprocessing_layout.addRow(self.fast_fp16_checkbox)
+        preprocessing_layout.addRow("Section-dropout passes", self.section_dropout_spin)
+        preprocessing_layout.addRow(self.conf_weighted_ensemble_checkbox)
+        left_layout.addWidget(preprocessing_group)
+
+        training_group = QGroupBox("Training Toolkit")
+        training_layout = QFormLayout(training_group)
+
+        self.training_group_mode_combo = QComboBox()
+        self.training_group_mode_combo.addItem("Parent folder", "parent-folder")
+        self.training_group_mode_combo.addItem("Filename prefix (_sXXX removed)", "filename-prefix")
+        self.training_group_mode_combo.addItem("Each file independently", "full-path")
+        desired_mode = str(self.state.training_group_mode).strip().lower()
+        selected_mode_index = 0
+        for combo_idx in range(self.training_group_mode_combo.count()):
+            item_mode = str(self.training_group_mode_combo.itemData(combo_idx)).strip().lower()
+            if item_mode == desired_mode:
+                selected_mode_index = combo_idx
+                break
+        self.training_group_mode_combo.setCurrentIndex(selected_mode_index)
+        self.training_group_mode_combo.currentIndexChanged.connect(self._on_training_controls_changed)
+
+        self.training_seed_spin = QSpinBox()
+        self.training_seed_spin.setRange(0, 2147483647)
+        self.training_seed_spin.setValue(int(max(0, self.state.training_seed)))
+        self.training_seed_spin.valueChanged.connect(self._on_training_controls_changed)
+
+        self.training_train_fraction_spin = QDoubleSpinBox()
+        self.training_train_fraction_spin.setRange(0.50, 0.90)
+        self.training_train_fraction_spin.setDecimals(2)
+        self.training_train_fraction_spin.setSingleStep(0.01)
+        self.training_train_fraction_spin.setValue(float(self.state.training_train_fraction))
+        self.training_train_fraction_spin.valueChanged.connect(self._on_training_controls_changed)
+
+        self.training_val_fraction_spin = QDoubleSpinBox()
+        self.training_val_fraction_spin.setRange(0.05, 0.40)
+        self.training_val_fraction_spin.setDecimals(2)
+        self.training_val_fraction_spin.setSingleStep(0.01)
+        self.training_val_fraction_spin.setValue(float(self.state.training_val_fraction))
+        self.training_val_fraction_spin.valueChanged.connect(self._on_training_controls_changed)
+
+        self.training_patience_spin = QSpinBox()
+        self.training_patience_spin.setRange(1, 50)
+        self.training_patience_spin.setValue(int(max(1, self.state.training_patience)))
+        self.training_patience_spin.valueChanged.connect(self._on_training_controls_changed)
+
+        self.training_lr_factor_spin = QDoubleSpinBox()
+        self.training_lr_factor_spin.setRange(0.05, 0.95)
+        self.training_lr_factor_spin.setDecimals(2)
+        self.training_lr_factor_spin.setSingleStep(0.05)
+        self.training_lr_factor_spin.setValue(float(self.state.training_lr_factor))
+        self.training_lr_factor_spin.valueChanged.connect(self._on_training_controls_changed)
+
+        self.training_min_lr_spin = QDoubleSpinBox()
+        self.training_min_lr_spin.setRange(1e-8, 1e-3)
+        self.training_min_lr_spin.setDecimals(7)
+        self.training_min_lr_spin.setSingleStep(1e-6)
+        self.training_min_lr_spin.setValue(float(self.state.training_min_lr))
+        self.training_min_lr_spin.valueChanged.connect(self._on_training_controls_changed)
+
+        self.training_mixed_precision_checkbox = QCheckBox("Use mixed precision")
+        self.training_mixed_precision_checkbox.setChecked(bool(self.state.training_use_mixed_precision))
+        self.training_mixed_precision_checkbox.toggled.connect(self._on_training_controls_changed)
+
+        self.preview_training_split_button = QPushButton("Preview Split")
+        self.preview_training_split_button.clicked.connect(self._preview_training_split)
+
+        self.save_training_split_button = QPushButton("Save Split Manifest")
+        self.save_training_split_button.clicked.connect(self._save_training_split_manifest)
+
+        self.save_training_metadata_button = QPushButton("Save Training Metadata")
+        self.save_training_metadata_button.clicked.connect(self._save_training_metadata_manifest)
+
+        training_actions_row = QHBoxLayout()
+        training_actions_row.addWidget(self.preview_training_split_button)
+        training_actions_row.addWidget(self.save_training_split_button)
+        training_actions_row.addWidget(self.save_training_metadata_button)
+
+        training_actions_widget = QWidget()
+        training_actions_widget.setLayout(training_actions_row)
+
+        self.training_split_summary_label = QLabel("Split preview: no images loaded")
+        self.training_split_summary_label.setWordWrap(True)
+
+        training_layout.addRow("Group images by", self.training_group_mode_combo)
+        training_layout.addRow("Seed", self.training_seed_spin)
+        training_layout.addRow("Train fraction", self.training_train_fraction_spin)
+        training_layout.addRow("Validation fraction", self.training_val_fraction_spin)
+        training_layout.addRow("Scheduler patience", self.training_patience_spin)
+        training_layout.addRow("LR decay factor", self.training_lr_factor_spin)
+        training_layout.addRow("Minimum LR", self.training_min_lr_spin)
+        training_layout.addRow(self.training_mixed_precision_checkbox)
+        training_layout.addRow(training_actions_widget)
+        training_layout.addRow(self.training_split_summary_label)
+
+        left_layout.addWidget(training_group)
+
         self.slice_count_reminder_label = QLabel("Will process 0 slices")
         self.processing_estimate_label = QLabel("Estimated processing time: -")
         self.validate_configuration_button = QPushButton("Validate Configuration")
@@ -2497,6 +2908,15 @@ class DeepSliceMainWindow(QMainWindow):
         right_layout.addWidget(self.prediction_compare_checkbox)
         right_layout.addWidget(self.prediction_atlas_info_label)
 
+        self.preprocessing_preview_info_label = QLabel("Model input preview: waiting for selection")
+        self.preprocessing_preview_info_label.setWordWrap(True)
+        self.preprocessing_preview_label = QLabel()
+        self.preprocessing_preview_label.setMinimumHeight(180)
+        self.preprocessing_preview_label.setAlignment(Qt.AlignCenter)
+        self.preprocessing_preview_label.setObjectName("PreviewPanel")
+        right_layout.addWidget(self.preprocessing_preview_info_label)
+        right_layout.addWidget(self.preprocessing_preview_label)
+
         self.prediction_viewer = SliceGraphicsView()
         self.prediction_atlas_viewer = SliceGraphicsView()
         self.prediction_atlas_viewer.clear_with_text("Atlas view will update during prediction")
@@ -2541,7 +2961,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.curation_deselect_all_btn.clicked.connect(lambda: self._set_all_flags(Qt.Unchecked))
         
         self.confidence_filter_combo = QComboBox()
-        self.confidence_filter_combo.addItems(["All Confidences", "High Only", "Medium Only", "Low Only"])
+        self.confidence_filter_combo.addItems(["All Confidences", "High Only", "Medium Only", "Low Only", "Review Queue"])
         self.confidence_filter_combo.currentIndexChanged.connect(self._filter_curation_list)
         
         list_header_layout.addWidget(self.curation_prev_button)
@@ -2575,10 +2995,19 @@ class DeepSliceMainWindow(QMainWindow):
         self.detect_outliers_button.clicked.connect(self._detect_outliers)
         self.reset_flags_button = QPushButton("Reset All Flags")
         self.reset_flags_button.clicked.connect(lambda: self._set_all_flags(Qt.Unchecked))
+        self.auto_flag_low_conf_button = QPushButton("Auto-Flag Low Confidence")
+        self.auto_flag_low_conf_button.clicked.connect(self._auto_flag_low_confidence)
+        self.interpolate_bad_depth_button = QPushButton("Interpolate Flagged Depths")
+        self.interpolate_bad_depth_button.clicked.connect(self._interpolate_flagged_depths)
+        self.toggle_current_flag_button = QToolButton()
+        self.toggle_current_flag_button.setText("Toggle Current")
+        self.toggle_current_flag_button.clicked.connect(self._toggle_current_bad_flag)
         self.slice_note_edit = QLineEdit()
         self.slice_note_edit.setPlaceholderText("Optional per-slice atlas note")
         self.save_slice_note_button = QPushButton("Save Slice Note")
         self.save_slice_note_button.clicked.connect(self._save_slice_note)
+        self.curation_queue_label = QLabel("Review queue: 0 slices")
+        self.curation_queue_label.setObjectName("HintText")
 
         controls_group = QGroupBox("Propagation / Curation")
         controls_layout = QGridLayout(controls_group)
@@ -2687,6 +3116,12 @@ class DeepSliceMainWindow(QMainWindow):
         left_layout.addWidget(self.apply_bad_sections_button)
         left_layout.addWidget(self.detect_outliers_button)
         left_layout.addWidget(self.reset_flags_button)
+        quick_action_row = QHBoxLayout()
+        quick_action_row.addWidget(self.auto_flag_low_conf_button)
+        quick_action_row.addWidget(self.interpolate_bad_depth_button)
+        quick_action_row.addWidget(self.toggle_current_flag_button)
+        left_layout.addLayout(quick_action_row)
+        left_layout.addWidget(self.curation_queue_label)
         left_layout.addWidget(controls_group, stretch=1)
         left_layout.addWidget(anchor_group)
 
@@ -3660,7 +4095,209 @@ class DeepSliceMainWindow(QMainWindow):
         settings.setValue("inference_batch_size", batch_size)
         self._update_processing_estimate()
 
-    def _validate_before_prediction(self) -> (List[str], List[str]):
+    def _on_preprocessing_controls_changed(self, *_args):
+        self.state.quality_gate_enabled = bool(self.quality_gate_checkbox.isChecked())
+        self.state.tissue_crop_enabled = bool(self.tissue_crop_checkbox.isChecked())
+        self.state.clahe_enabled = bool(self.clahe_checkbox.isChecked())
+        self.state.stain_normalization_mode = str(self.stain_norm_combo.currentData() or "none")
+        self.state.preserve_color_enabled = bool(self.preserve_color_checkbox.isChecked())
+        self.state.percentile_normalization_enabled = bool(self.percentile_norm_checkbox.isChecked())
+        self.state.bilateral_denoise_enabled = bool(self.bilateral_checkbox.isChecked())
+        self.state.gamma_correction = float(self.gamma_spin.value())
+        self.state.min_resolution_px = int(self.min_resolution_spin.value())
+        self.state.blur_variance_threshold = float(self.blur_threshold_spin.value())
+        self.state.tta_enabled = bool(self.tta_checkbox.isChecked())
+        self.state.multiscale_enabled = bool(self.multiscale_checkbox.isChecked())
+        self.state.fast_fp16_enabled = bool(self.fast_fp16_checkbox.isChecked())
+        self.state.section_dropout_passes = int(self.section_dropout_spin.value())
+        self.state.confidence_weighted_ensemble = bool(self.conf_weighted_ensemble_checkbox.isChecked())
+
+        settings = QSettings("DeepSlice", "GUI")
+        settings.setValue("quality_gate_enabled", self.state.quality_gate_enabled)
+        settings.setValue("tissue_crop_enabled", self.state.tissue_crop_enabled)
+        settings.setValue("clahe_enabled", self.state.clahe_enabled)
+        settings.setValue("stain_normalization_mode", self.state.stain_normalization_mode)
+        settings.setValue("preserve_color_enabled", self.state.preserve_color_enabled)
+        settings.setValue("percentile_normalization_enabled", self.state.percentile_normalization_enabled)
+        settings.setValue("bilateral_denoise_enabled", self.state.bilateral_denoise_enabled)
+        settings.setValue("gamma_correction", self.state.gamma_correction)
+        settings.setValue("min_resolution_px", self.state.min_resolution_px)
+        settings.setValue("blur_variance_threshold", self.state.blur_variance_threshold)
+        settings.setValue("tta_enabled", self.state.tta_enabled)
+        settings.setValue("multiscale_enabled", self.state.multiscale_enabled)
+        settings.setValue("fast_fp16_enabled", self.state.fast_fp16_enabled)
+        settings.setValue("section_dropout_passes", self.state.section_dropout_passes)
+        settings.setValue("confidence_weighted_ensemble", self.state.confidence_weighted_ensemble)
+
+        self._update_processing_estimate()
+
+    def _on_training_controls_changed(self, *_args):
+        if not hasattr(self, "training_group_mode_combo"):
+            return
+
+        train_fraction = float(self.training_train_fraction_spin.value())
+        val_fraction = float(self.training_val_fraction_spin.value())
+        if train_fraction + val_fraction >= 0.99:
+            sender = self.sender()
+            if sender is self.training_train_fraction_spin:
+                val_fraction = max(0.05, 0.98 - train_fraction)
+                self.training_val_fraction_spin.blockSignals(True)
+                self.training_val_fraction_spin.setValue(float(val_fraction))
+                self.training_val_fraction_spin.blockSignals(False)
+            else:
+                train_fraction = max(0.50, 0.98 - val_fraction)
+                self.training_train_fraction_spin.blockSignals(True)
+                self.training_train_fraction_spin.setValue(float(train_fraction))
+                self.training_train_fraction_spin.blockSignals(False)
+
+        self.state.training_group_mode = str(
+            self.training_group_mode_combo.currentData() or "parent-folder"
+        )
+        self.state.training_seed = int(max(0, self.training_seed_spin.value()))
+        self.state.training_train_fraction = float(train_fraction)
+        self.state.training_val_fraction = float(val_fraction)
+        self.state.training_patience = int(max(1, self.training_patience_spin.value()))
+        self.state.training_lr_factor = float(self.training_lr_factor_spin.value())
+        self.state.training_min_lr = float(self.training_min_lr_spin.value())
+        self.state.training_use_mixed_precision = bool(
+            self.training_mixed_precision_checkbox.isChecked()
+        )
+
+        settings = QSettings("DeepSlice", "GUI")
+        settings.setValue("training_group_mode", self.state.training_group_mode)
+        settings.setValue("training_seed", self.state.training_seed)
+        settings.setValue("training_train_fraction", self.state.training_train_fraction)
+        settings.setValue("training_val_fraction", self.state.training_val_fraction)
+        settings.setValue("training_patience", self.state.training_patience)
+        settings.setValue("training_lr_factor", self.state.training_lr_factor)
+        settings.setValue("training_min_lr", self.state.training_min_lr)
+        settings.setValue("training_use_mixed_precision", self.state.training_use_mixed_precision)
+
+        self._update_training_split_summary()
+
+    def _update_training_split_summary(self):
+        if not hasattr(self, "training_split_summary_label"):
+            return
+        if len(self.state.image_paths) == 0:
+            self.training_split_summary_label.setText("Split preview: no images loaded")
+            return
+
+        try:
+            preview = self.state.build_training_split_preview()
+        except Exception as exc:
+            self.training_split_summary_label.setText(f"Split preview unavailable: {exc}")
+            return
+
+        counts = preview["counts"]
+        group_counts = preview["group_counts"]
+        leakage_text = "leakage-free" if preview["leakage_free"] else "overlap detected"
+        self.training_split_summary_label.setText(
+            "Split preview: "
+            f"train {counts['train']} ({group_counts['train']} groups), "
+            f"val {counts['val']} ({group_counts['val']} groups), "
+            f"test {counts['test']} ({group_counts['test']} groups), "
+            f"{leakage_text}."
+        )
+
+    def _preview_training_split(self):
+        if len(self.state.image_paths) == 0:
+            QMessageBox.information(self, "Training Split", "Load images before previewing a split.")
+            return
+
+        try:
+            preview = self.state.build_training_split_preview()
+            self._update_training_split_summary()
+        except Exception as exc:
+            self._show_logged_exception(
+                title="Training Split",
+                context="Unable to generate grouped split preview",
+                exc=exc,
+                icon=QMessageBox.Warning,
+            )
+            return
+
+        counts = preview["counts"]
+        group_counts = preview["group_counts"]
+        leakage_text = "Yes" if preview["leakage_free"] else "No"
+        lines = [
+            f"Mode: {preview['group_mode']}",
+            f"Seed: {preview['seed']}",
+            f"Train: {counts['train']} images ({group_counts['train']} groups)",
+            f"Validation: {counts['val']} images ({group_counts['val']} groups)",
+            f"Test: {counts['test']} images ({group_counts['test']} groups)",
+            f"Group leakage-free: {leakage_text}",
+        ]
+        if preview["leakage_free"]:
+            QMessageBox.information(self, "Training Split Preview", "\n".join(lines))
+        else:
+            QMessageBox.warning(self, "Training Split Preview", "\n".join(lines))
+
+    def _save_training_split_manifest(self):
+        if len(self.state.image_paths) == 0:
+            QMessageBox.information(self, "Save Training Split", "Load images before exporting split manifest.")
+            return
+
+        base_dir = os.getcwd()
+        if hasattr(self, "output_dir_edit"):
+            configured_dir = str(self.output_dir_edit.text()).strip()
+            if configured_dir:
+                base_dir = configured_dir
+
+        default_name = os.path.join(base_dir, "training_split_manifest.json")
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Training Split Manifest",
+            default_name,
+            "JSON Files (*.json)",
+        )
+        if not filename:
+            return
+
+        try:
+            saved_path = self.state.save_training_split_manifest(filename)
+            self._update_training_split_summary()
+            self._show_toast(f"Saved training split manifest: {saved_path}", level="success")
+        except Exception as exc:
+            self._show_logged_exception(
+                title="Save Training Split Manifest",
+                context="Unable to save split manifest",
+                exc=exc,
+                icon=QMessageBox.Critical,
+            )
+
+    def _save_training_metadata_manifest(self):
+        if len(self.state.image_paths) == 0:
+            QMessageBox.information(self, "Save Training Metadata", "Load images before exporting training metadata.")
+            return
+
+        base_dir = os.getcwd()
+        if hasattr(self, "output_dir_edit"):
+            configured_dir = str(self.output_dir_edit.text()).strip()
+            if configured_dir:
+                base_dir = configured_dir
+
+        default_name = os.path.join(base_dir, "training_run_metadata.json")
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Training Metadata",
+            default_name,
+            "JSON Files (*.json)",
+        )
+        if not filename:
+            return
+
+        try:
+            saved_path = self.state.save_training_metadata_manifest(filename)
+            self._show_toast(f"Saved training metadata: {saved_path}", level="success")
+        except Exception as exc:
+            self._show_logged_exception(
+                title="Save Training Metadata",
+                context="Unable to save training metadata",
+                exc=exc,
+                icon=QMessageBox.Critical,
+            )
+
+    def _validate_before_prediction(self) -> Tuple[List[str], List[str]]:
         errors: List[str] = []
         warnings: List[str] = []
 
@@ -3679,6 +4316,12 @@ class DeepSliceMainWindow(QMainWindow):
         if self.confidence_high_spin.value() <= self.confidence_medium_spin.value():
             errors.append("High confidence threshold must be greater than medium threshold")
 
+        if self.ensemble_checkbox.isChecked() and self.secondary_model_checkbox.isChecked():
+            errors.append("Choose either ensemble mode or secondary-only mode, not both")
+
+        if self.min_resolution_spin.value() < 64:
+            errors.append("Minimum resolution threshold must be at least 64 px")
+
         if self.enable_section_numbers_checkbox.isChecked():
             index_report = self.state.build_index_report(
                 legacy_section_numbers=self.legacy_parsing_checkbox.isChecked()
@@ -3690,6 +4333,12 @@ class DeepSliceMainWindow(QMainWindow):
 
         if not self.auto_thickness_checkbox.isChecked() and self.thickness_spin.value() <= 0:
             errors.append("Section thickness must be greater than zero")
+
+        if self.tta_checkbox.isChecked() and self.multiscale_checkbox.isChecked():
+            warnings.append("TTA + multi-scale is robust but can be substantially slower")
+
+        if self.fast_fp16_checkbox.isChecked() and "GPU" not in self.hardware_mode_label.text().upper():
+            warnings.append("Fast float16 mode is most beneficial on GPU; CPU gains may be limited")
 
         return errors, warnings
 
@@ -3708,6 +4357,22 @@ class DeepSliceMainWindow(QMainWindow):
             QMessageBox.warning(self, "Cannot Run Alignment", "\n".join(errors))
             return
 
+        # Warn before clobbering existing curation work.
+        if self._curation_modified and self._baseline_predictions is not None:
+            confirm = QMessageBox.question(
+                self,
+                "Re-run Alignment",
+                (
+                    "Running prediction again will discard your current curation "
+                    "edits (bad-section flags, anchors, angle overrides).\n\n"
+                    "Continue?"
+                ),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if confirm != QMessageBox.Yes:
+                return
+
         if len(warnings) > 0:
             answer = QMessageBox.question(
                 self,
@@ -3717,12 +4382,48 @@ class DeepSliceMainWindow(QMainWindow):
             if answer != QMessageBox.Yes:
                 return
 
+        quality_report = self.state.screen_input_quality()
+        quality_warnings: List[str] = []
+        if quality_report.get("resolution_mismatch", False):
+            dimensions = quality_report.get("dimensions", [])
+            preview_dims = ", ".join([f"{w}x{h}" for w, h in dimensions[:4]])
+            quality_warnings.append(
+                "Input resolution mismatch detected"
+                + (f" ({preview_dims})" if preview_dims else "")
+            )
+
+        issue_count = int(quality_report.get("issue_count", 0))
+        if issue_count > 0:
+            counts = quality_report.get("counts", {}) or {}
+            count_parts = []
+            for key in ["low_resolution", "blurry", "underexposed", "overexposed", "saturated", "artifact"]:
+                value = int(counts.get(key, 0))
+                if value > 0:
+                    count_parts.append(f"{key.replace('_', ' ')}: {value}")
+            summary = ", ".join(count_parts)
+            if summary:
+                quality_warnings.append(f"Quality gate flags: {summary}")
+            else:
+                quality_warnings.append(f"Quality gate flagged {issue_count} section(s)")
+
+        if len(quality_warnings) > 0:
+            level_title = "Quality Gate Warning" if self.state.quality_gate_enabled else "Input Quality Warning"
+            proceed = QMessageBox.question(
+                self,
+                level_title,
+                "\n".join(quality_warnings) + "\n\nContinue with prediction?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No if self.state.quality_gate_enabled else QMessageBox.Yes,
+            )
+            if proceed != QMessageBox.Yes:
+                return
+
         self.state.section_numbers = self.enable_section_numbers_checkbox.isChecked()
         self.state.legacy_section_numbers = self.legacy_parsing_checkbox.isChecked()
         self.state.ensemble = self.ensemble_checkbox.isChecked()
         self.state.use_secondary_model = self.secondary_model_checkbox.isChecked()
         self._phase_total = 3 if self.state.ensemble else 2
-        self._prediction_cancel_requested = False
+        self._prediction_cancel_event.clear()
         self._prediction_total = max(len(self.state.image_paths), 1)
         self._prediction_completed = 0
         self._prediction_phase = "initializing"
@@ -3765,14 +4466,25 @@ class DeepSliceMainWindow(QMainWindow):
         self.thread_pool.start(self._current_prediction_worker)
 
     def _cancel_alignment(self):
-        self._prediction_cancel_requested = True
+        self._prediction_cancel_event.set()
         self._append_console_log("[WARNING] Cancellation requested. Waiting for current batch boundary...")
         self.cancel_alignment_button.setEnabled(False)
         self.run_alignment_button.setText("Cancelling...")
 
-    def _run_prediction_task(self, options: dict, progress_callback=None, log_callback=None):
+    def _run_prediction_task(self, options: dict, progress_callback=None, log_callback=None, cancel_check=None):
+        # Use the thread-safe Event flag; respect any cancel_check injected by
+        # the worker for additional cooperative-cancellation paths.
+        cancel_event = self._prediction_cancel_event
+
         def is_cancelled() -> bool:
-            return bool(self._prediction_cancel_requested)
+            if cancel_event.is_set():
+                return True
+            if cancel_check is not None:
+                try:
+                    return bool(cancel_check())
+                except Exception:
+                    return False
+            return False
 
         def guarded_progress(completed: int, total: int, phase: str):
             if is_cancelled():
@@ -3881,6 +4593,7 @@ class DeepSliceMainWindow(QMainWindow):
             [f"Inferring slice {index + 1}/{len(self.state.image_paths)}"],
             pixel_spacing_um=self._get_pixel_spacing_um(preview_path),
         )
+        self._update_preprocessing_preview(preview_path)
         depth_estimate = self._estimate_depth_from_progress(index + 1, len(self.state.image_paths))
         self._update_prediction_atlas_view(
             preview_path,
@@ -3959,9 +4672,15 @@ class DeepSliceMainWindow(QMainWindow):
             self.predicted_thickness_label.setText(
                 f"Estimated thickness: {predicted_thickness:.2f} um"
             )
+            # Store as widget property so we don't have to re-parse the label
+            # text (which would break under i18n or unit changes).
+            self.predicted_thickness_label.setProperty(
+                "predicted_thickness_um", float(predicted_thickness)
+            )
             self.accept_predicted_thickness_button.setEnabled(True)
         else:
             self.predicted_thickness_label.setText("Estimated thickness: unavailable")
+            self.predicted_thickness_label.setProperty("predicted_thickness_um", None)
             self.accept_predicted_thickness_button.setEnabled(False)
 
         elapsed_seconds = max(0, int(self._prediction_elapsed_timer.elapsed() / 1000))
@@ -4014,7 +4733,7 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _on_prediction_error(self, error_text: str):
         self._stop_prediction_activity()
-        self._prediction_cancel_requested = False
+        self._prediction_cancel_event.clear()
         self.run_alignment_button.setEnabled(True)
         if hasattr(self, "cancel_alignment_button"):
             self.cancel_alignment_button.setEnabled(False)
@@ -4026,7 +4745,7 @@ class DeepSliceMainWindow(QMainWindow):
             self.prediction_eta_label.setText("Remaining: --:--")
             return
 
-        if "PARTIAL_PREDICTIONS_AVAILABLE" in str(error_text):
+        if "PartialPredictionAvailable" in str(error_text):
             if self.state.has_partial_prediction_candidate():
                 reason = self.state.partial_prediction_reason().splitlines()[0].strip()
                 if len(reason) > 220:
@@ -4060,7 +4779,7 @@ class DeepSliceMainWindow(QMainWindow):
                 self._show_toast("Partial result discarded", timeout_ms=2800, level="info")
                 return
 
-            error_text = str(error_text).replace("PARTIAL_PREDICTIONS_AVAILABLE:", "").strip()
+            error_text = str(error_text).replace("PartialPredictionAvailable:", "").strip()
 
         self._show_logged_error(
             title="Prediction Failed",
@@ -4071,23 +4790,28 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _on_prediction_finished(self, result: dict):
         self._stop_prediction_activity()
-        self._prediction_cancel_requested = False
+        self._prediction_cancel_event.clear()
         self.run_alignment_button.setEnabled(True)
         if hasattr(self, "cancel_alignment_button"):
             self.cancel_alignment_button.setEnabled(False)
         self._finalize_prediction_result(result, recovered_partial=False)
 
     def _accept_predicted_thickness(self):
-        label_text = self.predicted_thickness_label.text()
+        stored = self.predicted_thickness_label.property("predicted_thickness_um")
+        if stored is None:
+            self._show_toast(
+                "No predicted thickness value is available to apply",
+                timeout_ms=3000,
+                level="warning",
+            )
+            return
         try:
-            value_text = label_text.split(":", 1)[1].replace("um", "").strip()
-            value = float(value_text)
-        except Exception as exc:
-            self._show_logged_exception(
-                title="Thickness",
-                context="No predicted thickness value is available to apply",
-                exc=exc,
-                icon=QMessageBox.Information,
+            value = float(stored)
+        except (TypeError, ValueError):
+            self._show_toast(
+                "Predicted thickness value is invalid",
+                timeout_ms=3000,
+                level="warning",
             )
             return
         self.auto_thickness_checkbox.setChecked(False)
@@ -4110,6 +4834,8 @@ class DeepSliceMainWindow(QMainWindow):
             self.prediction_viewer.clear_with_text("No predictions to preview")
             self.prediction_atlas_viewer.clear_with_text("No atlas comparison available")
             self.prediction_atlas_info_label.setText("Atlas comparison: waiting for prediction")
+            self.preprocessing_preview_info_label.setText("Model input preview: waiting for selection")
+            self.preprocessing_preview_label.clear()
             return
 
         row_index = self.prediction_slice_selector.currentIndex()
@@ -4129,6 +4855,7 @@ class DeepSliceMainWindow(QMainWindow):
             overlay,
             pixel_spacing_um=self._get_pixel_spacing_um(image_path),
         )
+        self._update_preprocessing_preview(image_path)
 
         depth_estimate = self._depth_for_prediction_index(row_index)
         self._update_prediction_atlas_view(
@@ -4136,6 +4863,46 @@ class DeepSliceMainWindow(QMainWindow):
             depth_estimate,
             status_prefix=f"Selected slice {row_index + 1}/{len(self.state.predictions)}",
         )
+
+    def _update_preprocessing_preview(self, image_path: Optional[str]):
+        if not image_path:
+            self.preprocessing_preview_info_label.setText("Model input preview: image not available")
+            self.preprocessing_preview_label.clear()
+            return
+
+        try:
+            preview = self.state.preview_preprocessed_image(image_path)
+            preview_image = np.asarray(preview.get("preview_image"), dtype=np.uint8)
+            if preview_image.ndim != 3 or preview_image.shape[2] != 3:
+                raise ValueError("Invalid preview image array")
+
+            preview_image = np.ascontiguousarray(preview_image)
+            h, w = preview_image.shape[:2]
+            qimage = QImage(preview_image.data, w, h, 3 * w, QImage.Format_RGB888).copy()
+            pixmap = QPixmap.fromImage(qimage)
+            target_width = max(180, self.preprocessing_preview_label.width() - 8)
+            scaled = pixmap.scaled(
+                target_width,
+                220,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
+            )
+            self.preprocessing_preview_label.setPixmap(scaled)
+
+            tissue_fraction = float(preview.get("tissue_fraction", 0.0))
+            blur_variance = float(preview.get("blur_variance", 0.0))
+            mean_intensity = float(preview.get("mean_intensity", 0.0))
+            self.preprocessing_preview_info_label.setText(
+                "Model input preview | "
+                f"tissue: {tissue_fraction * 100.0:.1f}% | "
+                f"blur: {blur_variance:.5f} | "
+                f"intensity: {mean_intensity:.3f}"
+            )
+        except Exception as exc:
+            self.preprocessing_preview_label.clear()
+            self.preprocessing_preview_info_label.setText(
+                f"Model input preview unavailable ({type(exc).__name__})"
+            )
 
     def _depth_for_prediction_index(self, row_index: int) -> float:
         if self._linearity_payload is not None and "y" in self._linearity_payload:
@@ -4254,7 +5021,14 @@ class DeepSliceMainWindow(QMainWindow):
             f"Atlas coords: {depth_text} | DV: {scene_y:.1f} | ML: {scene_x:.1f}"
         )
 
+    def _is_curation_step_active(self) -> bool:
+        if not hasattr(self, "stack"):
+            return False
+        return int(self.stack.currentIndex()) == 3
+
     def _step_curation_slice(self, delta: int):
+        if not self._is_curation_step_active():
+            return
         if not hasattr(self, "slice_flag_list"):
             return
         count = self.slice_flag_list.count()
@@ -4367,6 +5141,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.anchor_depth_spin.blockSignals(False)
 
     def _set_anchor_for_current_slice(self):
+        if not self._is_curation_step_active():
+            return
         if self.state.predictions is None:
             return
         source_index = self._selected_prediction_row_from_list()
@@ -4378,6 +5154,8 @@ class DeepSliceMainWindow(QMainWindow):
         self._show_toast(f"Anchor set for slice {source_index + 1}", timeout_ms=2200)
 
     def _remove_anchor_for_current_slice(self):
+        if not self._is_curation_step_active():
+            return
         source_index = self._selected_prediction_row_from_list()
         if source_index is None:
             return
@@ -4998,6 +5776,8 @@ class DeepSliceMainWindow(QMainWindow):
             self.atlas_slice_info_label.setText("Atlas: disabled")
             self.atlas_coords_label.setText("Atlas coords: -")
             self.atlas_viewer.clear_with_text("Enable atlas preview to load atlas slices")
+            if hasattr(self, "curation_queue_label"):
+                self.curation_queue_label.setText("Review queue: 0 slices")
             if hasattr(self, "confidence_overlay_viewer"):
                 self.confidence_overlay_viewer.clear_with_text("No predictions available")
             if hasattr(self, "slice_note_edit"):
@@ -5010,6 +5790,10 @@ class DeepSliceMainWindow(QMainWindow):
 
         payload = self.state.linearity_payload()
         self._linearity_payload = payload
+        try:
+            risk_scores = np.asarray(self.state.curation_risk_scores(), dtype=float)
+        except Exception:
+            risk_scores = np.clip(1.0 - np.asarray(payload["confidence"], dtype=float), 0.0, 1.0)
 
         for idx, row in self.state.predictions.iterrows():
             nr = row["nr"] if "nr" in row else idx + 1
@@ -5025,16 +5809,20 @@ class DeepSliceMainWindow(QMainWindow):
 
             confidence = float(payload["confidence"][idx])
             confidence_level = str(payload["confidence_level"][idx])
+            risk_score = float(risk_scores[idx]) if idx < len(risk_scores) else float(1.0 - confidence)
             if confidence_level == "high":
                 item.setBackground(QColor(44, 129, 79, 120))
             elif confidence_level == "medium":
                 item.setBackground(QColor(150, 111, 36, 120))
             else:
                 item.setBackground(QColor(164, 51, 68, 120))
+            if risk_score >= 0.65:
+                item.setForeground(QColor("#FFE7A6"))
 
             components = payload["confidence_components"]
             tooltip_lines = [
                 f"Score: {confidence:.3f} ({confidence_level})",
+                f"Review risk: {risk_score:.3f}",
                 f"Residual: {payload['residuals'][idx]:.3f}",
                 f"Angle deviation: {payload['angle_deviation'][idx]:.3f}",
                 f"Spacing deviation: {payload['spacing_deviation'][idx]:.3f}",
@@ -5047,6 +5835,8 @@ class DeepSliceMainWindow(QMainWindow):
                     tooltip_lines.append(f"Note: {note_text}")
             item.setToolTip("\n".join(tooltip_lines))
             item.setData(Qt.UserRole, idx)
+            item.setData(Qt.UserRole + 1, float(risk_score))
+            item.setData(Qt.UserRole + 2, bool(payload["outliers"][idx]))
             self.slice_flag_list.addItem(item)
 
         x = payload["x"]
@@ -5126,7 +5916,20 @@ class DeepSliceMainWindow(QMainWindow):
         self._update_undo_redo_labels()
         self._refresh_anchor_list()
 
-        self.slice_flag_list.setCurrentRow(0)
+        queue_count = int(np.sum((risk_scores >= 0.55) | np.asarray(payload["outliers"], dtype=bool)))
+        if hasattr(self, "curation_queue_label"):
+            self.curation_queue_label.setText(f"Review queue: {queue_count} slice(s)")
+
+        if hasattr(self, "confidence_filter_combo"):
+            self._filter_curation_list(int(self.confidence_filter_combo.currentIndex()))
+
+        selected_row = 0
+        for row_idx in range(self.slice_flag_list.count()):
+            item = self.slice_flag_list.item(row_idx)
+            if item is not None and not item.isHidden():
+                selected_row = row_idx
+                break
+        self.slice_flag_list.setCurrentRow(selected_row)
         self._refresh_export_views()
 
     def _on_linearity_click(self, event):
@@ -5181,6 +5984,77 @@ class DeepSliceMainWindow(QMainWindow):
             item = self.slice_flag_list.item(idx)
             if not item.isHidden():
                 item.setCheckState(check_state)
+
+    def _toggle_current_bad_flag(self):
+        if not self._is_curation_step_active():
+            return
+        if self.state.predictions is None:
+            return
+        row = self.slice_flag_list.currentRow()
+        if row < 0:
+            return
+        item = self.slice_flag_list.item(row)
+        if item is None:
+            return
+        if item.checkState() == Qt.Checked:
+            item.setCheckState(Qt.Unchecked)
+        else:
+            item.setCheckState(Qt.Checked)
+
+    def _auto_flag_low_confidence(self):
+        if self.state.predictions is None:
+            return
+        threshold = float(self.state.confidence_medium_threshold)
+        try:
+            flagged = int(
+                self.state.flag_low_confidence_sections(
+                    threshold=threshold,
+                    include_outliers=True,
+                    include_high_risk=True,
+                )
+            )
+        except Exception as exc:
+            self._show_logged_exception(
+                title="Auto-Flag Low Confidence",
+                context="Unable to auto-flag low-confidence sections",
+                exc=exc,
+                icon=QMessageBox.Warning,
+            )
+            return
+
+        if flagged == 0:
+            self._show_toast("No additional low-confidence sections were flagged", timeout_ms=2400)
+            return
+
+        self._mark_curation_modified()
+        self._refresh_curation_views()
+        self._show_toast(f"Auto-flagged {flagged} section(s)", timeout_ms=2500, level="success")
+
+    def _interpolate_flagged_depths(self):
+        if self.state.predictions is None:
+            return
+        try:
+            corrected = int(self.state.interpolate_bad_section_depths(max_gap=6))
+        except Exception as exc:
+            self._show_logged_exception(
+                title="Interpolate Flagged Depths",
+                context="Unable to interpolate AP depths for flagged sections",
+                exc=exc,
+                icon=QMessageBox.Warning,
+            )
+            return
+
+        if corrected == 0:
+            self._show_toast(
+                "No eligible flagged sections could be interpolated",
+                timeout_ms=2600,
+                level="warning",
+            )
+            return
+
+        self._mark_curation_modified()
+        self._refresh_curation_views()
+        self._show_toast(f"Interpolated AP depth for {corrected} section(s)", timeout_ms=2600, level="success")
                 
     def _filter_curation_list(self, filter_index: int):
         if self.state.predictions is None or self._linearity_payload is None:
@@ -5204,6 +6078,10 @@ class DeepSliceMainWindow(QMainWindow):
                 item.setHidden(level != "medium")
             elif filter_index == 3:  # Low Only
                 item.setHidden(level != "low")
+            elif filter_index == 4:  # Review Queue
+                risk_score = float(item.data(Qt.UserRole + 1) or 0.0)
+                outlier = bool(item.data(Qt.UserRole + 2) or False)
+                item.setHidden((risk_score < 0.55) and (not outlier))
 
     def _show_curation_context_menu(self, pos):
         item = self.slice_flag_list.itemAt(pos)
@@ -5285,6 +6163,8 @@ class DeepSliceMainWindow(QMainWindow):
         self._request_atlas_preview(source_index)
 
     def _apply_bad_section_flags(self):
+        if not self._is_curation_step_active():
+            return
         if self.state.predictions is None:
             return
 
@@ -5649,9 +6529,19 @@ class DeepSliceMainWindow(QMainWindow):
             return
 
         self.last_export_basepath = base_path
+        # Count the files we actually wrote (CSV sidecar + the chosen format).
+        written = [
+            f"{base_path}.csv",
+            f"{base_path}.{output_format}",
+        ]
+        produced = sum(1 for path in written if os.path.exists(path))
         self._session_base_text = "Session: Export complete"
         self._update_session_status()
-        self._show_toast("Export complete - 2 files saved", timeout_ms=4500)
+        self._show_toast(
+            f"Export complete - {produced} file(s) saved",
+            timeout_ms=4500,
+            level="success",
+        )
 
     def _generate_report(self):
         if self.state.predictions is None:
@@ -5660,6 +6550,16 @@ class DeepSliceMainWindow(QMainWindow):
 
         output_dir = self.output_dir_edit.text().strip()
         base_name = self.output_basename_edit.text().strip() or "DeepSliceResults"
+        if not output_dir:
+            QMessageBox.warning(self, "Report", "Output directory is required")
+            return
+        if not self._is_output_dir_writable(output_dir):
+            QMessageBox.warning(
+                self,
+                "Report",
+                "Output directory is not writable. Please choose another location.",
+            )
+            return
         os.makedirs(output_dir, exist_ok=True)
         report_path = os.path.join(output_dir, base_name + "_report.pdf")
 
@@ -5747,10 +6647,7 @@ class DeepSliceMainWindow(QMainWindow):
                 options=options,
             )
             
-            if os.name == "nt":
-                os.startfile(temp_report_path)  # type: ignore[attr-defined]
-            else:
-                subprocess.Popen(["xdg-open", temp_report_path])
+            _open_path_in_os(temp_report_path)
                 
         except Exception as exc:
             self._show_logged_exception(
@@ -5780,7 +6677,9 @@ class DeepSliceMainWindow(QMainWindow):
             return
 
         quicknii_path = self.quicknii_path_edit.text().strip()
-        if not quicknii_path:
+        if not quicknii_path and os.name == "nt":
+            # Default install locations only exist on Windows; skip probing
+            # bogus empty paths on Linux/macOS where ProgramFiles is unset.
             candidates = [
                 os.path.join(os.environ.get("ProgramFiles", ""), "QuickNII", "QuickNII.exe"),
                 os.path.join(
@@ -6053,6 +6952,115 @@ class DeepSliceMainWindow(QMainWindow):
             self.inference_batch_spin.blockSignals(True)
             self.inference_batch_spin.setValue(int(self.state.inference_batch_size))
             self.inference_batch_spin.blockSignals(False)
+
+        if hasattr(self, "quality_gate_checkbox"):
+            self.quality_gate_checkbox.blockSignals(True)
+            self.quality_gate_checkbox.setChecked(bool(self.state.quality_gate_enabled))
+            self.quality_gate_checkbox.blockSignals(False)
+        if hasattr(self, "tissue_crop_checkbox"):
+            self.tissue_crop_checkbox.blockSignals(True)
+            self.tissue_crop_checkbox.setChecked(bool(self.state.tissue_crop_enabled))
+            self.tissue_crop_checkbox.blockSignals(False)
+        if hasattr(self, "clahe_checkbox"):
+            self.clahe_checkbox.blockSignals(True)
+            self.clahe_checkbox.setChecked(bool(self.state.clahe_enabled))
+            self.clahe_checkbox.blockSignals(False)
+        if hasattr(self, "stain_norm_combo"):
+            target_mode = str(self.state.stain_normalization_mode).strip().lower()
+            target_index = 0
+            for combo_index in range(self.stain_norm_combo.count()):
+                if str(self.stain_norm_combo.itemData(combo_index)).strip().lower() == target_mode:
+                    target_index = combo_index
+                    break
+            self.stain_norm_combo.blockSignals(True)
+            self.stain_norm_combo.setCurrentIndex(target_index)
+            self.stain_norm_combo.blockSignals(False)
+        if hasattr(self, "preserve_color_checkbox"):
+            self.preserve_color_checkbox.blockSignals(True)
+            self.preserve_color_checkbox.setChecked(bool(self.state.preserve_color_enabled))
+            self.preserve_color_checkbox.blockSignals(False)
+        if hasattr(self, "percentile_norm_checkbox"):
+            self.percentile_norm_checkbox.blockSignals(True)
+            self.percentile_norm_checkbox.setChecked(bool(self.state.percentile_normalization_enabled))
+            self.percentile_norm_checkbox.blockSignals(False)
+        if hasattr(self, "bilateral_checkbox"):
+            self.bilateral_checkbox.blockSignals(True)
+            self.bilateral_checkbox.setChecked(bool(self.state.bilateral_denoise_enabled))
+            self.bilateral_checkbox.blockSignals(False)
+        if hasattr(self, "gamma_spin"):
+            self.gamma_spin.blockSignals(True)
+            self.gamma_spin.setValue(float(self.state.gamma_correction))
+            self.gamma_spin.blockSignals(False)
+        if hasattr(self, "min_resolution_spin"):
+            self.min_resolution_spin.blockSignals(True)
+            self.min_resolution_spin.setValue(int(self.state.min_resolution_px))
+            self.min_resolution_spin.blockSignals(False)
+        if hasattr(self, "blur_threshold_spin"):
+            self.blur_threshold_spin.blockSignals(True)
+            self.blur_threshold_spin.setValue(float(self.state.blur_variance_threshold))
+            self.blur_threshold_spin.blockSignals(False)
+        if hasattr(self, "tta_checkbox"):
+            self.tta_checkbox.blockSignals(True)
+            self.tta_checkbox.setChecked(bool(self.state.tta_enabled))
+            self.tta_checkbox.blockSignals(False)
+        if hasattr(self, "multiscale_checkbox"):
+            self.multiscale_checkbox.blockSignals(True)
+            self.multiscale_checkbox.setChecked(bool(self.state.multiscale_enabled))
+            self.multiscale_checkbox.blockSignals(False)
+        if hasattr(self, "fast_fp16_checkbox"):
+            self.fast_fp16_checkbox.blockSignals(True)
+            self.fast_fp16_checkbox.setChecked(bool(self.state.fast_fp16_enabled))
+            self.fast_fp16_checkbox.blockSignals(False)
+        if hasattr(self, "section_dropout_spin"):
+            self.section_dropout_spin.blockSignals(True)
+            self.section_dropout_spin.setValue(int(self.state.section_dropout_passes))
+            self.section_dropout_spin.blockSignals(False)
+        if hasattr(self, "conf_weighted_ensemble_checkbox"):
+            self.conf_weighted_ensemble_checkbox.blockSignals(True)
+            self.conf_weighted_ensemble_checkbox.setChecked(bool(self.state.confidence_weighted_ensemble))
+            self.conf_weighted_ensemble_checkbox.blockSignals(False)
+        if hasattr(self, "training_group_mode_combo"):
+            desired_mode = str(self.state.training_group_mode).strip().lower()
+            target_index = 0
+            for combo_index in range(self.training_group_mode_combo.count()):
+                combo_mode = str(self.training_group_mode_combo.itemData(combo_index)).strip().lower()
+                if combo_mode == desired_mode:
+                    target_index = combo_index
+                    break
+            self.training_group_mode_combo.blockSignals(True)
+            self.training_group_mode_combo.setCurrentIndex(target_index)
+            self.training_group_mode_combo.blockSignals(False)
+        if hasattr(self, "training_seed_spin"):
+            self.training_seed_spin.blockSignals(True)
+            self.training_seed_spin.setValue(int(max(0, self.state.training_seed)))
+            self.training_seed_spin.blockSignals(False)
+        if hasattr(self, "training_train_fraction_spin"):
+            self.training_train_fraction_spin.blockSignals(True)
+            self.training_train_fraction_spin.setValue(float(self.state.training_train_fraction))
+            self.training_train_fraction_spin.blockSignals(False)
+        if hasattr(self, "training_val_fraction_spin"):
+            self.training_val_fraction_spin.blockSignals(True)
+            self.training_val_fraction_spin.setValue(float(self.state.training_val_fraction))
+            self.training_val_fraction_spin.blockSignals(False)
+        if hasattr(self, "training_patience_spin"):
+            self.training_patience_spin.blockSignals(True)
+            self.training_patience_spin.setValue(int(max(1, self.state.training_patience)))
+            self.training_patience_spin.blockSignals(False)
+        if hasattr(self, "training_lr_factor_spin"):
+            self.training_lr_factor_spin.blockSignals(True)
+            self.training_lr_factor_spin.setValue(float(self.state.training_lr_factor))
+            self.training_lr_factor_spin.blockSignals(False)
+        if hasattr(self, "training_min_lr_spin"):
+            self.training_min_lr_spin.blockSignals(True)
+            self.training_min_lr_spin.setValue(float(self.state.training_min_lr))
+            self.training_min_lr_spin.blockSignals(False)
+        if hasattr(self, "training_mixed_precision_checkbox"):
+            self.training_mixed_precision_checkbox.blockSignals(True)
+            self.training_mixed_precision_checkbox.setChecked(bool(self.state.training_use_mixed_precision))
+            self.training_mixed_precision_checkbox.blockSignals(False)
+
+        self._update_training_split_summary()
+
         self._refresh_anchor_list()
 
     def _show_hardware_health(self):
@@ -6121,6 +7129,7 @@ class DeepSliceMainWindow(QMainWindow):
         self._refresh_curation_views()
         self._refresh_export_views()
         self._update_processing_estimate()
+        self._update_training_split_summary()
         self._update_export_size_estimate(self.output_format_combo.currentIndex())
         self._update_undo_redo_labels()
 
@@ -6150,14 +7159,40 @@ class DeepSliceMainWindow(QMainWindow):
             QWidget.setTabOrder(self.outlier_sigma_spin, self.confidence_medium_spin)
             QWidget.setTabOrder(self.confidence_medium_spin, self.confidence_high_spin)
             QWidget.setTabOrder(self.confidence_high_spin, self.inference_batch_spin)
-            QWidget.setTabOrder(self.inference_batch_spin, self.validate_configuration_button)
+            QWidget.setTabOrder(self.inference_batch_spin, self.quality_gate_checkbox)
+            QWidget.setTabOrder(self.quality_gate_checkbox, self.tissue_crop_checkbox)
+            QWidget.setTabOrder(self.tissue_crop_checkbox, self.clahe_checkbox)
+            QWidget.setTabOrder(self.clahe_checkbox, self.stain_norm_combo)
+            QWidget.setTabOrder(self.stain_norm_combo, self.gamma_spin)
+            QWidget.setTabOrder(self.gamma_spin, self.min_resolution_spin)
+            QWidget.setTabOrder(self.min_resolution_spin, self.blur_threshold_spin)
+            QWidget.setTabOrder(self.blur_threshold_spin, self.tta_checkbox)
+            QWidget.setTabOrder(self.tta_checkbox, self.multiscale_checkbox)
+            QWidget.setTabOrder(self.multiscale_checkbox, self.fast_fp16_checkbox)
+            QWidget.setTabOrder(self.fast_fp16_checkbox, self.section_dropout_spin)
+            QWidget.setTabOrder(self.section_dropout_spin, self.conf_weighted_ensemble_checkbox)
+            QWidget.setTabOrder(self.conf_weighted_ensemble_checkbox, self.training_group_mode_combo)
+            QWidget.setTabOrder(self.training_group_mode_combo, self.training_seed_spin)
+            QWidget.setTabOrder(self.training_seed_spin, self.training_train_fraction_spin)
+            QWidget.setTabOrder(self.training_train_fraction_spin, self.training_val_fraction_spin)
+            QWidget.setTabOrder(self.training_val_fraction_spin, self.training_patience_spin)
+            QWidget.setTabOrder(self.training_patience_spin, self.training_lr_factor_spin)
+            QWidget.setTabOrder(self.training_lr_factor_spin, self.training_min_lr_spin)
+            QWidget.setTabOrder(self.training_min_lr_spin, self.training_mixed_precision_checkbox)
+            QWidget.setTabOrder(self.training_mixed_precision_checkbox, self.preview_training_split_button)
+            QWidget.setTabOrder(self.preview_training_split_button, self.save_training_split_button)
+            QWidget.setTabOrder(self.save_training_split_button, self.save_training_metadata_button)
+            QWidget.setTabOrder(self.save_training_metadata_button, self.validate_configuration_button)
 
             QWidget.setTabOrder(self.run_alignment_button, self.cancel_alignment_button)
             QWidget.setTabOrder(self.cancel_alignment_button, self.console_toggle)
             QWidget.setTabOrder(self.console_toggle, self.console_output)
 
             QWidget.setTabOrder(self.slice_flag_list, self.apply_bad_sections_button)
-            QWidget.setTabOrder(self.apply_bad_sections_button, self.undo_button)
+            QWidget.setTabOrder(self.apply_bad_sections_button, self.auto_flag_low_conf_button)
+            QWidget.setTabOrder(self.auto_flag_low_conf_button, self.interpolate_bad_depth_button)
+            QWidget.setTabOrder(self.interpolate_bad_depth_button, self.toggle_current_flag_button)
+            QWidget.setTabOrder(self.toggle_current_flag_button, self.undo_button)
             QWidget.setTabOrder(self.undo_button, self.redo_button)
             QWidget.setTabOrder(self.redo_button, self.anchor_depth_spin)
             QWidget.setTabOrder(self.anchor_depth_spin, self.set_anchor_button)

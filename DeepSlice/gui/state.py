@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
+from collections import deque
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Deque, Dict, List, Optional
+
+_logger = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
@@ -11,12 +17,42 @@ import pandas as pd
 from ..coord_post_processing import angle_methods, spacing_and_indexing
 from ..coord_post_processing.depth_estimation import calculate_brain_center_depths
 from ..metadata import metadata_loader
+from ..neural_network import neural_network
+from ..training import training_utils
 
 if TYPE_CHECKING:
     from ..main import DSModel
 
 SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 ALIGNMENT_COLUMNS = ["ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz"]
+TRAINING_GROUP_MODES = {"parent-folder", "filename-prefix", "full-path"}
+
+
+def _coerce_bool(value, default: bool = False) -> bool:
+    """Coerce JSON-loaded values to bool without falling into the bool("False")=True trap."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    if value is None:
+        return default
+    try:
+        return bool(value)
+    except Exception:
+        return default
+
+
+class PartialPredictionAvailable(RuntimeError):
+    """Raised when ensemble secondary inference fails but primary predictions
+    were captured and can be adopted as a partial recovery result.
+
+    The GUI layer catches this exception type explicitly instead of parsing
+    sentinel substrings out of generic RuntimeError messages.
+    """
+
+    def __init__(self, reason: str):
+        super().__init__(str(reason))
+        self.reason = str(reason)
 
 
 @dataclass
@@ -34,10 +70,37 @@ class DeepSliceAppState:
     confidence_high_threshold: float = 0.75
     confidence_medium_threshold: float = 0.50
     inference_batch_size: int = 8
+    tissue_crop_enabled: bool = True
+    clahe_enabled: bool = False
+    stain_normalization_mode: str = "none"
+    quality_gate_enabled: bool = True
+    min_resolution_px: int = 500
+    blur_variance_threshold: float = 0.0002
+    dark_intensity_threshold: float = 0.12
+    bright_intensity_threshold: float = 0.93
+    saturated_fraction_threshold: float = 0.20
+    artifact_blank_fraction_threshold: float = 0.18
+    gamma_correction: float = 1.0
+    bilateral_denoise_enabled: bool = False
+    percentile_normalization_enabled: bool = True
+    preserve_color_enabled: bool = False
+    tta_enabled: bool = False
+    multiscale_enabled: bool = False
+    fast_fp16_enabled: bool = False
+    section_dropout_passes: int = 0
+    confidence_weighted_ensemble: bool = True
+    training_seed: int = 42
+    training_group_mode: str = "parent-folder"
+    training_train_fraction: float = 0.70
+    training_val_fraction: float = 0.15
+    training_patience: int = 8
+    training_lr_factor: float = 0.50
+    training_min_lr: float = 1e-6
+    training_use_mixed_precision: bool = False
     detected_indexing_direction: Optional[str] = None
     selected_indexing_direction: Optional[str] = None
-    undo_stack: List[pd.DataFrame] = field(default_factory=list)
-    redo_stack: List[pd.DataFrame] = field(default_factory=list)
+    undo_stack: Deque[pd.DataFrame] = field(default_factory=lambda: deque(maxlen=50))
+    redo_stack: Deque[pd.DataFrame] = field(default_factory=lambda: deque(maxlen=50))
     _config: Optional[dict] = None
     _metadata_path: Optional[str] = None
     _atlas_cache: Dict[str, np.ndarray] = field(default_factory=dict)
@@ -82,6 +145,217 @@ class DeepSliceAppState:
         self.confidence_medium_threshold = confidence_medium
         self.confidence_high_threshold = confidence_high
 
+    def preprocessing_options(self) -> Dict[str, object]:
+        return {
+            "tissue_crop": bool(self.tissue_crop_enabled),
+            "clahe": bool(self.clahe_enabled),
+            "stain_normalization": str(self.stain_normalization_mode),
+            "mask_background_norm": True,
+            "gamma": float(self.gamma_correction),
+            "bilateral_denoise": bool(self.bilateral_denoise_enabled),
+            "percentile_normalization": bool(self.percentile_normalization_enabled),
+            "preserve_color": bool(self.preserve_color_enabled),
+            "min_resolution_px": int(self.min_resolution_px),
+            "blur_variance_threshold": float(self.blur_variance_threshold),
+            "dark_intensity_threshold": float(self.dark_intensity_threshold),
+            "bright_intensity_threshold": float(self.bright_intensity_threshold),
+            "saturated_fraction_threshold": float(self.saturated_fraction_threshold),
+            "artifact_blank_fraction_threshold": float(self.artifact_blank_fraction_threshold),
+        }
+
+    @staticmethod
+    def _normalize_training_group_mode(mode: Optional[str]) -> str:
+        normalized = str(mode or "parent-folder").strip().lower()
+        if normalized not in TRAINING_GROUP_MODES:
+            normalized = "parent-folder"
+        return normalized
+
+    @staticmethod
+    def _training_group_from_path(image_path: str, mode: str) -> str:
+        mode = DeepSliceAppState._normalize_training_group_mode(mode)
+        absolute_path = os.path.abspath(str(image_path))
+        filename = os.path.basename(absolute_path)
+        stem = os.path.splitext(filename)[0]
+
+        if mode == "parent-folder":
+            parent = os.path.basename(os.path.dirname(absolute_path))
+            if str(parent).strip() != "":
+                return str(parent)
+            return stem
+
+        if mode == "filename-prefix":
+            match = re.match(r"(.+?)_s\d{1,5}(?:_|$)", stem, flags=re.IGNORECASE)
+            if match is not None and match.group(1).strip() != "":
+                return str(match.group(1).strip())
+            return stem
+
+        return absolute_path
+
+    def training_options(self) -> Dict[str, object]:
+        return {
+            "seed": int(max(0, self.training_seed)),
+            "group_mode": self._normalize_training_group_mode(self.training_group_mode),
+            "train_fraction": float(np.clip(self.training_train_fraction, 0.50, 0.90)),
+            "val_fraction": float(np.clip(self.training_val_fraction, 0.05, 0.40)),
+            "patience": int(max(1, self.training_patience)),
+            "lr_factor": float(np.clip(self.training_lr_factor, 0.05, 0.95)),
+            "min_lr": float(np.clip(self.training_min_lr, 1e-8, 1e-3)),
+            "mixed_precision": bool(self.training_use_mixed_precision),
+        }
+
+    def build_training_split_preview(
+        self,
+        group_mode: Optional[str] = None,
+        train_fraction: Optional[float] = None,
+        val_fraction: Optional[float] = None,
+        seed: Optional[int] = None,
+    ) -> Dict[str, object]:
+        if len(self.image_paths) == 0:
+            raise ValueError("No images selected")
+
+        options = self.training_options()
+        mode = self._normalize_training_group_mode(
+            options["group_mode"] if group_mode is None else group_mode
+        )
+        train_fraction = options["train_fraction"] if train_fraction is None else float(train_fraction)
+        val_fraction = options["val_fraction"] if val_fraction is None else float(val_fraction)
+        seed = options["seed"] if seed is None else int(seed)
+
+        records = []
+        for image_path in self.image_paths:
+            abs_path = os.path.abspath(str(image_path))
+            records.append(
+                {
+                    "path": abs_path,
+                    "filename": os.path.basename(abs_path),
+                    "group_id": self._training_group_from_path(abs_path, mode),
+                }
+            )
+
+        dataframe = pd.DataFrame(records)
+        split = training_utils.split_dataframe_by_group(
+            dataframe=dataframe,
+            group_column="group_id",
+            train_fraction=train_fraction,
+            val_fraction=val_fraction,
+            seed=seed,
+        )
+
+        train_df = split["train"]
+        val_df = split["val"]
+        test_df = split["test"]
+
+        train_groups = set(train_df["group_id"].astype(str).unique().tolist())
+        val_groups = set(val_df["group_id"].astype(str).unique().tolist())
+        test_groups = set(test_df["group_id"].astype(str).unique().tolist())
+        leakage_free = (
+            train_groups.isdisjoint(val_groups)
+            and train_groups.isdisjoint(test_groups)
+            and val_groups.isdisjoint(test_groups)
+        )
+
+        return {
+            "group_mode": mode,
+            "seed": int(seed),
+            "train_fraction": float(train_fraction),
+            "val_fraction": float(val_fraction),
+            "counts": {
+                "total": int(len(dataframe)),
+                "train": int(len(train_df)),
+                "val": int(len(val_df)),
+                "test": int(len(test_df)),
+            },
+            "group_counts": {
+                "train": int(len(train_groups)),
+                "val": int(len(val_groups)),
+                "test": int(len(test_groups)),
+            },
+            "leakage_free": bool(leakage_free),
+            "train": train_df.reset_index(drop=True),
+            "val": val_df.reset_index(drop=True),
+            "test": test_df.reset_index(drop=True),
+        }
+
+    def save_training_split_manifest(self, output_path: str) -> str:
+        if str(output_path).strip() == "":
+            raise ValueError("output_path must not be empty")
+
+        split = self.build_training_split_preview()
+        payload = {
+            "created_utc": datetime.now(timezone.utc).isoformat(),
+            "species": str(self.species),
+            "group_mode": split["group_mode"],
+            "seed": int(split["seed"]),
+            "train_fraction": float(split["train_fraction"]),
+            "val_fraction": float(split["val_fraction"]),
+            "counts": split["counts"],
+            "group_counts": split["group_counts"],
+            "leakage_free": bool(split["leakage_free"]),
+            "splits": {
+                "train": split["train"]["path"].astype(str).tolist(),
+                "val": split["val"]["path"].astype(str).tolist(),
+                "test": split["test"]["path"].astype(str).tolist(),
+            },
+        }
+
+        output_path = os.path.abspath(str(output_path))
+        output_dir = os.path.dirname(output_path)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True)
+        return output_path
+
+    def save_training_metadata_manifest(self, output_path: str) -> str:
+        split = self.build_training_split_preview()
+        model_version = str(
+            self._config.get("DeepSlice_version", {}).get("prerelease", "unknown")
+        )
+
+        metadata = training_utils.training_run_metadata(
+            species=self.species,
+            seed=int(split["seed"]),
+            train_size=int(split["counts"]["train"]),
+            val_size=int(split["counts"]["val"]),
+            test_size=int(split["counts"]["test"]),
+            model_version=model_version,
+            preprocessing_options=self.preprocessing_options(),
+            training_options=self.training_options(),
+        )
+        metadata["split_group_mode"] = split["group_mode"]
+        metadata["split_counts"] = split["counts"]
+        metadata["split_group_counts"] = split["group_counts"]
+        metadata["split_leakage_free"] = bool(split["leakage_free"])
+
+        output_path = os.path.abspath(str(output_path))
+        training_utils.save_training_run_metadata(output_path, metadata)
+        return output_path
+
+    def screen_input_quality(self) -> Dict[str, object]:
+        if len(self.image_paths) == 0:
+            return {
+                "total": 0,
+                "resolution_mismatch": False,
+                "issue_count": 0,
+                "issue_paths": [],
+                "metrics": [],
+                "counts": {},
+                "dimensions": [],
+            }
+
+        return neural_network.inspect_image_batch(
+            self.image_paths,
+            preprocessing_options=self.preprocessing_options(),
+        )
+
+    def preview_preprocessed_image(self, image_path: str) -> Dict[str, object]:
+        if not image_path:
+            raise ValueError("Image path is required for preprocessing preview")
+        return neural_network.preview_preprocessed_image(
+            image_path,
+            preprocessing_options=self.preprocessing_options(),
+        )
+
     def ensure_model(self, log_callback=None) -> "DSModel":
         from ..main import DSModel
 
@@ -117,6 +391,9 @@ class DeepSliceAppState:
                 continue
             if not os.path.isfile(absolute_path):
                 continue
+            extension = os.path.splitext(absolute_path)[1].lower()
+            if extension not in SUPPORTED_IMAGE_FORMATS:
+                continue
             seen.add(absolute_path)
             deduplicated.append(absolute_path)
         self.image_paths = deduplicated
@@ -151,8 +428,8 @@ class DeepSliceAppState:
 
         self.is_dirty = True
         self.predictions = self._partial_prediction_candidate.copy()
-        self.undo_stack = []
-        self.redo_stack = []
+        self.undo_stack.clear()
+        self.redo_stack.clear()
         self._sync_model_predictions()
 
         reason = self.partial_prediction_reason()
@@ -202,9 +479,12 @@ class DeepSliceAppState:
         return sorted(list(volume_config.keys()))
 
     def default_atlas_volume(self) -> str:
-        default_volume = self._config["default_volumes"].get(self.species, "")
         if self.species == "rat":
             return "MRI"
+        default_volume = self._config["default_volumes"].get(self.species, "")
+        if not str(default_volume).strip():
+            available = self.atlas_volume_options()
+            return available[0] if available else ""
         return str(default_volume)
 
     def _resolve_volume_entry(self, volume_key: Optional[str]):
@@ -266,7 +546,8 @@ class DeepSliceAppState:
                 import nibabel as nib
             except ImportError as exc:
                 raise RuntimeError(
-                    "nibabel is required for atlas previews. Install with 'pip install nibabel'."
+                    "nibabel is required for atlas previews. "
+                    "Install with 'pip install DeepSlice[atlas]' or 'pip install nibabel'."
                 ) from exc
 
             nifti_img = nib.load(local_path)
@@ -292,6 +573,8 @@ class DeepSliceAppState:
             else:
                 depth_value = float(volume.shape[1] / 2.0)
 
+        if volume.shape[1] == 0:
+            raise ValueError("Atlas volume has zero depth along the A-P axis")
         slice_index = int(np.clip(int(round(depth_value)), 0, volume.shape[1] - 1))
         raw_slice = volume[:, slice_index, :]
         image = self._normalize_atlas_slice(raw_slice)
@@ -367,9 +650,7 @@ class DeepSliceAppState:
         if self.predictions is None:
             return
         self.undo_stack.append(self.predictions.copy())
-        if len(self.undo_stack) > 50:
-            self.undo_stack = self.undo_stack[-50:]
-        self.redo_stack = []
+        self.redo_stack.clear()
 
     def _sync_model_predictions(self):
         if self.model is not None and self.predictions is not None:
@@ -385,6 +666,8 @@ class DeepSliceAppState:
             requested = int(requested_batch_size)
             if requested <= 0:
                 raise ValueError("inference_batch_size must be a positive integer")
+            if requested > 512:
+                raise ValueError("inference_batch_size must not exceed 512")
             if log_callback is not None:
                 log_callback(f"Using user-configured inference batch size {requested}")
             return requested
@@ -425,7 +708,8 @@ class DeepSliceAppState:
             self.predictions["ap_depth"] = depths
             self.predictions["ap_out_of_bounds"] = out_of_bounds.astype(bool)
             diagnostics["out_of_bounds_count"] = int(np.sum(out_of_bounds))
-        except Exception:
+        except Exception as _exc:
+            _logger.warning("AP depth bounds check failed (non-fatal): %s", _exc)
             self.predictions["ap_out_of_bounds"] = False
 
         try:
@@ -441,7 +725,8 @@ class DeepSliceAppState:
             self.predictions["uv_cosine"] = uv_cosine
             self.predictions["orthogonality_flag"] = orthogonality_flags.astype(bool)
             diagnostics["orthogonality_count"] = int(np.sum(orthogonality_flags))
-        except Exception:
+        except Exception as _exc:
+            _logger.warning("Orthogonality check failed (non-fatal): %s", _exc)
             self.predictions["orthogonality_flag"] = False
 
         try:
@@ -477,28 +762,31 @@ class DeepSliceAppState:
             self.predictions["angle_neighbor_deviation"] = neighbor_deviation
             self.predictions["angle_outlier"] = angle_outliers.astype(bool)
             diagnostics["angle_outlier_count"] = int(np.sum(angle_outliers))
-        except Exception:
+        except Exception as _exc:
+            _logger.warning("Angle outlier detection failed (non-fatal): %s", _exc)
             self.predictions["angle_outlier"] = False
 
         return diagnostics
 
     def undo(self):
-        self.is_dirty = True
+        # Do not flip is_dirty until we know the swap can succeed: raising on an
+        # empty stack should not mark the session as modified.
         if len(self.undo_stack) == 0:
             raise ValueError("Nothing to undo")
         if self.predictions is not None:
             self.redo_stack.append(self.predictions.copy())
         self.predictions = self.undo_stack.pop()
         self._sync_model_predictions()
+        self.is_dirty = True
 
     def redo(self):
-        self.is_dirty = True
         if len(self.redo_stack) == 0:
             raise ValueError("Nothing to redo")
         if self.predictions is not None:
             self.undo_stack.append(self.predictions.copy())
         self.predictions = self.redo_stack.pop()
         self._sync_model_predictions()
+        self.is_dirty = True
 
     def run_prediction(
         self,
@@ -539,6 +827,12 @@ class DeepSliceAppState:
                 legacy_section_numbers=legacy_section_numbers,
                 use_secondary_model=use_secondary_model,
                 batch_size=inference_batch_size,
+                preprocessing_options=self.preprocessing_options(),
+                tta=self.tta_enabled,
+                multi_scale=self.multiscale_enabled,
+                fast_fp16=self.fast_fp16_enabled,
+                section_dropout_passes=int(max(0, self.section_dropout_passes)),
+                confidence_weighted_ensemble=self.confidence_weighted_ensemble,
                 progress_callback=progress_callback,
                 log_callback=log_callback,
                 cancel_check=cancel_check,
@@ -548,16 +842,13 @@ class DeepSliceAppState:
             if isinstance(partial_predictions, pd.DataFrame) and len(partial_predictions) > 0:
                 self._partial_prediction_candidate = partial_predictions.copy()
                 self._partial_prediction_reason = str(exc)
-                raise RuntimeError(
-                    "PARTIAL_PREDICTIONS_AVAILABLE: "
-                    + str(exc)
-                ) from exc
+                raise PartialPredictionAvailable(str(exc)) from exc
             raise
 
         self.predictions = model.predictions.copy()
         self.clear_partial_prediction_candidate()
-        self.undo_stack = []
-        self.redo_stack = []
+        self.undo_stack.clear()
+        self.redo_stack.clear()
         diagnostics = self._annotate_prediction_diagnostics()
 
         progress_total = max(len(self.predictions), 1)
@@ -595,8 +886,8 @@ class DeepSliceAppState:
         model.load_QUINT(filename)
         self.species = model.species
         self.predictions = model.predictions.copy()
-        self.undo_stack = []
-        self.redo_stack = []
+        self.undo_stack.clear()
+        self.redo_stack.clear()
         self._annotate_prediction_diagnostics()
 
         self.detected_indexing_direction = self.detect_indexing_direction()
@@ -636,6 +927,138 @@ class DeepSliceAppState:
         model.set_bad_sections(bad_sections, auto=auto)
         self.predictions = model.predictions.copy()
 
+    def curation_risk_scores(self) -> np.ndarray:
+        if self.predictions is None:
+            raise ValueError("No predictions available")
+        if len(self.predictions) == 0:
+            return np.zeros(0, dtype=float)
+
+        payload = self.linearity_payload()
+        confidence = np.asarray(payload["confidence"], dtype=float)
+        outliers = np.asarray(payload["outliers"], dtype=bool)
+
+        risk = 0.55 * (1.0 - np.clip(confidence, 0.0, 1.0))
+        risk += 0.20 * outliers.astype(float)
+
+        if "orthogonality_flag" in self.predictions.columns:
+            risk += 0.08 * self.predictions["orthogonality_flag"].astype(bool).values.astype(float)
+        if "ap_out_of_bounds" in self.predictions.columns:
+            risk += 0.08 * self.predictions["ap_out_of_bounds"].astype(bool).values.astype(float)
+        if "angle_outlier" in self.predictions.columns:
+            risk += 0.07 * self.predictions["angle_outlier"].astype(bool).values.astype(float)
+        if "model_disagreement" in self.predictions.columns:
+            risk += 0.10 * self.predictions["model_disagreement"].astype(bool).values.astype(float)
+
+        if "ensemble_delta_mean_abs" in self.predictions.columns:
+            risk += 0.07 * self._scaled_deviation(self.predictions["ensemble_delta_mean_abs"].values)
+        if "tta_coordinate_variance" in self.predictions.columns:
+            risk += 0.07 * self._scaled_deviation(self.predictions["tta_coordinate_variance"].values)
+
+        return np.clip(risk, 0.0, 1.0)
+
+    def flag_low_confidence_sections(
+        self,
+        threshold: Optional[float] = None,
+        include_outliers: bool = True,
+        include_high_risk: bool = True,
+    ) -> int:
+        self.is_dirty = True
+        if self.predictions is None:
+            raise ValueError("No predictions available")
+        if len(self.predictions) == 0:
+            return 0
+
+        if threshold is None:
+            threshold = float(self.confidence_medium_threshold)
+        threshold = float(np.clip(threshold, 0.0, 1.0))
+
+        payload = self.linearity_payload()
+        confidence = np.asarray(payload["confidence"], dtype=float)
+        mask = confidence < threshold
+
+        if include_outliers:
+            mask = mask | np.asarray(payload["outliers"], dtype=bool)
+        if include_high_risk:
+            mask = mask | (self.curation_risk_scores() >= 0.70)
+
+        if "bad_section" in self.predictions.columns:
+            existing = self.predictions["bad_section"].astype(bool).values
+        else:
+            existing = np.zeros(len(self.predictions), dtype=bool)
+
+        updated = existing | mask
+        newly_flagged = int(np.sum(updated & (~existing)))
+        if newly_flagged == 0:
+            return 0
+
+        self.snapshot_predictions()
+        self.predictions["bad_section"] = updated.astype(bool)
+
+        if "review_status" not in self.predictions.columns:
+            self.predictions["review_status"] = "accepted"
+        review = self.predictions["review_status"].astype(str).values
+        review[updated] = "review"
+        self.predictions["review_status"] = review
+        self._sync_model_predictions()
+        return newly_flagged
+
+    def interpolate_bad_section_depths(self, max_gap: int = 6) -> int:
+        self.is_dirty = True
+        if self.predictions is None:
+            raise ValueError("No predictions available")
+        if len(self.predictions) < 3:
+            return 0
+        if "bad_section" not in self.predictions.columns:
+            return 0
+
+        bad_mask = self.predictions["bad_section"].astype(bool).values
+        if not np.any(bad_mask):
+            return 0
+
+        depths = np.asarray(
+            calculate_brain_center_depths(self.predictions, species=self.species),
+            dtype=float,
+        )
+        target_depths = depths.copy()
+        good_indices = np.where(~bad_mask)[0]
+        if len(good_indices) < 2:
+            return 0
+
+        replaced = 0
+        max_gap = int(max(1, max_gap))
+
+        for idx in np.where(bad_mask)[0]:
+            left_candidates = good_indices[good_indices < idx]
+            right_candidates = good_indices[good_indices > idx]
+            if len(left_candidates) == 0 or len(right_candidates) == 0:
+                continue
+            left = int(left_candidates[-1])
+            right = int(right_candidates[0])
+            gap_size = int(right - left - 1)
+            if gap_size > max_gap:
+                continue
+            target_depths[idx] = float(np.interp(idx, [left, right], [depths[left], depths[right]]))
+            replaced += 1
+
+        if replaced == 0:
+            return 0
+
+        self.snapshot_predictions()
+        delta = target_depths - depths
+        self.predictions["oy"] = self.predictions["oy"].astype(float) + delta
+
+        if "review_status" not in self.predictions.columns:
+            self.predictions["review_status"] = "accepted"
+        review = self.predictions["review_status"].astype(str).values
+        for idx in np.where(bad_mask)[0]:
+            if np.abs(delta[idx]) > 1e-9:
+                review[idx] = "interpolated"
+        self.predictions["review_status"] = review
+
+        self._annotate_prediction_diagnostics()
+        self._sync_model_predictions()
+        return replaced
+
     def apply_manual_order(self, ordered_row_indices: List[int]):
         self.is_dirty = True
         if self.predictions is None:
@@ -671,7 +1094,8 @@ class DeepSliceAppState:
         self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
-        model.adjust_angles(ml_angle, dv_angle)
+        # Keyword-only to prevent ML/DV positional swaps regressions.
+        model.adjust_angles(ML=ml_angle, DV=dv_angle)
         self.predictions = model.predictions.copy()
 
     def enforce_index_order(self):
@@ -760,6 +1184,10 @@ class DeepSliceAppState:
             raise ValueError("Predictions table is empty")
 
         predictions = self.predictions.copy()
+        # x_values are the section index values used for linearity fitting.
+        # When "nr" is present these are actual section numbers (may have gaps);
+        # otherwise they are positional indices 1..N. The two are semantically
+        # different: positional indices assume evenly-spaced sections.
         if "nr" in predictions.columns:
             x_values = predictions["nr"].astype(float).values
         else:
@@ -769,14 +1197,18 @@ class DeepSliceAppState:
             calculate_brain_center_depths(predictions, species=self.species),
             dtype=float,
         )
-        if len(y_values) > 1:
+        # Detect rank-deficient input (e.g. all section numbers identical, which
+        # would make polyfit raise or return NaNs) and fall back to a flat trend.
+        x_unique = np.unique(x_values)
+        if len(y_values) > 1 and x_unique.size > 1:
             slope, intercept = np.polyfit(x_values, y_values, 1)
             trend = slope * x_values + intercept
             residuals = y_values - trend
         else:
-            slope, intercept = 0.0, float(y_values[0])
-            trend = np.array(y_values)
-            residuals = np.zeros_like(y_values)
+            slope = 0.0
+            intercept = float(np.mean(y_values)) if y_values.size else 0.0
+            trend = np.full_like(y_values, intercept, dtype=float)
+            residuals = np.zeros_like(y_values, dtype=float)
 
         section_numbers_for_weighting = (
             predictions["nr"].astype(int).tolist()
@@ -805,13 +1237,17 @@ class DeepSliceAppState:
         dv_angles = np.array(dv_angles, dtype=float)
         ml_angles = np.array(ml_angles, dtype=float)
         if len(dv_angles) > 0:
-            mean_dv, mean_ml = angle_methods.get_mean_angle(
-                dv_angles,
-                ml_angles,
-                method="weighted_mean",
-                depths=y_values,
-                species=self.species,
-            )
+            try:
+                mean_dv, mean_ml = angle_methods.get_mean_angle(
+                    dv_angles,
+                    ml_angles,
+                    method="weighted_mean",
+                    depths=y_values,
+                    species=self.species,
+                )
+            except Exception:
+                mean_dv = float(np.mean(dv_angles))
+                mean_ml = float(np.mean(ml_angles))
             angle_deviation = np.sqrt((dv_angles - mean_dv) ** 2 + (ml_angles - mean_ml) ** 2)
         else:
             angle_deviation = np.zeros(len(predictions), dtype=float)
@@ -950,6 +1386,33 @@ class DeepSliceAppState:
             "outlier_sigma_threshold": float(self.outlier_sigma_threshold),
             "confidence_high_threshold": float(self.confidence_high_threshold),
             "confidence_medium_threshold": float(self.confidence_medium_threshold),
+            "tissue_crop_enabled": bool(self.tissue_crop_enabled),
+            "clahe_enabled": bool(self.clahe_enabled),
+            "stain_normalization_mode": str(self.stain_normalization_mode),
+            "quality_gate_enabled": bool(self.quality_gate_enabled),
+            "min_resolution_px": int(self.min_resolution_px),
+            "blur_variance_threshold": float(self.blur_variance_threshold),
+            "dark_intensity_threshold": float(self.dark_intensity_threshold),
+            "bright_intensity_threshold": float(self.bright_intensity_threshold),
+            "saturated_fraction_threshold": float(self.saturated_fraction_threshold),
+            "artifact_blank_fraction_threshold": float(self.artifact_blank_fraction_threshold),
+            "gamma_correction": float(self.gamma_correction),
+            "bilateral_denoise_enabled": bool(self.bilateral_denoise_enabled),
+            "percentile_normalization_enabled": bool(self.percentile_normalization_enabled),
+            "preserve_color_enabled": bool(self.preserve_color_enabled),
+            "tta_enabled": bool(self.tta_enabled),
+            "multiscale_enabled": bool(self.multiscale_enabled),
+            "fast_fp16_enabled": bool(self.fast_fp16_enabled),
+            "section_dropout_passes": int(max(0, self.section_dropout_passes)),
+            "confidence_weighted_ensemble": bool(self.confidence_weighted_ensemble),
+            "training_seed": int(max(0, self.training_seed)),
+            "training_group_mode": self._normalize_training_group_mode(self.training_group_mode),
+            "training_train_fraction": float(np.clip(self.training_train_fraction, 0.50, 0.90)),
+            "training_val_fraction": float(np.clip(self.training_val_fraction, 0.05, 0.40)),
+            "training_patience": int(max(1, self.training_patience)),
+            "training_lr_factor": float(np.clip(self.training_lr_factor, 0.05, 0.95)),
+            "training_min_lr": float(np.clip(self.training_min_lr, 1e-8, 1e-3)),
+            "training_use_mixed_precision": bool(self.training_use_mixed_precision),
             "detected_indexing_direction": self.detected_indexing_direction,
             "selected_indexing_direction": self.selected_indexing_direction,
             "predictions": prediction_records,
@@ -958,16 +1421,107 @@ class DeepSliceAppState:
     def load_session_dict(self, payload: Dict[str, object]):
         self.is_dirty = False
         self.clear_partial_prediction_candidate()
-        self.species = payload.get("species", "mouse")
+        # Route species changes through set_species() so the atlas cache and
+        # loaded model are invalidated when the species actually changes.
+        target_species = str(payload.get("species", "mouse")).strip().lower()
+        try:
+            self.set_species(target_species)
+        except ValueError:
+            self.species = "mouse"
         self.image_paths = payload.get("image_paths", [])
-        self.section_numbers = bool(payload.get("section_numbers", True))
-        self.legacy_section_numbers = bool(payload.get("legacy_section_numbers", False))
-        self.ensemble = payload.get("ensemble", None)
-        self.use_secondary_model = bool(payload.get("use_secondary_model", False))
+        self.section_numbers = _coerce_bool(payload.get("section_numbers", True), True)
+        self.legacy_section_numbers = _coerce_bool(payload.get("legacy_section_numbers", False))
+        ensemble_value = payload.get("ensemble", None)
+        # ensemble is a tri-state (None / True / False); preserve None but coerce strings.
+        self.ensemble = None if ensemble_value is None else _coerce_bool(ensemble_value)
+        self.use_secondary_model = _coerce_bool(payload.get("use_secondary_model", False))
         try:
             self.inference_batch_size = int(max(1, int(payload.get("inference_batch_size", self.inference_batch_size))))
         except Exception:
             self.inference_batch_size = int(max(1, self.inference_batch_size))
+
+        self.tissue_crop_enabled = bool(payload.get("tissue_crop_enabled", self.tissue_crop_enabled))
+        self.clahe_enabled = bool(payload.get("clahe_enabled", self.clahe_enabled))
+        self.stain_normalization_mode = str(
+            payload.get("stain_normalization_mode", self.stain_normalization_mode)
+        ).strip().lower()
+        self.quality_gate_enabled = bool(payload.get("quality_gate_enabled", self.quality_gate_enabled))
+        self.min_resolution_px = int(max(64, int(payload.get("min_resolution_px", self.min_resolution_px))))
+        self.blur_variance_threshold = float(
+            payload.get("blur_variance_threshold", self.blur_variance_threshold)
+        )
+        self.dark_intensity_threshold = float(
+            payload.get("dark_intensity_threshold", self.dark_intensity_threshold)
+        )
+        self.bright_intensity_threshold = float(
+            payload.get("bright_intensity_threshold", self.bright_intensity_threshold)
+        )
+        self.saturated_fraction_threshold = float(
+            payload.get("saturated_fraction_threshold", self.saturated_fraction_threshold)
+        )
+        self.artifact_blank_fraction_threshold = float(
+            payload.get("artifact_blank_fraction_threshold", self.artifact_blank_fraction_threshold)
+        )
+        try:
+            gamma_value = float(payload.get("gamma_correction", self.gamma_correction))
+        except Exception:
+            gamma_value = float(self.gamma_correction)
+        self.gamma_correction = float(np.clip(gamma_value, 0.5, 2.0))
+        self.bilateral_denoise_enabled = bool(
+            payload.get("bilateral_denoise_enabled", self.bilateral_denoise_enabled)
+        )
+        self.percentile_normalization_enabled = bool(
+            payload.get("percentile_normalization_enabled", self.percentile_normalization_enabled)
+        )
+        self.preserve_color_enabled = bool(payload.get("preserve_color_enabled", self.preserve_color_enabled))
+        self.tta_enabled = bool(payload.get("tta_enabled", self.tta_enabled))
+        self.multiscale_enabled = bool(payload.get("multiscale_enabled", self.multiscale_enabled))
+        self.fast_fp16_enabled = bool(payload.get("fast_fp16_enabled", self.fast_fp16_enabled))
+        self.section_dropout_passes = int(max(0, int(payload.get("section_dropout_passes", self.section_dropout_passes))))
+        self.confidence_weighted_ensemble = bool(
+            payload.get("confidence_weighted_ensemble", self.confidence_weighted_ensemble)
+        )
+
+        try:
+            self.training_seed = int(max(0, int(payload.get("training_seed", self.training_seed))))
+        except Exception:
+            self.training_seed = int(max(0, self.training_seed))
+        self.training_group_mode = self._normalize_training_group_mode(
+            payload.get("training_group_mode", self.training_group_mode)
+        )
+        try:
+            self.training_train_fraction = float(
+                np.clip(float(payload.get("training_train_fraction", self.training_train_fraction)), 0.50, 0.90)
+            )
+        except Exception:
+            pass
+        try:
+            self.training_val_fraction = float(
+                np.clip(float(payload.get("training_val_fraction", self.training_val_fraction)), 0.05, 0.40)
+            )
+        except Exception:
+            pass
+        if self.training_train_fraction + self.training_val_fraction >= 0.99:
+            self.training_val_fraction = max(0.05, 0.98 - self.training_train_fraction)
+        try:
+            self.training_patience = int(max(1, int(payload.get("training_patience", self.training_patience))))
+        except Exception:
+            pass
+        try:
+            self.training_lr_factor = float(
+                np.clip(float(payload.get("training_lr_factor", self.training_lr_factor)), 0.05, 0.95)
+            )
+        except Exception:
+            pass
+        try:
+            self.training_min_lr = float(
+                np.clip(float(payload.get("training_min_lr", self.training_min_lr)), 1e-8, 1e-3)
+            )
+        except Exception:
+            pass
+        self.training_use_mixed_precision = bool(
+            payload.get("training_use_mixed_precision", self.training_use_mixed_precision)
+        )
 
         outlier_sigma = payload.get("outlier_sigma_threshold", self.outlier_sigma_threshold)
         confidence_high = payload.get("confidence_high_threshold", self.confidence_high_threshold)
@@ -984,6 +1538,19 @@ class DeepSliceAppState:
         self.detected_indexing_direction = payload.get("detected_indexing_direction", None)
         self.selected_indexing_direction = payload.get("selected_indexing_direction", None)
 
+        # Surface missing-file warnings so users notice a relocated dataset
+        # before they hit "Run alignment" and get an obscure IO error.
+        self.missing_image_paths: List[str] = [
+            str(path)
+            for path in self.image_paths
+            if path and not os.path.isfile(str(path))
+        ]
+        if self.missing_image_paths:
+            _logger.warning(
+                "load_session_dict: %d image path(s) referenced by session are missing on disk",
+                len(self.missing_image_paths),
+            )
+
         prediction_rows = payload.get("predictions", None)
         if prediction_rows is None:
             self.predictions = None
@@ -992,8 +1559,8 @@ class DeepSliceAppState:
             if len(self.predictions) > 0:
                 self._annotate_prediction_diagnostics()
 
-        self.undo_stack = []
-        self.redo_stack = []
+        self.undo_stack.clear()
+        self.redo_stack.clear()
         if self.model is not None and self.model.species != self.species:
             self.model = None
         self._sync_model_predictions()

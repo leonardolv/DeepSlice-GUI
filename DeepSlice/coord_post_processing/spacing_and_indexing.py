@@ -1,3 +1,4 @@
+import logging
 from typing import Union, List, Optional
 import numpy as np
 import pandas as pd
@@ -6,6 +7,8 @@ from pathlib import Path
 from .depth_estimation import calculate_brain_center_depths
 from .plane_alignment_functions import plane_alignment
 from ..metadata import metadata_loader
+
+_logger = logging.getLogger(__name__)
 
 
 def trim_mean(arr: np.array, percent: int) -> float:
@@ -228,10 +231,10 @@ def space_according_to_index(
                 species=species,
             )
             if not suppress:
-                print(f"predicted thickness is {section_thickness * voxel_size}µm")
+                _logger.info("Predicted section thickness: %.3f um", section_thickness * voxel_size)
         else:
             if not suppress:
-                print(f"specified thickness is {section_thickness * voxel_size}µm")
+                _logger.info("Specified section thickness: %.3f um", section_thickness * voxel_size)
 
         calculated_spacing = ideal_spacing(
             predictions["nr"], depths, section_thickness, bad_sections, species=species
@@ -322,9 +325,11 @@ def set_bad_sections_util(
     bad_sections_found = len(flagged_indexes)
     # Tell the user which sections were identified as bad
     if bad_sections_found > 0:
-        print(
-            f"{bad_sections_found} sections out of {len(df)} were marked as bad, \n\
-        They are:\n {df.Filenames.iloc[flagged_indexes]}"
+        _logger.info(
+            "%d sections out of %d marked as bad: %s",
+            bad_sections_found,
+            len(df),
+            df.Filenames.iloc[flagged_indexes].tolist(),
         )
     return df
 

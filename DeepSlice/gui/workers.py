@@ -8,8 +8,13 @@ from ..error_logging import get_logger
 LOGGER = get_logger("gui.worker")
 
 
+import threading
+
+
 class WorkerSignals(QObject):
     finished = Signal(object)
+    # error emits the full traceback text. Callers may inspect the exception
+    # class name (it appears in the traceback) for typed dispatch.
     error = Signal(str)
     progress = Signal(int, int, str)
     log = Signal(str)
@@ -24,6 +29,14 @@ class FunctionWorker(QRunnable):
         self.kwargs = kwargs
         self.inject_callbacks = inject_callbacks
         self.signals = WorkerSignals()
+        self._cancel_event = threading.Event()
+
+    def request_cancel(self) -> None:
+        """Set a cooperative cancellation flag tasks can poll."""
+        self._cancel_event.set()
+
+    def is_cancel_requested(self) -> bool:
+        return self._cancel_event.is_set()
 
     @Slot()
     def run(self):
@@ -32,6 +45,8 @@ class FunctionWorker(QRunnable):
             if self.inject_callbacks:
                 kwargs["progress_callback"] = self._emit_progress
                 kwargs["log_callback"] = self.signals.log.emit
+                if "cancel_check" not in kwargs:
+                    kwargs["cancel_check"] = self.is_cancel_requested
             result = self.fn(*self.args, **kwargs)
         except Exception as exc:
             error_text = traceback.format_exc()

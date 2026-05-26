@@ -1,21 +1,20 @@
-
-Download.csv
-Download.xml
-utilities/__pycache__/QuickNII_functions.cpython-39.pyc
-utilities/adult_to_p28_test.xml.csv
-utilities/adult_to_p28_test.xml.xml
-utilities/C110_deepslice2.xml
-DS-test.py
-DS-test.py
-utilities/__pycache__/plane_alignment.cpython-37.pyc
-utilities/__pycache__/QuickNII_functions.cpython-37.pyc
+# Byte-compiled / cache
+__pycache__/
 *.pyc
-*.pyc
-DeepSlice/metadata/volumes/*.nii
-DeepSlice/metadata/weights/*.h5
-DeepSlice/metadata/weights/*.hdf5
+*.pyo
+*.pyd
+.pytest_cache/
 
-dist
+# Editor / IDE
+.vscode/settings.json
+.idea/
+
+# Virtual environments (must not live inside the repo)
+/.venv/
+/.venv*/
+/venv/
+/env/
+
 # Distribution / packaging
 bin/
 build/
@@ -27,18 +26,33 @@ lib64/
 parts/
 sdist/
 var/
+*.egg
 *.egg-info/
 .installed.cfg
-*.egg
+DeepSlice.egg-info/
 
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
-DeepSlice.egg-info
-test.py
-.vscode/settings.json
 
-# Ignore large NIfTI data (added by Copilot)
+# DeepSlice runtime artifacts (downloaded on demand)
+DeepSlice/metadata/volumes/*.nii
+DeepSlice/metadata/volumes/*.nii.gz
 DeepSlice/metadata/*.nii
 DeepSlice/metadata/*.nii.gz
+DeepSlice/metadata/weights/*.h5
+DeepSlice/metadata/weights/*.hdf5
+
+# Local test images and dev scratch
 TEST IMAGES/
+test.py
+DS-test.py
+patch*.py
+
+# FreeFileSync / sync tool databases
+*.ffs_db
+*.ffs_lock
+
+# OS junk
+.DS_Store
+Thumbs.db

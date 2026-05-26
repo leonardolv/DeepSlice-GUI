@@ -1,0 +1,17 @@
+[run]
+branch = True
+source = DeepSlice
+omit =
+    DeepSlice/gui/main_window.py
+    DeepSlice/__init__.py
+    DeepSlice/*/__init__.py
+    */tests/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+show_missing = True
+skip_covered = True

@@ -1,3 +1,4 @@
+import json
 import pathlib
 import sys
 
@@ -253,7 +254,9 @@ def test_run_prediction_caches_partial_candidate_on_failure(monkeypatch):
     failing_model = _FailingPredictModel(partial_predictions=partial)
     monkeypatch.setattr(state, "ensure_model", lambda log_callback=None: failing_model)
 
-    with pytest.raises(RuntimeError, match="PARTIAL_PREDICTIONS_AVAILABLE"):
+    # The sentinel-string error was replaced by a typed exception.
+    from DeepSlice.gui.state import PartialPredictionAvailable
+    with pytest.raises(PartialPredictionAvailable):
         state.run_prediction(
             section_numbers=True,
             legacy_section_numbers=False,
@@ -309,3 +312,126 @@ def test_partial_prediction_candidate_adds_diagnostic_columns():
     assert "ap_out_of_bounds" in state.predictions.columns
     assert "orthogonality_flag" in state.predictions.columns
     assert "angle_outlier" in state.predictions.columns
+
+
+def test_curation_risk_scores_are_bounded_and_aligned():
+    state = DeepSliceAppState(species="mouse")
+    state.predictions = _sample_predictions().copy()
+    state._annotate_prediction_diagnostics()
+
+    scores = state.curation_risk_scores()
+
+    assert scores.shape[0] == len(state.predictions)
+    assert np.all(scores >= 0.0)
+    assert np.all(scores <= 1.0)
+
+
+def test_flag_low_confidence_sections_sets_bad_section_column():
+    state = DeepSliceAppState(species="mouse")
+    state.predictions = _sample_predictions().copy()
+
+    flagged = state.flag_low_confidence_sections(threshold=0.95, include_outliers=False, include_high_risk=False)
+
+    assert flagged > 0
+    assert "bad_section" in state.predictions.columns
+    assert int(np.sum(state.predictions["bad_section"].astype(bool))) >= flagged
+
+
+def test_interpolate_bad_section_depths_updates_oy_for_middle_bad_slice():
+    state = DeepSliceAppState(species="mouse")
+    predictions = _sample_predictions().copy()
+    predictions["bad_section"] = False
+    predictions.loc[2, "bad_section"] = True
+    predictions.loc[2, "oy"] = predictions.loc[2, "oy"] + 30.0
+    state.predictions = predictions
+
+    before = state.predictions["oy"].astype(float).copy()
+    corrected = state.interpolate_bad_section_depths(max_gap=6)
+    after = state.predictions["oy"].astype(float)
+
+    assert corrected >= 1
+    assert float(after.iloc[2]) != pytest.approx(float(before.iloc[2]))
+
+
+def test_training_split_preview_is_group_leakage_free(tmp_path):
+    state = DeepSliceAppState(species="mouse")
+    image_paths = []
+    groups = ["brainA", "brainA", "brainB", "brainB", "brainC", "brainD"]
+    for idx, group in enumerate(groups):
+        folder = tmp_path / group
+        folder.mkdir(parents=True, exist_ok=True)
+        image_path = folder / f"{group}_s{idx + 1:03d}.png"
+        image_path.write_text("x", encoding="utf-8")
+        image_paths.append(str(image_path))
+
+    state.image_paths = image_paths
+    state.training_group_mode = "parent-folder"
+    state.training_seed = 9
+    state.training_train_fraction = 0.60
+    state.training_val_fraction = 0.20
+
+    preview = state.build_training_split_preview()
+
+    assert preview["counts"]["total"] == len(image_paths)
+    assert preview["counts"]["train"] + preview["counts"]["val"] + preview["counts"]["test"] == len(image_paths)
+    assert preview["leakage_free"] is True
+
+
+def test_training_manifest_exports_include_split_and_metadata(tmp_path):
+    state = DeepSliceAppState(species="mouse")
+    image_paths = []
+    prefixes = ["animal01", "animal01", "animal02", "animal02", "animal03", "animal04"]
+    for idx, prefix in enumerate(prefixes):
+        image_path = tmp_path / f"{prefix}_s{idx + 1:03d}.png"
+        image_path.write_text("x", encoding="utf-8")
+        image_paths.append(str(image_path))
+
+    state.image_paths = image_paths
+    state.training_group_mode = "filename-prefix"
+    state.training_seed = 17
+    state.training_train_fraction = 0.67
+    state.training_val_fraction = 0.16
+
+    split_path = tmp_path / "training_split_manifest.json"
+    metadata_path = tmp_path / "training_run_metadata.json"
+
+    state.save_training_split_manifest(str(split_path))
+    state.save_training_metadata_manifest(str(metadata_path))
+
+    with split_path.open("r", encoding="utf-8") as handle:
+        split_payload = json.load(handle)
+    with metadata_path.open("r", encoding="utf-8") as handle:
+        metadata_payload = json.load(handle)
+
+    assert split_payload["species"] == "mouse"
+    assert split_payload["counts"]["total"] == len(image_paths)
+    assert set(split_payload["splits"].keys()) == {"train", "val", "test"}
+    assert metadata_payload["species"] == "mouse"
+    assert metadata_payload["split_counts"]["total"] == len(image_paths)
+    assert metadata_payload["split_leakage_free"] is True
+
+
+def test_training_settings_session_roundtrip():
+    state = DeepSliceAppState(species="mouse")
+    state.training_seed = 1234
+    state.training_group_mode = "filename-prefix"
+    state.training_train_fraction = 0.73
+    state.training_val_fraction = 0.14
+    state.training_patience = 11
+    state.training_lr_factor = 0.35
+    state.training_min_lr = 2e-6
+    state.training_use_mixed_precision = True
+
+    payload = state.to_session_dict()
+
+    restored = DeepSliceAppState(species="rat")
+    restored.load_session_dict(payload)
+
+    assert restored.training_seed == 1234
+    assert restored.training_group_mode == "filename-prefix"
+    assert restored.training_train_fraction == pytest.approx(0.73)
+    assert restored.training_val_fraction == pytest.approx(0.14)
+    assert restored.training_patience == 11
+    assert restored.training_lr_factor == pytest.approx(0.35)
+    assert restored.training_min_lr == pytest.approx(2e-6)
+    assert restored.training_use_mixed_precision is True

@@ -10,7 +10,8 @@ def generate_pdf_report(output_path: str, summary: dict, options: dict):
         from reportlab.pdfgen import canvas
     except ImportError as exc:
         raise RuntimeError(
-            "reportlab is required for PDF report generation. Install with 'pip install reportlab'."
+            "reportlab is required for PDF report generation. "
+            "Install with 'pip install DeepSlice[pdf]' or 'pip install reportlab'."
         ) from exc
 
     pdf = canvas.Canvas(output_path, pagesize=A4)

@@ -1,10 +1,13 @@
 import hashlib
 import json
+import logging
 import os
 from functools import lru_cache
 from pathlib import Path
 
 import requests
+
+_logger = logging.getLogger(__name__)
 
 
 def load_config() -> dict:
@@ -76,7 +79,7 @@ def download_file(
 
     for attempt in range(1, retries + 1):
         try:
-            print("Downloading file from " + url + " to " + path)
+            _logger.info("Downloading file from %s to %s", url, path)
             with requests.get(
                 url, allow_redirects=True, stream=True, timeout=timeout
             ) as response:
@@ -108,8 +111,9 @@ def download_file(
                     pass
 
             if attempt < retries:
-                print(
-                    f"Download attempt {attempt}/{retries} failed for {path}: {exc}. Retrying..."
+                _logger.warning(
+                    "Download attempt %d/%d failed for %s: %s. Retrying...",
+                    attempt, retries, path, exc,
                 )
             else:
                 raise RuntimeError(
@@ -142,8 +146,9 @@ def get_data_path(
     if not needs_download and expected_sha256:
         existing_sha256 = _file_sha256(local_path)
         if existing_sha256.lower() != expected_sha256.lower():
-            print(
-                f"Checksum mismatch for existing file {local_path}. Re-downloading."
+            _logger.warning(
+                "Checksum mismatch for existing file %s. Re-downloading.",
+                local_path,
             )
             needs_download = True
 
