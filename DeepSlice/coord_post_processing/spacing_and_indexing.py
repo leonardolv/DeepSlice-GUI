@@ -66,6 +66,11 @@ def calculate_average_section_thickness(
         )
 
     number_spacing = section_numbers[:-1].values - section_numbers[1:].values
+    if np.any(number_spacing == 0):
+        raise ValueError(
+            "Duplicate section numbers detected (after dropping bad sections). "
+            "Each section number must be unique to compute thickness."
+        )
     # inter section depth differences
     depth_spacing = section_depth[:-1] - section_depth[1:]
     # dividing depth spacing by number spacing allows us to control for missing sections
@@ -73,6 +78,10 @@ def calculate_average_section_thickness(
         section_numbers, section_depth, species, None, method
     )
     section_thicknesses = depth_spacing / number_spacing
+    if not np.isfinite(section_thicknesses).all():
+        raise ValueError(
+            "Computed section thicknesses contain non-finite values (NaN/Inf)"
+        )
     thickness_weights = np.asarray(weighted_accuracy[1:], dtype=float)
     if len(thickness_weights) != len(section_thicknesses):
         raise ValueError(
@@ -266,9 +275,14 @@ def number_sections(filenames: List[str], legacy=False) -> List[int]:
                 )
             section_numbers.append(int(match[-1][2:]))
         else:
-            match = re.sub("[^0-9]", "", filename)
+            digits = re.sub("[^0-9]", "", filename)
             ###this gets the three numbers closest to the end
-            section_numbers.append(match[-3:])
+            tail = digits[-3:]
+            if not tail:
+                raise ValueError(
+                    f"Legacy section numbering requires at least one digit in filename: {filename}"
+                )
+            section_numbers.append(int(tail))
     return section_numbers
 
 
