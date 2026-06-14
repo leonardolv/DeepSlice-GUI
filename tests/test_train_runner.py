@@ -130,3 +130,89 @@ def test_train_runner_main_requires_labels_for_epochs(tmp_path):
     )
 
     assert exit_code == 1
+
+
+def test_train_runner_rejects_out_of_range_train_fraction(tmp_path, capsys):
+    import pytest
+
+    images_root = tmp_path / "images"
+    output_root = tmp_path / "run"
+    _create_mock_images(images_root)
+
+    with pytest.raises(SystemExit):
+        main(
+            [
+                "--images",
+                str(images_root),
+                "--output-dir",
+                str(output_root),
+                "--train-fraction",
+                "-0.5",
+                "--dry-run",
+            ]
+        )
+    captured = capsys.readouterr()
+    assert "--train-fraction" in captured.err
+
+
+def test_train_runner_rejects_out_of_range_gamma(tmp_path, capsys):
+    import pytest
+
+    images_root = tmp_path / "images"
+    output_root = tmp_path / "run"
+    _create_mock_images(images_root)
+
+    with pytest.raises(SystemExit):
+        main(
+            [
+                "--images",
+                str(images_root),
+                "--output-dir",
+                str(output_root),
+                "--gamma",
+                "100",
+                "--dry-run",
+            ]
+        )
+    captured = capsys.readouterr()
+    assert "--gamma" in captured.err
+
+
+def test_train_runner_rejects_non_positive_learning_rate(tmp_path, capsys):
+    import pytest
+
+    images_root = tmp_path / "images"
+    output_root = tmp_path / "run"
+    _create_mock_images(images_root)
+
+    with pytest.raises(SystemExit):
+        main(
+            [
+                "--images",
+                str(images_root),
+                "--output-dir",
+                str(output_root),
+                "--learning-rate",
+                "0",
+                "--dry-run",
+            ]
+        )
+    captured = capsys.readouterr()
+    assert "--learning-rate" in captured.err
+
+
+def test_validate_learning_rate_rejects_zero_negative_nan():
+    import math
+    import pytest
+
+    from DeepSlice.training.train_runner import _validate_learning_rate
+
+    assert _validate_learning_rate(0.001) == 0.001
+    with pytest.raises(ValueError):
+        _validate_learning_rate(0)
+    with pytest.raises(ValueError):
+        _validate_learning_rate(-1.0)
+    with pytest.raises(ValueError):
+        _validate_learning_rate(float("nan"))
+    with pytest.raises(ValueError):
+        _validate_learning_rate(math.inf)
