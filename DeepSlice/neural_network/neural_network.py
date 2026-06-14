@@ -271,7 +271,8 @@ def _preprocess_image_array(
 
     if bool(options.get("tissue_crop", True)):
         rgb, tissue_mask = _crop_to_tissue_bbox(rgb, tissue_mask)
-        gray = rgb2gray(rgb)
+        # gray is stale here but only re-derived if a path below actually
+        # consumes it (CLAHE-greyscale branch or the final repeat).
 
     if not np.isclose(scale_factor, 1.0):
         rgb = _apply_scale_variant(rgb, float(scale_factor))
@@ -281,7 +282,6 @@ def _preprocess_image_array(
     stain_mode = str(options.get("stain_normalization", "none")).strip().lower()
     if stain_mode == "reinhard":
         rgb = _apply_reinhard_normalization(rgb, tissue_mask)
-        gray = rgb2gray(rgb)
 
     if bool(options.get("clahe", False)):
         if bool(options.get("preserve_color", False)):
@@ -291,9 +291,10 @@ def _preprocess_image_array(
             lab[:, :, 0] = l_channel * 100.0
             rgb = np.clip(color.lab2rgb(lab), 0.0, 1.0).astype(np.float32)
         else:
+            # CLAHE consumes gray, so make sure it matches the current rgb.
+            gray = rgb2gray(rgb)
             gray = exposure.equalize_adapthist(gray, clip_limit=0.03)
             rgb = np.repeat(gray[:, :, None], 3, axis=2)
-        gray = rgb2gray(rgb)
 
     if bool(options.get("bilateral_denoise", False)):
         rgb = restoration.denoise_bilateral(
@@ -302,18 +303,18 @@ def _preprocess_image_array(
             sigma_spatial=3,
             channel_axis=-1,
         ).astype(np.float32)
-        gray = rgb2gray(rgb)
 
     gamma_value = float(options.get("gamma", 1.0))
     if not np.isclose(gamma_value, 1.0):
         rgb = exposure.adjust_gamma(np.clip(rgb, 0.0, 1.0), gamma=gamma_value).astype(np.float32)
-        gray = rgb2gray(rgb)
 
     if bool(options.get("percentile_normalization", True)):
         rgb = _percentile_normalize(rgb, tissue_mask)
-        gray = rgb2gray(rgb)
 
     if not bool(options.get("preserve_color", False)):
+        # Compute gray once from the final rgb instead of re-deriving after
+        # every intermediate filter above.
+        gray = rgb2gray(rgb)
         rgb = np.repeat(gray[:, :, None], 3, axis=2)
 
     rgb = _flip_image(rgb, flip_mode)
@@ -361,14 +362,21 @@ def _preprocess_image_array(
     }
 
 
-def inspect_image_quality(image_path: str, preprocessing_options=None):
-    options = _coerce_preprocessing_options(preprocessing_options)
-    rgb = _load_image_rgb(image_path)
+def _inspect_image_quality_from_rgb(rgb: np.ndarray, options: dict, path: str = "") -> dict:
+    """Compute the quality report from an already-decoded RGB array. The public
+    inspect_image_quality() wraps this so callers that already hold ``rgb``
+    don't re-open the file."""
     h, w = rgb.shape[:2]
     gray = rgb2gray(rgb)
     metrics = _compute_quality_metrics(gray, width=w, height=h, options=options)
-    metrics["path"] = str(image_path)
+    metrics["path"] = str(path)
     return metrics
+
+
+def inspect_image_quality(image_path: str, preprocessing_options=None):
+    options = _coerce_preprocessing_options(preprocessing_options)
+    rgb = _load_image_rgb(image_path)
+    return _inspect_image_quality_from_rgb(rgb, options, str(image_path))
 
 
 def inspect_image_batch(image_paths: list, preprocessing_options=None):
@@ -428,7 +436,8 @@ def preview_preprocessed_image(
         dropout_fraction=0.0,
         rng=None,
     )
-    quality = inspect_image_quality(image_path, preprocessing_options=options)
+    # Re-use the rgb array already loaded above instead of re-opening the file.
+    quality = _inspect_image_quality_from_rgb(rgb, options, str(image_path))
     quality.update(extra)
     quality["preview_image"] = preview_uint8
     quality["model_input"] = model_input

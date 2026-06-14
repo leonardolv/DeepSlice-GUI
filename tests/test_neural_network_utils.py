@@ -259,3 +259,64 @@ def test_inspect_image_batch_nonexistent_paths_skipped():
     assert report["total"] == 2
     # Both should be skipped gracefully, no crash
     assert len(report["metrics"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Efficiency: preview_preprocessed_image should not double-open the file
+# (regression test for the redundant inspect_image_quality re-load).
+# ---------------------------------------------------------------------------
+
+def test_preview_preprocessed_image_opens_file_only_once(tmp_path, monkeypatch):
+    from PIL import Image as PILImage
+
+    from DeepSlice.neural_network import neural_network
+
+    image_path = tmp_path / "sample.png"
+    array = np.random.randint(0, 255, size=(120, 160, 3), dtype=np.uint8)
+    PILImage.fromarray(array).save(image_path)
+
+    open_call_count = {"count": 0}
+    original_open = PILImage.open
+
+    def _counting_open(path, *args, **kwargs):
+        if str(path) == str(image_path):
+            open_call_count["count"] += 1
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(PILImage, "open", _counting_open)
+
+    result = neural_network.preview_preprocessed_image(str(image_path))
+
+    assert open_call_count["count"] == 1
+    assert "preview_image" in result
+    assert "model_input" in result
+    assert result["model_input"].shape == neural_network.XCEPTION_INPUT_SIZE
+
+
+def test_preprocess_image_array_default_path_minimises_rgb2gray():
+    """On the default preprocessing path (no scale, no Reinhard, no CLAHE,
+    no bilateral denoise, no gamma change), only two rgb2gray conversions
+    should be required: the initial tissue-mask gray and the final
+    grayscale-as-3-channels step. This is a regression guard against
+    accidentally re-introducing intermediate gray recomputations."""
+    from DeepSlice.neural_network import neural_network
+
+    call_count = {"count": 0}
+    original_rgb2gray = neural_network.rgb2gray
+
+    def _counting_rgb2gray(image):
+        call_count["count"] += 1
+        return original_rgb2gray(image)
+
+    neural_network.rgb2gray = _counting_rgb2gray
+    try:
+        rgb = np.random.rand(120, 160, 3).astype(np.float32)
+        options = neural_network._coerce_preprocessing_options(None)
+        neural_network._preprocess_image_array(rgb, options=options)
+    finally:
+        neural_network.rgb2gray = original_rgb2gray
+
+    assert call_count["count"] == 2, (
+        f"Default preprocessing path should call rgb2gray exactly twice "
+        f"(initial + final), but called it {call_count['count']} times."
+    )
