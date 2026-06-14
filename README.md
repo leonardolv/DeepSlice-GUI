@@ -58,6 +58,30 @@ deepslice-train --images ./my_dataset/images --labels ./my_dataset/labels.csv --
 
 The command always writes grouped split and run metadata manifests, and when `--epochs > 0` it trains the selected trainer and saves model/history artifacts.
 
+#### Training output artifacts
+
+After `deepslice-train` finishes, `--output-dir` will contain:
+
+```
+training_run/
+├── training_split_manifest.json     # train/val/test image lists with leakage-free groups
+├── training_run_metadata.json       # CLI args, effective batch size, split counts, timing
+├── checkpoints/                     # best-epoch Keras checkpoints (when --epochs > 0)
+│   └── deepslice_training_model.keras
+├── training_history.json            # per-epoch loss / mae values for plotting
+└── deepslice_training_model.keras   # final model (also saved as the best checkpoint)
+```
+
+The split manifest is deterministic for a given `--seed` + `--group-mode` combination,
+so re-running with `--dry-run` first lets you inspect the planned split before
+committing GPU time. `effective_batch_size` in the metadata reflects automatic
+clamping when the requested `--batch-size` exceeds the number of training samples.
+
+Argument validation runs at parse time: `--train-fraction`, `--val-fraction`,
+`--lr-factor` must be in `[0, 1]`; `--gamma` in `[0.5, 2.0]`; `--learning-rate`,
+`--finetune-learning-rate`, `--min-lr` must be strictly positive. The CLI
+rejects out-of-range values up-front instead of letting them propagate to TF.
+
 GUI workflow stages:
 
 1. Ingestion: drag-and-drop folders/files, filename index parsing, pre-flight validation.

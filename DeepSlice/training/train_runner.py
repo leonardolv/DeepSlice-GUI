@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -11,6 +12,8 @@ import numpy as np
 import pandas as pd
 
 from ..metadata import metadata_loader
+
+_logger = logging.getLogger(__name__)
 from ..neural_network.neural_network import XCEPTION_INPUT_SIZE
 from . import training_utils
 
@@ -400,8 +403,18 @@ def _build_labeled_sequence(
     return _LabeledSequence(sequence, targets)
 
 
+def _validate_learning_rate(value: float, name: str = "learning_rate") -> float:
+    """Reject zero/negative/non-finite learning rates that Adam would silently accept."""
+    learning_rate = float(value)
+    if not np.isfinite(learning_rate) or learning_rate <= 0:
+        raise ValueError(f"{name} must be a finite positive number, got {value!r}")
+    return learning_rate
+
+
 def _build_baseline_regressor(learning_rate: float):
     import tensorflow as tf
+
+    learning_rate = _validate_learning_rate(learning_rate, "baseline learning_rate")
 
     inputs = tf.keras.Input(shape=XCEPTION_INPUT_SIZE, name="image")
     x = tf.keras.layers.Conv2D(16, 5, strides=2, padding="same", activation="relu")(inputs)
@@ -413,7 +426,7 @@ def _build_baseline_regressor(learning_rate: float):
     outputs = tf.keras.layers.Dense(len(TARGET_COLUMNS), activation="linear", name="coordinates")(x)
 
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="deepslice_baseline_regressor")
-    optimizer = tf.keras.optimizers.Adam(learning_rate=float(learning_rate))
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="mse", metrics=["mae"])
     return model
 
@@ -507,7 +520,8 @@ def _set_xception_backbone_trainable(model, trainable: bool) -> str:
 def _compile_regression_model(model, learning_rate: float):
     import tensorflow as tf
 
-    optimizer = tf.keras.optimizers.Adam(learning_rate=float(learning_rate))
+    learning_rate = _validate_learning_rate(learning_rate, "compile learning_rate")
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="mse", metrics=["mae"])
     return model
 
@@ -806,6 +820,41 @@ def run_supervised_training(
     )
 
 
+def _bounded_float(name: str, lo: float, hi: float):
+    """Argparse type that enforces a closed float interval [lo, hi] up-front."""
+
+    def _parse(value: str) -> float:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            raise argparse.ArgumentTypeError(f"{name} must be a number, got {value!r}")
+        if not (lo <= number <= hi):
+            raise argparse.ArgumentTypeError(
+                f"{name} must be in [{lo}, {hi}], got {number}"
+            )
+        return number
+
+    return _parse
+
+
+def _positive_float(name: str):
+    """Argparse type that enforces a strictly positive float."""
+
+    def _parse(value: str) -> float:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            raise argparse.ArgumentTypeError(f"{name} must be a number, got {value!r}")
+        if number <= 0:
+            raise argparse.ArgumentTypeError(
+                f"{name} must be > 0, got {number}"
+            )
+        return number
+
+
+    return _parse
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="DeepSlice training workflow CLI: grouped split preparation and optional supervised training."
@@ -814,8 +863,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", required=True, help="Output directory for manifests and artifacts")
     parser.add_argument("--species", choices=["mouse", "rat"], default="mouse")
     parser.add_argument("--group-mode", choices=sorted(GROUP_MODES), default="parent-folder")
-    parser.add_argument("--train-fraction", type=float, default=0.70)
-    parser.add_argument("--val-fraction", type=float, default=0.15)
+    parser.add_argument(
+        "--train-fraction",
+        type=_bounded_float("--train-fraction", 0.0, 1.0),
+        default=0.70,
+    )
+    parser.add_argument(
+        "--val-fraction",
+        type=_bounded_float("--val-fraction", 0.0, 1.0),
+        default=0.15,
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--non-recursive", action="store_true", help="Only scan top-level image directory")
     parser.add_argument("--split-manifest-name", default="training_split_manifest.json")
@@ -825,14 +882,30 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--trainer", choices=sorted(TRAINER_MODES), default="baseline-cnn")
     parser.add_argument("--epochs", type=int, default=0, help="Run supervised training when > 0")
     parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--learning-rate", type=float, default=1e-3)
-    parser.add_argument("--finetune-learning-rate", type=float, default=1e-4)
+    parser.add_argument(
+        "--learning-rate",
+        type=_positive_float("--learning-rate"),
+        default=1e-3,
+    )
+    parser.add_argument(
+        "--finetune-learning-rate",
+        type=_positive_float("--finetune-learning-rate"),
+        default=1e-4,
+    )
     parser.add_argument("--freeze-base-epochs", type=int, default=1)
     parser.add_argument("--xception-init", choices=sorted(XCEPTION_INIT_MODES), default="species-primary")
     parser.add_argument("--checkpoint-dir", default=None)
     parser.add_argument("--patience", type=int, default=8)
-    parser.add_argument("--lr-factor", type=float, default=0.50)
-    parser.add_argument("--min-lr", type=float, default=1e-6)
+    parser.add_argument(
+        "--lr-factor",
+        type=_bounded_float("--lr-factor", 0.0, 1.0),
+        default=0.50,
+    )
+    parser.add_argument(
+        "--min-lr",
+        type=_positive_float("--min-lr"),
+        default=1e-6,
+    )
     parser.add_argument("--mixed-precision", action="store_true")
     parser.add_argument("--dry-run", action="store_true", help="Generate manifests only")
 
@@ -842,7 +915,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--preserve-color", action="store_true")
     parser.add_argument("--no-percentile-normalization", action="store_true")
     parser.add_argument("--bilateral-denoise", action="store_true")
-    parser.add_argument("--gamma", type=float, default=1.0)
+    parser.add_argument(
+        "--gamma",
+        type=_bounded_float("--gamma", 0.5, 2.0),
+        default=1.0,
+    )
 
     return parser
 
@@ -858,7 +935,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "preserve_color": bool(args.preserve_color),
         "percentile_normalization": not bool(args.no_percentile_normalization),
         "bilateral_denoise": bool(args.bilateral_denoise),
-        "gamma": float(np.clip(float(args.gamma), 0.5, 2.0)),
+        # _build_parser already enforces gamma in [0.5, 2.0].
+        "gamma": float(args.gamma),
     }
     checkpoint_dir = _resolve_checkpoint_dir(args.output_dir, args.checkpoint_dir)
     training_options = {
@@ -925,6 +1003,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not args.labels:
             raise ValueError("--labels is required when --epochs is greater than 0")
 
+        train_count = int(split_manifest["counts"]["train"])
+        requested_batch_size = int(max(1, args.batch_size))
+        effective_batch_size = requested_batch_size
+        if train_count > 0 and requested_batch_size > train_count:
+            _logger.warning(
+                "Requested --batch-size %s exceeds training-set size %s; "
+                "clamping to %s for this run.",
+                requested_batch_size,
+                train_count,
+                train_count,
+            )
+            effective_batch_size = train_count
+        metadata["effective_batch_size"] = effective_batch_size
+
         training_result = run_supervised_training(
             trainer=str(args.trainer),
             split=prepared["split"],
@@ -932,7 +1024,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             output_dir=str(args.output_dir),
             species=str(args.species),
             preprocessing_options=preprocessing_options,
-            batch_size=int(max(1, args.batch_size)),
+            batch_size=effective_batch_size,
             epochs=int(args.epochs),
             learning_rate=float(args.learning_rate),
             checkpoint_dir=checkpoint_dir,
