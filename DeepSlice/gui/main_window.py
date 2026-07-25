@@ -2070,6 +2070,41 @@ class DeepSliceMainWindow(QMainWindow):
         error_text = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         self._show_logged_error(title, context, error_text, icon=icon)
 
+    def _actionable_warning(
+        self,
+        title: str,
+        message: str,
+        actions=None,
+        icon=QMessageBox.Warning,
+    ):
+        """Show a QMessageBox with optional fix-it action buttons.
+
+        actions is a sequence of (label, callback) tuples. The clicked
+        callback is invoked after the dialog closes. Always includes a
+        default 'Close' button.
+        """
+        box = QMessageBox(self)
+        box.setWindowTitle(title)
+        box.setIcon(icon)
+        box.setText(message)
+        close_button = box.addButton(QMessageBox.Close)
+        action_buttons = []
+        for label, callback in (actions or []):
+            btn = box.addButton(str(label), QMessageBox.ActionRole)
+            action_buttons.append((btn, callback))
+        box.setDefaultButton(close_button)
+        box.exec()
+        clicked = box.clickedButton()
+        for btn, callback in action_buttons:
+            if clicked is btn and callable(callback):
+                try:
+                    callback()
+                except Exception:
+                    self._logger.exception(
+                        "Actionable-warning callback failed for %s", title
+                    )
+                return
+
     def _build_ingestion_page(self) -> QWidget:
         page = QWidget()
         split = QSplitter(Qt.Horizontal)
@@ -6474,7 +6509,30 @@ class DeepSliceMainWindow(QMainWindow):
     def _open_export_directory(self):
         output_dir = self.output_dir_edit.text().strip()
         if not os.path.exists(output_dir):
-            QMessageBox.warning(self, "Export Folder", "The export folder does not exist yet.")
+            def _create_folder():
+                if not output_dir:
+                    self._browse_output_directory()
+                    return
+                try:
+                    os.makedirs(output_dir, exist_ok=True)
+                    self._show_toast(
+                        f"Created folder: {output_dir}", timeout_ms=2500, level="success"
+                    )
+                except OSError as exc:
+                    self._show_toast(
+                        f"Could not create folder: {exc}", timeout_ms=3500, level="warning"
+                    )
+            self._actionable_warning(
+                "Export Folder",
+                (
+                    f"The export folder does not exist yet:\n{output_dir or '(empty)'}\n\n"
+                    "Create it now or pick a different folder."
+                ),
+                actions=[
+                    ("Create Folder", _create_folder),
+                    ("Choose Different Folder...", self._browse_output_directory),
+                ],
+            )
             return
             
         try:
@@ -6513,18 +6571,36 @@ class DeepSliceMainWindow(QMainWindow):
         output_dir = self.output_dir_edit.text().strip()
         base_name = self.output_basename_edit.text().strip()
         if not output_dir or not base_name:
-            QMessageBox.warning(
-                self,
+            missing = []
+            if not output_dir:
+                missing.append("Output Directory")
+            if not base_name:
+                missing.append("Base Filename")
+            actions = []
+            if not output_dir:
+                actions.append(("Choose Directory...", self._browse_output_directory))
+            if not base_name:
+                actions.append(
+                    ("Use Default 'DeepSliceResults'",
+                     lambda: self.output_basename_edit.setText("DeepSliceResults")),
+                )
+            self._actionable_warning(
                 "Export",
-                "Output directory and base filename are required",
+                "Missing required fields: " + ", ".join(missing) + ".",
+                actions=actions,
             )
             return
 
         if not self._is_output_dir_writable(output_dir):
-            QMessageBox.warning(
-                self,
+            self._actionable_warning(
                 "Export",
-                "Output directory is not writable. Please choose another location.",
+                (
+                    f"Output directory is not writable:\n{output_dir}\n\n"
+                    "Pick a different folder or check filesystem permissions."
+                ),
+                actions=[
+                    ("Choose Different Directory...", self._browse_output_directory),
+                ],
             )
             return
 
@@ -6586,7 +6662,13 @@ class DeepSliceMainWindow(QMainWindow):
         output_dir = self.output_dir_edit.text().strip()
         base_name = self.output_basename_edit.text().strip() or "DeepSliceResults"
         if not output_dir:
-            QMessageBox.warning(self, "Report", "Output directory is required")
+            self._actionable_warning(
+                "Report",
+                "An output directory is required to write the alignment report.",
+                actions=[
+                    ("Choose Directory...", self._browse_output_directory),
+                ],
+            )
             return
         if not self._is_output_dir_writable(output_dir):
             QMessageBox.warning(
@@ -6729,10 +6811,16 @@ class DeepSliceMainWindow(QMainWindow):
                     break
 
         if not quicknii_path or not os.path.exists(quicknii_path):
-            QMessageBox.warning(
-                self,
+            self._actionable_warning(
                 "QuickNII",
-                "QuickNII executable not found. Set path in the export panel.",
+                (
+                    "QuickNII executable not found."
+                    + (f"\nConfigured path: {quicknii_path}" if quicknii_path else "")
+                    + "\n\nLocate the executable now, or download QuickNII from nitrc.org first."
+                ),
+                actions=[
+                    ("Locate QuickNII Executable...", self._browse_quicknii_path),
+                ],
             )
             return
 
