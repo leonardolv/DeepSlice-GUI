@@ -692,6 +692,11 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.state = DeepSliceAppState()
         self._apply_startup_preferences_to_state()
+        # Reuse a single QSettings handle across the whole window instead of
+        # instantiating a new one on every read/write. On macOS/Windows this
+        # avoids repeated registry/plist opens, and on Linux avoids re-parsing
+        # the ini file every time a spinbox fires valueChanged.
+        self._settings = QSettings("DeepSlice", "GUI")
         self._session_base_text = "Session: New"
         self.thread_pool = QThreadPool.globalInstance()
         # Use a set keyed by id() so the same worker can't be double-tracked
@@ -1301,7 +1306,7 @@ class DeepSliceMainWindow(QMainWindow):
         return frame
 
     def _update_recent_sessions_menu(self):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         recent = settings.value("recent_sessions", [])
         if not isinstance(recent, list):
             recent = []
@@ -1325,7 +1330,7 @@ class DeepSliceMainWindow(QMainWindow):
                 action.setVisible(False)
 
     def _add_recent_session(self, path: str):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         recent = settings.value("recent_sessions", [])
         if not isinstance(recent, list):
             recent = []
@@ -1345,7 +1350,7 @@ class DeepSliceMainWindow(QMainWindow):
         return bool(value)
 
     def _apply_startup_preferences_to_state(self):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         preferred_species = str(settings.value("default_species", self.state.species)).strip().lower()
         if preferred_species in {"mouse", "rat"}:
             try:
@@ -1505,7 +1510,7 @@ class DeepSliceMainWindow(QMainWindow):
         return None
 
     def _restore_window_preferences(self):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         geometry = settings.value("window_geometry", None)
         if geometry is not None:
             try:
@@ -1526,7 +1531,7 @@ class DeepSliceMainWindow(QMainWindow):
             self.console_toggle.setChecked(True)
 
     def _persist_window_preferences(self):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("window_geometry", self.saveGeometry())
         if hasattr(self, "body_split"):
             settings.setValue("body_split_sizes", self.body_split.sizes())
@@ -1534,7 +1539,7 @@ class DeepSliceMainWindow(QMainWindow):
             settings.setValue("curation_split_sizes", self.curation_vertical_split.sizes())
 
     def _open_preferences_dialog(self):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Preferences")
@@ -1762,12 +1767,12 @@ class DeepSliceMainWindow(QMainWindow):
         self._show_toast("Documentation file not found in this workspace", timeout_ms=3200, level="warning")
 
     def _load_theme_preference(self) -> str:
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         theme = str(settings.value("theme", "dark")).strip().lower()
         return theme if theme in {"dark", "light"} else "dark"
 
     def _save_theme_preference(self, theme: str):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("theme", theme)
 
     def _set_theme(self, theme: str):
@@ -1779,7 +1784,7 @@ class DeepSliceMainWindow(QMainWindow):
         self._apply_theme()
 
     def _show_startup_dialogs(self):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         onboarding_complete = bool(settings.value("onboarding_complete", False))
         if not onboarding_complete:
             self._show_onboarding_dialog()
@@ -4078,7 +4083,7 @@ class DeepSliceMainWindow(QMainWindow):
             self.config_validation_label.setText(f"Validation: {exc}")
             return
 
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("outlier_sigma", float(self.state.outlier_sigma_threshold))
         settings.setValue("confidence_medium_threshold", float(self.state.confidence_medium_threshold))
         settings.setValue("confidence_high_threshold", float(self.state.confidence_high_threshold))
@@ -4091,7 +4096,7 @@ class DeepSliceMainWindow(QMainWindow):
     def _on_inference_batch_changed(self, value: int):
         batch_size = int(max(1, value))
         self.state.inference_batch_size = batch_size
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("inference_batch_size", batch_size)
         self._update_processing_estimate()
 
@@ -4112,7 +4117,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.state.section_dropout_passes = int(self.section_dropout_spin.value())
         self.state.confidence_weighted_ensemble = bool(self.conf_weighted_ensemble_checkbox.isChecked())
 
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("quality_gate_enabled", self.state.quality_gate_enabled)
         settings.setValue("tissue_crop_enabled", self.state.tissue_crop_enabled)
         settings.setValue("clahe_enabled", self.state.clahe_enabled)
@@ -4163,7 +4168,7 @@ class DeepSliceMainWindow(QMainWindow):
             self.training_mixed_precision_checkbox.isChecked()
         )
 
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("training_group_mode", self.state.training_group_mode)
         settings.setValue("training_seed", self.state.training_seed)
         settings.setValue("training_train_fraction", self.state.training_train_fraction)
@@ -5795,20 +5800,51 @@ class DeepSliceMainWindow(QMainWindow):
         except Exception:
             risk_scores = np.clip(1.0 - np.asarray(payload["confidence"], dtype=float), 0.0, 1.0)
 
-        for idx, row in self.state.predictions.iterrows():
-            nr = row["nr"] if "nr" in row else idx + 1
-            filename = row["Filenames"]
-            ap_pos = float(payload["y"][idx]) if idx < len(payload["y"]) else float("nan")
+        # Hoist per-row DataFrame lookups out of the loop: iterrows() is O(n^2)
+        # due to per-row namedtuple construction, and repeated .iloc[idx] on
+        # the same index adds another lookup per row. Convert once to arrays.
+        predictions_df = self.state.predictions
+        row_count = len(predictions_df)
+        filenames = predictions_df["Filenames"].tolist()
+        if "nr" in predictions_df.columns:
+            nrs = predictions_df["nr"].tolist()
+        else:
+            nrs = list(range(1, row_count + 1))
+        if "bad_section" in predictions_df.columns:
+            bad_section_values = predictions_df["bad_section"].to_numpy(dtype=bool)
+        else:
+            bad_section_values = None
+        if "atlas_note" in predictions_df.columns:
+            atlas_note_values = predictions_df["atlas_note"].astype(str).tolist()
+        else:
+            atlas_note_values = None
+
+        y_values = payload["y"]
+        confidence_values = payload["confidence"]
+        confidence_levels = payload["confidence_level"]
+        residuals = payload["residuals"]
+        angle_deviations = payload["angle_deviation"]
+        spacing_deviations = payload["spacing_deviation"]
+        weights = payload["weights"]
+        outliers = payload["outliers"]
+        components = payload["confidence_components"]
+        c_residual = components["residual"]
+        c_angle = components["angle"]
+        c_spacing = components["spacing"]
+        c_center = components["center_weight"]
+
+        for idx in range(row_count):
+            nr = nrs[idx]
+            filename = filenames[idx]
+            ap_pos = float(y_values[idx]) if idx < len(y_values) else float("nan")
             item = QListWidgetItem(f"{nr} | AP {ap_pos:.1f} | {filename}")
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsSelectable)
 
-            is_bad = False
-            if "bad_section" in self.state.predictions.columns:
-                is_bad = bool(self.state.predictions.iloc[idx]["bad_section"])
+            is_bad = bool(bad_section_values[idx]) if bad_section_values is not None else False
             item.setCheckState(Qt.Checked if is_bad else Qt.Unchecked)
 
-            confidence = float(payload["confidence"][idx])
-            confidence_level = str(payload["confidence_level"][idx])
+            confidence = float(confidence_values[idx])
+            confidence_level = str(confidence_levels[idx])
             risk_score = float(risk_scores[idx]) if idx < len(risk_scores) else float(1.0 - confidence)
             if confidence_level == "high":
                 item.setBackground(QColor(44, 129, 79, 120))
@@ -5819,24 +5855,23 @@ class DeepSliceMainWindow(QMainWindow):
             if risk_score >= 0.65:
                 item.setForeground(QColor("#FFE7A6"))
 
-            components = payload["confidence_components"]
             tooltip_lines = [
                 f"Score: {confidence:.3f} ({confidence_level})",
                 f"Review risk: {risk_score:.3f}",
-                f"Residual: {payload['residuals'][idx]:.3f}",
-                f"Angle deviation: {payload['angle_deviation'][idx]:.3f}",
-                f"Spacing deviation: {payload['spacing_deviation'][idx]:.3f}",
-                f"Gaussian weight: {payload['weights'][idx]:.3f}",
-                f"Components: residual={components['residual'][idx]:.2f}, angle={components['angle'][idx]:.2f}, spacing={components['spacing'][idx]:.2f}, center={components['center_weight'][idx]:.2f}",
+                f"Residual: {residuals[idx]:.3f}",
+                f"Angle deviation: {angle_deviations[idx]:.3f}",
+                f"Spacing deviation: {spacing_deviations[idx]:.3f}",
+                f"Gaussian weight: {weights[idx]:.3f}",
+                f"Components: residual={c_residual[idx]:.2f}, angle={c_angle[idx]:.2f}, spacing={c_spacing[idx]:.2f}, center={c_center[idx]:.2f}",
             ]
-            if "atlas_note" in self.state.predictions.columns:
-                note_text = str(self.state.predictions.iloc[idx].get("atlas_note", "")).strip()
+            if atlas_note_values is not None:
+                note_text = atlas_note_values[idx].strip()
                 if note_text and note_text.lower() != "nan":
                     tooltip_lines.append(f"Note: {note_text}")
             item.setToolTip("\n".join(tooltip_lines))
             item.setData(Qt.UserRole, idx)
             item.setData(Qt.UserRole + 1, float(risk_score))
-            item.setData(Qt.UserRole + 2, bool(payload["outliers"][idx]))
+            item.setData(Qt.UserRole + 2, bool(outliers[idx]))
             self.slice_flag_list.addItem(item)
 
         x = payload["x"]
@@ -6389,22 +6424,22 @@ class DeepSliceMainWindow(QMainWindow):
             self.quicknii_path_edit.setText(path)
 
     def _get_persisted_export_path(self) -> str:
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         path = settings.value("export_directory", "")
         if not path:
             path = settings.value("default_output_directory", "")
         return path if path else os.getcwd()
 
     def _persist_export_path(self, path: str):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("export_directory", path)
 
     def _get_persisted_quicknii_path(self) -> str:
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         return settings.value("quicknii_path", "")
 
     def _persist_quicknii_path(self, path: str):
-        settings = QSettings("DeepSlice", "GUI")
+        settings = self._settings
         settings.setValue("quicknii_path", path)
 
     def _is_output_dir_writable(self, output_dir: str) -> bool:

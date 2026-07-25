@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import re
-from collections import deque
+from collections import OrderedDict, deque
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Deque, Dict, List, Optional
@@ -103,9 +103,17 @@ class DeepSliceAppState:
     redo_stack: Deque[pd.DataFrame] = field(default_factory=lambda: deque(maxlen=50))
     _config: Optional[dict] = None
     _metadata_path: Optional[str] = None
-    _atlas_cache: Dict[str, np.ndarray] = field(default_factory=dict)
+    # LRU-ordered map of "{species}:{volume_label}" -> full atlas volume.
+    # Bounded to _ATLAS_CACHE_MAX_ENTRIES so users toggling species don't
+    # keep both large 3D volumes resident forever.
+    _atlas_cache: "OrderedDict[str, np.ndarray]" = field(default_factory=OrderedDict)
     _partial_prediction_candidate: Optional[pd.DataFrame] = None
     _partial_prediction_reason: Optional[str] = None
+
+    # Max number of full 3D atlas volumes to keep resident. 1 is enough for
+    # the normal single-species workflow; increase if the GUI ever renders
+    # slices from two volumes side-by-side.
+    _ATLAS_CACHE_MAX_ENTRIES = 1
 
     def __post_init__(self):
         self._config, self._metadata_path = metadata_loader.load_config()
@@ -117,7 +125,8 @@ class DeepSliceAppState:
         if self.species != species:
             self.species = species
             self.model = None
-            self._atlas_cache = {}
+            # Keep the OrderedDict type so subsequent LRU operations still work.
+            self._atlas_cache.clear()
 
     def supports_ensemble(self, species: Optional[str] = None) -> bool:
         """Return True if the given species has ensemble inference enabled in config."""
@@ -564,9 +573,17 @@ class DeepSliceAppState:
             if volume.ndim != 3:
                 raise ValueError(f"Atlas volume must be 3D, got shape {volume.shape}")
             self._atlas_cache[cache_key] = volume
+            # Evict the oldest entries so we don't hold multiple full 3D
+            # atlas volumes in memory when users toggle species/variants.
+            while len(self._atlas_cache) > self._ATLAS_CACHE_MAX_ENTRIES:
+                evicted_key, _ = self._atlas_cache.popitem(last=False)
+                if log_callback is not None:
+                    log_callback(f"Evicted cached atlas volume: {evicted_key}")
             if log_callback is not None:
                 log_callback(f"Atlas loaded with shape {volume.shape}")
 
+        # Mark this key as most-recently-used so a subsequent lookup keeps it.
+        self._atlas_cache.move_to_end(cache_key)
         volume = self._atlas_cache[cache_key]
         if depth_value is None:
             if self.predictions is not None and len(self.predictions) > 0:
