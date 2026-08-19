@@ -6349,7 +6349,7 @@ class DeepSliceMainWindow(QMainWindow):
         if self.state.predictions is None:
             return
         try:
-            self.state.propagate_angles()
+            converged = self.state.propagate_angles()
         except Exception as exc:
             self._show_logged_exception(
                 title="Normalize Angles",
@@ -6360,6 +6360,14 @@ class DeepSliceMainWindow(QMainWindow):
             return
         self._mark_curation_modified()
         self._refresh_curation_views()
+        if not converged:
+            self._show_toast(
+                "Angle normalization did not converge; the best available "
+                "estimate was applied. Check the angle distribution before "
+                "exporting.",
+                timeout_ms=6000,
+                level="warning",
+            )
 
     def _apply_manual_angles(self):
         if self.state.predictions is None:

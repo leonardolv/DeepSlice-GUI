@@ -1105,15 +1105,22 @@ class DeepSliceAppState:
         self.predictions = reordered
         self._sync_model_predictions()
 
-    def propagate_angles(self):
-        self.is_dirty = True
+    def propagate_angles(self) -> bool:
+        """:return: True if the iterative solver converged, False if it did not.
+
+        The caller has to see this: a non-converging run still writes its best
+        available estimate into ``predictions``, so it is indistinguishable
+        from a successful one without the flag.
+        """
         if self.predictions is None:
             raise ValueError("No predictions available")
+        self.is_dirty = True
         self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
-        model.propagate_angles()
+        converged = model.propagate_angles()
         self.predictions = model.predictions.copy()
+        return bool(converged)
 
     def adjust_angles(self, ml_angle: float, dv_angle: float):
         self.is_dirty = True
