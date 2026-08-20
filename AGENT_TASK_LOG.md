@@ -12,6 +12,52 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-08-20 UTC — `is_dirty` was set before validation in the remaining eight mutators
+Branch `claude/gallant-brahmagupta-vjwqhq` · PR: see below · Status: **done**
+
+Picked the standing Backlog item this file already ranked as trivial:
+`propagate_angles` was fixed by the 2026-08-19 20:10 run (below), and the
+same drift was still present in `run_prediction`, `set_bad_sections`,
+`flag_low_confidence_sections`, `interpolate_bad_section_depths`,
+`apply_manual_order`, `adjust_angles`, `enforce_index_order` and
+`enforce_index_spacing` (`gui/state.py`). Each set `self.is_dirty = True` as
+its first statement, so an action that raised on unmet preconditions (no
+predictions loaded, no images selected, a mismatched manual-order length)
+or that legitimately changed nothing (`flag_low_confidence_sections`
+finding no new low-confidence sections, `interpolate_bad_section_depths`
+finding no bad sections or no gap short enough to interpolate) still marked
+the session unsaved — eroding trust in the unsaved-changes prompt, which is
+the only thing standing between a user and lost curation work. `undo()`
+already states the rule in a comment ("Do not flip is_dirty until we know
+the swap can succeed") and it is the pattern every fix here follows: the
+flag now moves past every raise and every no-op early return, landing
+immediately before the first line that is guaranteed to actually mutate
+state. `run_prediction` was the one non-mechanical case — its flag now sets
+right after the `model.predict(...)` call succeeds (before
+`self.predictions` is reassigned), rather than before the image-count
+check or before the settings fields are copied onto `self`, so a
+`PartialPredictionAvailable`/other prediction failure no longer marks the
+session dirty over settings echoed onto `self` moments earlier with no
+completed prediction to show for it.
+
+Added `tests/test_mutators_defer_is_dirty.py` (20 new tests) covering all
+eight: a precondition raise doesn't dirty, a real no-op return doesn't
+dirty (where the function has one), and a genuine edit does. Modeled on
+`test_angle_convergence_reaches_the_user.py`'s existing pattern for the
+ninth (already-fixed) mutator, `propagate_angles`.
+
+**Validation:** `pytest tests/test_mutators_defer_is_dirty.py
+tests/test_angle_convergence_reaches_the_user.py
+tests/test_session_roundtrip.py` — 33/33 pass. Full suite (`pytest tests/
+--ignore=tests/gui`, environment has no display): 194 passed, 6
+pre-existing failures confirmed unrelated by reproducing them identically
+via `git stash` on the branch tip before this change (a TensorFlow-version
+weight-naming mismatch in `test_weight_loader.py` and one unrelated
+`test_spacing_and_indexing.py` assertion) — none touch `gui/state.py`.
+Environment note: this environment's venv had neither the package nor its
+heavy deps (`tensorflow`, `h5py`, `requests`, etc.) installed; installed
+them fresh from `setup.py`'s `install_requires` to run the suite at all.
+
 ### 2026-08-19 20:10-20:40 UTC — "Normalize Angles" reported success when the solver had not converged
 Branch `claude/gallant-brahmagupta-v91hcu` · PR
 [#10](https://github.com/leonardolv/DeepSlice-GUI/pull/10) · Status: **done**
@@ -158,17 +204,8 @@ against the code, not inferred from docs.
   already exists — `state.summary_metrics()` is computed at `:6683` and passed
   in. Small to render the angle stats for real; trivial to default the boxes
   off until it is done. Decide which; do not leave it as is.
-- **`is_dirty = True` is set before validation in the remaining eight
-  mutators.** *(`propagate_angles` was the ninth and was fixed by the
-  2026-08-19 20:10 run, since it was already being tested.)*
-  `gui/state.py:830, 949, 993, 1034, 1091, 1119, 1130, 1140` all flip the
-  flag on entry, so an action that raises (`propagate_angles` with no
-  predictions) or changes nothing (`flag_low_confidence_sections` returning 0)
-  still marks the session unsaved. The codebase already knows the rule —
-  `undo()` at `:799-803` carries the comment *"Do not flip is_dirty until we
-  know the swap can succeed"* — and the other nine drifted from it. It erodes
-  trust in the unsaved-changes prompt, which is what stands between the user
-  and lost curation work. Trivial: nine one-line moves.
+- ~~**`is_dirty = True` is set before validation in the remaining eight
+  mutators.**~~ Done by the 2026-08-20 run — see the Completed entry.
 - **The drag-and-drop toast counts paths requested, not images added.**
   `gui/main_window.py:775-787` reports `len(dropped_paths)` while
   `_handle_dropped_paths` → `state.add_images` → `set_images`
