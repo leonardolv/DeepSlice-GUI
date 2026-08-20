@@ -827,7 +827,6 @@ class DeepSliceAppState:
         log_callback=None,
         cancel_check=None,
     ) -> Dict[str, object]:
-        self.is_dirty = True
         self.clear_partial_prediction_candidate()
         if len(self.image_paths) == 0:
             raise ValueError("No images selected")
@@ -873,6 +872,7 @@ class DeepSliceAppState:
                 raise PartialPredictionAvailable(str(exc)) from exc
             raise
 
+        self.is_dirty = True
         self.predictions = model.predictions.copy()
         self.clear_partial_prediction_candidate()
         self.undo_stack.clear()
@@ -946,9 +946,9 @@ class DeepSliceAppState:
         model.save_predictions(filename_without_extension, output_format=output_format)
 
     def set_bad_sections(self, bad_sections: List[str], auto: bool = False):
-        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
+        self.is_dirty = True
         self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
@@ -990,7 +990,6 @@ class DeepSliceAppState:
         include_outliers: bool = True,
         include_high_risk: bool = True,
     ) -> int:
-        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         if len(self.predictions) == 0:
@@ -1019,6 +1018,7 @@ class DeepSliceAppState:
         if newly_flagged == 0:
             return 0
 
+        self.is_dirty = True
         self.snapshot_predictions()
         self.predictions["bad_section"] = updated.astype(bool)
 
@@ -1031,7 +1031,6 @@ class DeepSliceAppState:
         return newly_flagged
 
     def interpolate_bad_section_depths(self, max_gap: int = 6) -> int:
-        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         if len(self.predictions) < 3:
@@ -1071,6 +1070,7 @@ class DeepSliceAppState:
         if replaced == 0:
             return 0
 
+        self.is_dirty = True
         self.snapshot_predictions()
         delta = target_depths - depths
         self.predictions["oy"] = self.predictions["oy"].astype(float) + delta
@@ -1088,12 +1088,12 @@ class DeepSliceAppState:
         return replaced
 
     def apply_manual_order(self, ordered_row_indices: List[int]):
-        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
         if len(ordered_row_indices) != len(self.predictions):
             raise ValueError("Ordered index list does not match prediction length")
 
+        self.is_dirty = True
         self.snapshot_predictions()
         reordered = self.predictions.iloc[ordered_row_indices].reset_index(drop=True)
 
@@ -1123,9 +1123,9 @@ class DeepSliceAppState:
         return bool(converged)
 
     def adjust_angles(self, ml_angle: float, dv_angle: float):
-        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
+        self.is_dirty = True
         self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
@@ -1134,9 +1134,9 @@ class DeepSliceAppState:
         self.predictions = model.predictions.copy()
 
     def enforce_index_order(self):
-        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
+        self.is_dirty = True
         self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
@@ -1144,9 +1144,9 @@ class DeepSliceAppState:
         self.predictions = model.predictions.copy()
 
     def enforce_index_spacing(self, section_thickness_um: Optional[float] = None):
-        self.is_dirty = True
         if self.predictions is None:
             raise ValueError("No predictions available")
+        self.is_dirty = True
         self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
