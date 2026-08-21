@@ -4422,7 +4422,24 @@ class DeepSliceMainWindow(QMainWindow):
             if answer != QMessageBox.Yes:
                 return
 
-        quality_report = self.state.screen_input_quality()
+        if self.state.quality_gate_enabled:
+            self._run_quality_gate_scan()
+        else:
+            self._start_prediction_worker()
+
+    def _run_quality_gate_scan(self):
+        """Run the input quality scan off the UI thread, then continue on to
+        prediction (with a warning prompt if it flagged anything)."""
+        self.run_alignment_button.setEnabled(False)
+        self.run_alignment_button.setText("Scanning inputs...")
+        worker = FunctionWorker(self.state.screen_input_quality)
+        worker.signals.finished.connect(self._on_quality_gate_finished)
+        worker.signals.error.connect(self._on_quality_gate_error)
+        self._track_worker(worker)
+        self.thread_pool.start(worker)
+
+    @staticmethod
+    def _build_quality_gate_warnings(quality_report: dict) -> List[str]:
         quality_warnings: List[str] = []
         if quality_report.get("resolution_mismatch", False):
             dimensions = quality_report.get("dimensions", [])
@@ -4446,18 +4463,56 @@ class DeepSliceMainWindow(QMainWindow):
             else:
                 quality_warnings.append(f"Quality gate flagged {issue_count} section(s)")
 
+        unreadable_count = int(quality_report.get("unreadable_count", 0))
+        if unreadable_count > 0:
+            unreadable_paths = quality_report.get("unreadable_paths", []) or []
+            preview_names = ", ".join(os.path.basename(str(p)) for p in unreadable_paths[:4])
+            quality_warnings.append(
+                f"{unreadable_count} image(s) could not be read and will likely fail "
+                "during prediction"
+                + (f" ({preview_names})" if preview_names else "")
+            )
+
+        return quality_warnings
+
+    def _on_quality_gate_error(self, error_text: str):
+        self.run_alignment_button.setEnabled(True)
+        self.run_alignment_button.setText("Run Alignment")
+        self._show_logged_error(
+            "Input Quality Scan Failed",
+            "Unable to complete the input quality scan",
+            error_text,
+            icon=QMessageBox.Warning,
+        )
+        answer = QMessageBox.question(
+            self,
+            "Skip Quality Gate",
+            "Continue with prediction without the quality gate check?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer == QMessageBox.Yes:
+            self._start_prediction_worker()
+
+    def _on_quality_gate_finished(self, quality_report: dict):
+        self.run_alignment_button.setEnabled(True)
+        self.run_alignment_button.setText("Run Alignment")
+
+        quality_warnings = self._build_quality_gate_warnings(quality_report)
         if len(quality_warnings) > 0:
-            level_title = "Quality Gate Warning" if self.state.quality_gate_enabled else "Input Quality Warning"
             proceed = QMessageBox.question(
                 self,
-                level_title,
+                "Quality Gate Warning",
                 "\n".join(quality_warnings) + "\n\nContinue with prediction?",
                 QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No if self.state.quality_gate_enabled else QMessageBox.Yes,
+                QMessageBox.No,
             )
             if proceed != QMessageBox.Yes:
                 return
 
+        self._start_prediction_worker()
+
+    def _start_prediction_worker(self):
         self.state.section_numbers = self.enable_section_numbers_checkbox.isChecked()
         self.state.legacy_section_numbers = self.legacy_parsing_checkbox.isChecked()
         self.state.ensemble = self.ensemble_checkbox.isChecked()

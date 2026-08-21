@@ -387,6 +387,7 @@ def inspect_image_batch(image_paths: list, preprocessing_options=None):
         "issue_count": 0,
         "issue_paths": [],
         "metrics": [],
+        "unreadable_paths": [],
         "counts": {
             "low_resolution": 0,
             "blurry": 0,
@@ -403,6 +404,7 @@ def inspect_image_batch(image_paths: list, preprocessing_options=None):
             metrics = inspect_image_quality(image_path, preprocessing_options=options)
         except Exception as _exc:
             _logger.warning("Skipping image %s during batch inspection: %s", image_path, _exc)
+            report["unreadable_paths"].append(str(image_path))
             continue
         report["metrics"].append(metrics)
         dimensions.add((metrics["width"], metrics["height"]))
@@ -415,6 +417,7 @@ def inspect_image_batch(image_paths: list, preprocessing_options=None):
                 if flag_name in report["counts"]:
                     report["counts"][flag_name] += 1
 
+    report["unreadable_count"] = len(report["unreadable_paths"])
     report["resolution_mismatch"] = len(dimensions) > 1
     report["dimensions"] = sorted(list(dimensions))
     return report

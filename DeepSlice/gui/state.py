@@ -355,6 +355,8 @@ class DeepSliceAppState:
                 "issue_count": 0,
                 "issue_paths": [],
                 "metrics": [],
+                "unreadable_paths": [],
+                "unreadable_count": 0,
                 "counts": {},
                 "dimensions": [],
             }

@@ -259,6 +259,25 @@ def test_inspect_image_batch_nonexistent_paths_skipped():
     assert report["total"] == 2
     # Both should be skipped gracefully, no crash
     assert len(report["metrics"]) == 0
+    # ...but they must not vanish silently: an unreadable image will fail
+    # again during actual inference, so the quality gate needs to be able to
+    # tell the user about it before running prediction.
+    assert report["unreadable_count"] == 2
+    assert report["unreadable_paths"] == ["/no/such/image.png", "/also/missing.jpg"]
+
+
+def test_inspect_image_batch_mixed_readable_and_unreadable(tmp_path):
+    from PIL import Image as PILImage
+
+    good_path = tmp_path / "good.png"
+    array = np.random.randint(0, 255, size=(120, 160, 3), dtype=np.uint8)
+    PILImage.fromarray(array).save(good_path)
+
+    report = inspect_image_batch([str(good_path), "/no/such/image.png"])
+    assert report["total"] == 2
+    assert len(report["metrics"]) == 1
+    assert report["unreadable_count"] == 1
+    assert report["unreadable_paths"] == ["/no/such/image.png"]
 
 
 # ---------------------------------------------------------------------------
