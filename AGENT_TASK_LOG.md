@@ -12,6 +12,96 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-08-21 UTC — The quality-gate checkbox controlled nothing, and the scan it did not gate blocked the UI thread
+Branch `claude/gallant-brahmagupta-86mvu9` · PR: see below · Status: **done**
+
+Claimed and finished in one pass. Nothing was in progress (In Progress was
+empty and no commit since the 2026-08-20 entry below was unreflected here).
+Took the top-ranked, already-diagnosed Backlog item: "The 'Enable input
+quality gate' checkbox controls nothing, and the scan it does not gate
+blocks the UI thread."
+
+**Root cause.** `_run_alignment` (`gui/main_window.py`) called
+`self.state.screen_input_quality()` — which fully decodes every input image
+via `neural_network.inspect_image_batch` — unconditionally, on the GUI
+thread, before the actual prediction's `FunctionWorker` was ever created.
+`state.quality_gate_enabled` (the checkbox's backing field) only selected
+the resulting warning dialog's title string ("Quality Gate Warning" vs.
+"Input Quality Warning") and its default button — it did not skip the scan
+or the modal in either state. On a large dataset (the Backlog entry cited
+~300 slices) this froze the UI for minutes with no progress indicator and
+no way to opt out.
+
+**Solution.**
+* `_run_alignment` now branches on `self.state.quality_gate_enabled` before
+  doing anything quality-related: when off, it skips straight to
+  `_start_prediction_worker()` (the renamed tail of the old method); when
+  on, it dispatches `self.state.screen_input_quality()` through a
+  `FunctionWorker` (`_run_quality_gate_scan`), disabling the Run button and
+  labeling it "Scanning inputs..." for the duration — matching every other
+  long-running operation in this window (`_start_auto_fix` is the existing
+  precedent for the pattern).
+* `_on_quality_gate_finished` re-enables the button, builds the same
+  resolution-mismatch / flagged-issue warnings the old inline code did (now
+  `_build_quality_gate_warnings`, a plain staticmethod), and only then
+  proceeds to prediction — with a single, no-longer-vestigial "Quality Gate
+  Warning" dialog (the old title/default-button branch on
+  `quality_gate_enabled` is gone, since this path is now only reachable when
+  the gate is on).
+* `_on_quality_gate_error` reports a failed scan via `_show_logged_error`
+  and asks the user whether to proceed without the gate, rather than either
+  silently blocking prediction forever or silently ignoring the failure.
+* **Fixed in passing, same block:** the Backlog entry also flagged that
+  `neural_network.py:404` swallows unreadable images with a bare `continue`
+  while `report["total"]` still counts them — so a corrupt/unreadable file
+  passed the gate silently and would only fail later, during actual
+  inference. `inspect_image_batch` now records `unreadable_paths`/
+  `unreadable_count`, and `_build_quality_gate_warnings` surfaces them in
+  the same pre-flight warning dialog ("N image(s) could not be read and will
+  likely fail during prediction (name.tif, ...)"), so a bad file is caught
+  before a multi-minute prediction run rather than after.
+
+**Not done:** scan cancellation (the old synchronous scan had none either,
+so this is not a regression) and moving the per-image decode work inside
+`inspect_image_batch` onto multiple threads (the whole batch already runs
+off the UI thread as a unit, which is what the Backlog item asked for).
+
+**Validation.** New `tests/test_quality_gate_wiring.py` (14 tests) plus 2
+new/extended tests in `tests/test_neural_network_utils.py`. **11 of the 16
+are red on the pre-fix tree** (verified by `git stash` on the three
+production files and re-running): direct behavioral tests on
+`inspect_image_batch`/`state.screen_input_quality` for the new
+`unreadable_*` fields, plus AST-based structural checks on
+`_run_alignment`/`_run_quality_gate_scan`/`_on_quality_gate_finished`/
+`_on_quality_gate_error` (driving the real `DeepSliceMainWindow` needs a
+fully-constructed `QMainWindow` with app-level `QSettings` state that this
+sandbox can't stand up outside the real app entry point — confirmed
+directly, and `test_angle_convergence_reaches_the_user.py` already
+documents the same limitation) that pin: the scan is no longer called
+synchronously inside `_run_alignment`; the gate-disabled branch skips
+straight to `_start_prediction_worker` without invoking the scan; the scan
+runs inside a `FunctionWorker`; a scan failure is reported rather than
+silently proceeding.
+
+Full suite: **204 passed, 6 failed** (up from 194 passed, 6 failed) — the 6
+(`test_weight_loader.py` ×5, one `test_spacing_and_indexing.py` assertion)
+reproduce identically on the unmodified tree in this environment (a
+TensorFlow-version weight-naming mismatch, already documented by the
+2026-08-19 20:10 entry below), 0 failures caused by this change.
+`ruff check` on the three touched production files: 294 → 295 findings, the
++1 being a second `List[str]`-annotation site in the file's own established
+`typing.List` style (not a new class of finding); the two touched/added test
+files are ruff-clean except for `test_neural_network_utils.py`'s 4
+pre-existing findings, unchanged before/after.
+
+**Environment note:** this sandbox needed `libegl1`/`libgl1-mesa-dri`
+(`apt-get install`) for PySide6's `QApplication` to import at all under
+`QT_QPA_PLATFORM=offscreen`, on top of the `pandas`/`tensorflow`/
+`scikit-image`/`matplotlib`/`PySide6`/`pytest-qt` set the 2026-08-19 20:10
+entry already documented.
+
+**PR.** (opened this run, see repository pull requests).
+
 ### 2026-08-20 UTC — `is_dirty` was set before validation in the remaining eight mutators
 Branch `claude/gallant-brahmagupta-vjwqhq` · PR: see below · Status: **done**
 
@@ -142,6 +232,13 @@ this repo, unlike its siblings. Do not spend another run looking for it.
 Seeded by the 2026-08-19 20:10 run, ranked by user impact. Each was verified
 against the code, not inferred from docs.
 
+- ~~**The "Enable input quality gate" checkbox controls nothing, and the scan
+  it does not gate blocks the UI thread.**~~ Done by the 2026-08-21 run — see
+  the Completed entry. Took the "medium" option (moved the scan into a
+  `FunctionWorker` rather than just honouring the checkbox around an
+  otherwise-still-synchronous scan), and also fixed the noted
+  `neural_network.py:404` swallowed-unreadable-image gap in the same pass.
+  (original entry follows)
 - **The "Enable input quality gate" checkbox controls nothing, and the scan it
   does not gate blocks the UI thread.** `gui/main_window.py:4425-4459`:
   `self.state.screen_input_quality()` runs unconditionally, and
