@@ -13,7 +13,8 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-08-21 UTC — The quality-gate checkbox controlled nothing, and the scan it did not gate blocked the UI thread
-Branch `claude/gallant-brahmagupta-86mvu9` · PR: see below · Status: **done**
+Branch `claude/gallant-brahmagupta-86mvu9` · PR
+[#12](https://github.com/leonardolv/DeepSlice-GUI/pull/12) · Status: **done, merged**
 
 Claimed and finished in one pass. Nothing was in progress (In Progress was
 empty and no commit since the 2026-08-20 entry below was unreflected here).
@@ -100,7 +101,13 @@ pre-existing findings, unchanged before/after.
 `scikit-image`/`matplotlib`/`PySide6`/`pytest-qt` set the 2026-08-19 20:10
 entry already documented.
 
-**PR.** (opened this run, see repository pull requests).
+**CI note.** This repo's `.github/workflows/` has never produced a single
+workflow run (`actions_list list_workflow_runs` returns `total_count: 0`
+across every workflow, not just this PR) — GitHub Actions is effectively
+inactive here, so merging relied on the local validation above rather than
+a CI gate.
+
+**PR.** [#12](https://github.com/leonardolv/DeepSlice-GUI/pull/12) — merged.
 
 ### 2026-08-20 UTC — `is_dirty` was set before validation in the remaining eight mutators
 Branch `claude/gallant-brahmagupta-vjwqhq` · PR: see below · Status: **done**
