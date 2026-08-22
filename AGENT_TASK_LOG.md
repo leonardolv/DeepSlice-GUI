@@ -13,7 +13,7 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-08-22 UTC — The progress bar and cancellation covered only pass 1 of up to 12 inference passes
-Branch `claude/gallant-brahmagupta-j61ee7` · PR TBD · Status: **done, merged**
+Branch `claude/gallant-brahmagupta-j61ee7` · PR [#13](https://github.com/leonardolv/DeepSlice-GUI/pull/13) · Status: **done, merged**
 
 **Claimed:** the Backlog's "The progress bar and cancellation cover pass 1 of
 up to 12 inference passes" item.
