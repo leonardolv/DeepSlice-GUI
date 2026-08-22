@@ -12,6 +12,74 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-08-22 UTC — The progress bar and cancellation covered only pass 1 of up to 12 inference passes
+Branch `claude/gallant-brahmagupta-j61ee7` · PR TBD · Status: **done, merged**
+
+**Claimed:** the Backlog's "The progress bar and cancellation cover pass 1 of
+up to 12 inference passes" item.
+
+**The bug.** `neural_network.py`'s `_run_inference_passes` iterates
+`pass_specs` — up to 12 of them with TTA (4 flips) and multi-scale (3
+scales) both on, plus one per section-dropout pass — but only attached a
+`PredictionProgressCallback` when `pass_idx == 0`. Two consequences from the
+same line: **(1)** the progress bar filled to 100% after the first pass
+(~8% of the real work with TTA+multi-scale) and then sat there, unmoving,
+while passes 2-12 silently ran — the GUI's own pre-run time estimate
+(`_estimate_runtime_seconds`) does scale for TTA/multi-scale, so the two
+indicators visibly contradicted each other. **(2)** `cancel_check` is
+called from inside the Keras callback on every batch; with no callback for
+passes past the first, cancellation was only reachable at the outer loop's
+per-pass boundary check — once per *entire pass* over the dataset, not at
+the "safe batch boundary" the Cancel button's tooltip promises. Cancelling
+during pass 6 of 12 meant waiting for all of pass 6 to finish for nothing.
+
+**The fix.** Attach a `PredictionProgressCallback` on every pass, not just
+the first. Its `progress_callback` is now a small per-pass wrapper
+(`_scaled_progress_callback`) that offsets the pass-local `completed` value
+by `pass_idx * generator.n` and reports the *whole run's* image count
+(`total_passes * generator.n`) as the total, so `completed`/`total` describe
+progress across all passes rather than resetting/stalling per pass.
+Cancellation now falls out of the same change for free, since the
+per-batch `_raise_if_cancelled()` inside `PredictionProgressCallback` runs
+on every pass once its callback is attached — no separate cancellation
+logic was needed. `generator.n` is constant across passes (TTA/multi-scale
+only transform pixels, not the underlying image list — confirmed via
+`ImageGenerator.n = len(self.paths)`, and `clone_with` never changes
+`paths`), so a single offset arithmetic covers every pass without needing
+to precompute all passes' generators up front.
+
+**Validation.** Two new tests in `tests/test_neural_network_utils.py`
+drive `_run_inference_passes` against a fake Keras-shaped model/generator
+(no TF model/GPU needed — just the `on_predict_batch_begin`/`_end`
+callback protocol):
+`test_run_inference_passes_progress_covers_every_pass_not_just_the_first`
+asserts every progress call reports the same, whole-run total and that
+`completed` only reaches 100% at the very last batch of the very last pass;
+`test_run_inference_passes_cancellation_reaches_every_pass` asserts
+cancellation set mid-way through pass 1 (the second pass) is caught at
+pass 1's very first batch, and that pass 1 never runs a single batch to
+completion once cancelled. **Both fail on the pre-fix tree** (confirmed by
+stashing only the source change and re-running: the progress test asserts
+`total == 16` and gets `4`; the cancellation test asserts pass 1 was
+interrupted after 0 batches and finds it ran all 2 to completion instead —
+i.e. pre-fix, cancelling mid-pass-1 silently discards a whole pass of work
+before being noticed one pass boundary later). Full
+`tests/test_neural_network_utils.py` — 32 passed (30 pre-existing + 2 new).
+Broader `pytest tests/` (excluding the three heavy training-pipeline files,
+which need real training fixtures unrelated to this change) — 153 passed, 6
+failed; all 6 failures reproduced identically on the pre-fix tree in
+isolation (Keras layer-naming/h5py fixture issues in `test_weight_loader.py`
+and one in `test_spacing_and_indexing.py`, confirmed unrelated to this
+change and pre-existing). `ruff check` on both changed files reports only
+pre-existing, unrelated findings (`warnings`/`pandas`/`inspect_image_quality`
+unused imports that predate this diff, confirmed via `git show HEAD:...`).
+
+**Future recommendation.** The three other items this same Backlog entry's
+neighbours describe — the swallowed session-load exception, the
+drag-and-drop toast's request-vs-added count, and the two boilerplate PDF
+report sections — are all still open and independently small; any one of
+them is a reasonable next pick.
+
 ### 2026-08-21 UTC — The quality-gate checkbox controlled nothing, and the scan it did not gate blocked the UI thread
 Branch `claude/gallant-brahmagupta-86mvu9` · PR
 [#12](https://github.com/leonardolv/DeepSlice-GUI/pull/12) · Status: **done, merged**
@@ -278,6 +346,9 @@ against the code, not inferred from docs.
   model layer and was never plumbed to the UI. **Trivial** — return the bool
   through `state.py` and warn on `False`. This is the cheapest high-value item
   in the list and is the one to take first.
+- ~~**The progress bar and cancellation cover pass 1 of up to 12 inference
+  passes.**~~ Done by the 2026-08-22 run — see the Completed entry.
+  (original entry follows)
 - **The progress bar and cancellation cover pass 1 of up to 12 inference
   passes.** `neural_network/neural_network.py:955-993` attaches
   `PredictionProgressCallback` only when `pass_idx == 0`, but

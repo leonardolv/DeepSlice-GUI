@@ -17,6 +17,7 @@ from DeepSlice.neural_network.neural_network import (
     _combine_prediction_passes,
     _normalize_vectors,
     _residual_weighted_blend,
+    _run_inference_passes,
     _validate_prediction_matrix,
     inspect_image_batch,
     inspect_image_quality,
@@ -241,6 +242,147 @@ def test_build_inference_pass_specs_combined():
     specs = _build_inference_pass_specs(tta=True, multi_scale=True, section_dropout_passes=2)
     # 4 flips * 3 scales = 12, plus 2 dropout = 14
     assert len(specs) == 14
+
+
+# ---------------------------------------------------------------------------
+# _run_inference_passes — progress reporting and cancellation must cover
+# every pass, not just the first.
+# ---------------------------------------------------------------------------
+
+class _FakeGenerator:
+    """Minimal stand-in for the Keras image sequence `_run_inference_passes`
+    consumes: a fixed image count (`n`) that clone_with must preserve, since
+    the fix relies on every pass reporting the same per-pass image count."""
+
+    def __init__(self, n=4, batch_size=2):
+        self.n = n
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return int(np.ceil(self.n / self.batch_size))
+
+    def clone_with(self, **kwargs):
+        return _FakeGenerator(n=self.n, batch_size=self.batch_size)
+
+
+class _FakeModel:
+    """Stand-in for the Keras model: drives the Keras-callback protocol
+    (`on_predict_batch_begin`/`on_predict_batch_end`) the same way
+    `model.predict(..., callbacks=[...])` would, without needing a real
+    network or GPU."""
+
+    def predict(self, generator, steps, verbose=0, callbacks=None):
+        callbacks = callbacks or []
+        for batch in range(steps):
+            for cb in callbacks:
+                cb.on_predict_batch_begin(batch)
+            for cb in callbacks:
+                cb.on_predict_batch_end(batch)
+        return np.tile(np.arange(9, dtype=float), (generator.n, 1))
+
+
+class _TrackingModel(_FakeModel):
+    """Like `_FakeModel`, but records how many batches each `predict()` call
+    (i.e. each pass) actually got through before returning or raising."""
+
+    def __init__(self):
+        self.batches_started: list[dict] = []
+
+    def predict(self, generator, steps, verbose=0, callbacks=None):
+        record = {"planned_steps": steps, "batches_completed": 0}
+        self.batches_started.append(record)
+        callbacks = callbacks or []
+        for batch in range(steps):
+            for cb in callbacks:
+                cb.on_predict_batch_begin(batch)
+            for cb in callbacks:
+                cb.on_predict_batch_end(batch)
+            record["batches_completed"] = batch + 1
+        return np.tile(np.arange(9, dtype=float), (generator.n, 1))
+
+
+def test_run_inference_passes_progress_covers_every_pass_not_just_the_first():
+    # tta=True with no multi-scale/dropout gives 4 passes (flip: none/h/v/hv).
+    pass_specs = _build_inference_pass_specs(tta=True, multi_scale=False, section_dropout_passes=0)
+    assert len(pass_specs) == 4
+
+    generator = _FakeGenerator(n=4, batch_size=2)
+    calls = []
+
+    def record_progress(completed, total, phase):
+        calls.append((completed, total, phase))
+
+    _run_inference_passes(
+        model=_FakeModel(),
+        base_generator=generator,
+        phase_label="primary",
+        progress_callback=record_progress,
+        pass_specs=pass_specs,
+    )
+
+    assert calls, "progress_callback was never invoked"
+
+    total_images_all_passes = len(pass_specs) * generator.n
+    # Every call must report the SAME total — the whole run's image count —
+    # not just the first pass's. Before the fix, only pass 0 ever reported,
+    # so `total` would have been `generator.n` (4), not 16.
+    totals = {total for _, total, _ in calls}
+    assert totals == {total_images_all_passes}
+
+    # The bar must not reach 100% until the very last pass — before the fix
+    # it hit 100% (completed == generator.n == total) at the end of pass 0
+    # and then never moved again for the remaining 3 passes.
+    completed_after_first_pass = calls[generator.__len__() - 1][0]
+    assert completed_after_first_pass == generator.n
+    assert completed_after_first_pass < total_images_all_passes
+
+    # It must reach exactly 100% (not overshoot or undershoot) by the end.
+    assert calls[-1][0] == total_images_all_passes
+
+
+def test_run_inference_passes_cancellation_reaches_every_pass():
+    pass_specs = _build_inference_pass_specs(tta=True, multi_scale=False, section_dropout_passes=0)
+    generator = _FakeGenerator(n=4, batch_size=2)  # __len__() == 2 batches/pass
+
+    # cancel_check() is called once at each pass's top-of-loop boundary check
+    # and twice per batch (on_predict_batch_begin, on_predict_batch_end).
+    # Pass 0 (2 batches) therefore makes 1 + 2*2 = 5 calls, and pass 1's own
+    # boundary check is call 6. Flip to True starting at call 7 — pass 1's
+    # *first batch* callback, not a pass boundary. Before the fix, only pass
+    # 0 had a callback attached at all, so nothing would have called
+    # cancel_check again until pass 2's boundary check — i.e. only after
+    # pass 1 ran to completion for nothing.
+    call_count = {"n": 0}
+
+    def cancel_check():
+        call_count["n"] += 1
+        return call_count["n"] >= 7
+
+    model = _TrackingModel()
+    with pytest.raises(RuntimeError, match="cancelled"):
+        _run_inference_passes(
+            model=model,
+            base_generator=generator,
+            phase_label="primary",
+            progress_callback=lambda *a: None,
+            cancel_check=cancel_check,
+            pass_specs=pass_specs,
+        )
+
+    # Stopped exactly at pass 1's first batch callback, not after running
+    # every remaining batch of pass 1 (which would need 5 more calls) to
+    # completion first.
+    assert call_count["n"] == 7
+
+    # Pass 0 ran to completion (both its batches); pass 1 was interrupted
+    # before completing even its first batch. Before the fix, pass 1 had no
+    # callback attached at all (only pass 0 did), so it would have run to
+    # completion undisturbed (batches_completed == planned_steps) and
+    # cancellation would only have been noticed at pass 2's boundary check —
+    # after silently discarding a full pass of GPU/CPU work.
+    assert len(model.batches_started) == 2
+    assert model.batches_started[0]["batches_completed"] == model.batches_started[0]["planned_steps"]
+    assert model.batches_started[1]["batches_completed"] == 0
 
 
 # ---------------------------------------------------------------------------
