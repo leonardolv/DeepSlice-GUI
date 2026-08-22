@@ -971,12 +971,31 @@ def _run_inference_passes(
 
         steps = len(generator)
         callbacks = None
-        if progress_callback is not None and pass_idx == 0:
+        if progress_callback is not None:
+            # Every pass gets a callback now, not just pass 0. Attaching only
+            # to the first of up to 12 passes (TTA x4 flips x3 scales, plus
+            # one per dropout pass) used to fill the bar to 100% after ~8% of
+            # the work and leave cancellation reachable only once per full
+            # pass rather than at the per-batch boundary the Cancel button's
+            # tooltip promises. `completed`/`total` are offset and scaled here
+            # so they describe the whole multi-pass run, not just this pass.
+            pass_offset = pass_idx * generator.n
+            total_images_all_passes = total_passes * generator.n
+
+            def _scaled_progress_callback(
+                completed,
+                _total,
+                phase,
+                _offset=pass_offset,
+                _total_all=total_images_all_passes,
+            ):
+                progress_callback(_offset + completed, _total_all, phase)
+
             callbacks = [
                 PredictionProgressCallback(
                     total_images=generator.n,
                     phase=phase_label,
-                    progress_callback=progress_callback,
+                    progress_callback=_scaled_progress_callback,
                     cancel_check=cancel_check,
                     batch_size=generator.batch_size,
                 )
