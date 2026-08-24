@@ -13,7 +13,7 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-08-24 UTC — Swallowed session-load failure re-parsed the same file as QuickNII on half-applied state; drag-and-drop toast miscounted
-Branch `claude/gallant-brahmagupta-0wdkdo` · PR: pending · Status: **done, pending merge**
+Branch `claude/gallant-brahmagupta-0wdkdo` · PR [#15](https://github.com/leonardolv/DeepSlice-GUI/pull/15) · Status: **done, merged**
 
 **Claimed:** the Backlog's "A failed session load is swallowed, and then the
 same file is re-parsed as QuickNII on top of half-applied state" item and
