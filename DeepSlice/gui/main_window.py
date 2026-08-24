@@ -780,8 +780,17 @@ class DeepSliceMainWindow(QMainWindow):
                 if local_path:
                     dropped_paths.append(local_path)
             if dropped_paths:
+                before_count = len(self.state.image_paths)
                 self._handle_dropped_paths(dropped_paths)
-                self._show_toast(f"Added {len(dropped_paths)} dropped path(s)", timeout_ms=2500)
+                added_count = len(self.state.image_paths) - before_count
+                if added_count > 0:
+                    self._show_toast(f"Added {added_count} image(s)", timeout_ms=2500)
+                else:
+                    self._show_toast(
+                        "No images added - unsupported file type or already loaded",
+                        timeout_ms=3500,
+                        level="warning",
+                    )
             event.acceptProposedAction()
             return
         super().dropEvent(event)
@@ -7037,10 +7046,17 @@ class DeepSliceMainWindow(QMainWindow):
             return
 
         if filename.lower().endswith(".json"):
+            payload = None
             try:
                 with open(filename, "r", encoding="utf-8") as file_handle:
                     payload = json.load(file_handle)
-                if payload.get("session_format") == "deepslice_gui_v1":
+            except (json.JSONDecodeError, OSError):
+                # Not readable/parseable as JSON at all - fall through and
+                # let the QuickNII path have a look at it.
+                payload = None
+
+            if payload is not None and payload.get("session_format") == "deepslice_gui_v1":
+                try:
                     self.state.load_session_dict(payload)
                     self._load_anchor_targets_from_payload(payload)
                     self.state.is_dirty = False
@@ -7051,10 +7067,22 @@ class DeepSliceMainWindow(QMainWindow):
                     self._update_session_status()
                     self._refresh_all_views()
                     self._add_recent_session(filename)
+                except Exception as exc:
+                    # This file declared itself a DeepSlice session and
+                    # load_session_dict may have already mutated self.state
+                    # before raising - report the failure instead of silently
+                    # falling through to re-parse the same file as QuickNII
+                    # on top of that half-applied state.
                     self._set_session_io_busy(False)
+                    self._show_logged_exception(
+                        title="Load Session",
+                        context="Failed to load DeepSlice session",
+                        exc=exc,
+                        icon=QMessageBox.Critical,
+                    )
                     return
-            except Exception:
-                pass
+                self._set_session_io_busy(False)
+                return
 
         worker = FunctionWorker(self._load_quint_task, filename, inject_callbacks=True)
         worker.signals.log.connect(self._append_console_log)
