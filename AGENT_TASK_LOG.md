@@ -12,6 +12,70 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-08-24 UTC — Swallowed session-load failure re-parsed the same file as QuickNII on half-applied state; drag-and-drop toast miscounted
+Branch `claude/gallant-brahmagupta-0wdkdo` · PR: pending · Status: **done, pending merge**
+
+**Claimed:** the Backlog's "A failed session load is swallowed, and then the
+same file is re-parsed as QuickNII on top of half-applied state" item and
+"The drag-and-drop toast counts paths requested, not images added" item.
+
+**1. Swallowed session-load failure.** `gui/main_window.py`'s
+`_load_session_file`, `.json` branch (not the `.deepslice-session.json`
+branch, which already did this correctly): a file could declare
+`"session_format": "deepslice_gui_v1"` and then fail partway through
+`state.load_session_dict(payload)` — which mutates `self.state` field by
+field before it can raise — and that exception was caught by a bare
+`except Exception: pass` wrapping the *entire* read-parse-apply sequence,
+with no message and no logging. Control then fell through unconditionally to
+the `FunctionWorker` a few lines below, which re-opens the *same file* and
+parses it as a QuickNII export, on top of whatever half-applied state the
+failed session load left behind. Fixed by splitting the file read/parse
+(which legitimately means "not ours, try QuickNII" on `OSError`/
+`JSONDecodeError`) from the `state.load_session_dict(...)` application (which
+now reports through `_show_logged_exception` — the same call the
+`.deepslice-session.json` branch above it already used — instead of falling
+through). A `.json` file with no `deepslice_gui_v1` marker, or one that
+isn't valid JSON at all, is unchanged: still falls through to QuickNII, since
+neither case ever claimed to be a DeepSlice session.
+
+**2. Drag-and-drop toast miscounted.** `dropEvent` reported
+`len(dropped_paths)` — the raw URL count the OS handed over — while
+`_handle_dropped_paths` → `state.add_images` → `set_images` filters out
+non-files, unsupported extensions and duplicates. A folder of 200 TIFFs said
+"Added 1 dropped path(s)" (one folder URL); 5 unsupported files said "Added
+5" when zero were added. Fixed by snapshotting `len(state.image_paths)`
+before and after `_handle_dropped_paths` and reporting the delta, with a
+`level="warning"` toast (existing `ToastOverlay` level, used elsewhere for
+errors) when the delta is zero rather than a misleadingly neutral "Added 0".
+
+**Validation.** Both `_load_session_file` and `dropEvent` are methods on
+`DeepSliceMainWindow`, a `QMainWindow` subclass with a heavy `__init__`
+(builds the full tabbed UI) — nothing in the existing suite instantiates it;
+coverage here is deliberately at the state layer
+(`tests/test_session_roundtrip.py`'s own docstring says so). Followed the
+same convention: new `tests/test_load_session_file.py` (4 tests) and
+`tests/test_drop_event_toast.py` (3 tests) call the unbound method against a
+lightweight stub object exposing only the attributes/methods each method
+actually touches, rather than a real window. Each new test was confirmed to
+fail on the pre-fix code and pass after (`git stash` round-trips) — in
+particular `test_a_broken_deepslice_session_reports_the_failure_and_does_not_fall_through`
+reproduces the exact swallow-and-refallback sequence, and
+`test_toast_reports_zero_when_nothing_was_actually_added` reproduces the
+"Added 5" / zero-actually-added report from the original entry verbatim.
+
+Full suite (`pip install numpy pandas scikit-image scipy "tensorflow>=2.13,<2.16"
+h5py requests protobuf lxml Pillow matplotlib PySide6 pytest pytest-qt`,
+`QT_QPA_PLATFORM=offscreen` — `pip install -e ".[dev]"` itself fails on this
+Python/setuptools combination with an unrelated `pyproject.toml`/`setup.py`
+`long_description` config conflict, worth a separate look): **213 passed, 6
+failed** before and after this change, unchanged either way — the 6 are
+pre-existing `test_weight_loader.py`/`test_spacing_and_indexing.py` failures
+against TensorFlow 2.15.1 in this sandbox, confirmed by running the same two
+files against the pre-change tree via `git stash`. Not investigated further:
+unrelated files, outside this run's claimed scope.
+
+### 2026-08-22 UTC — The progress bar and cancellation covered only pass 1 of up to 12 inference passes
+
 ### 2026-08-22 UTC — The progress bar and cancellation covered only pass 1 of up to 12 inference passes
 Branch `claude/gallant-brahmagupta-j61ee7` · PR [#13](https://github.com/leonardolv/DeepSlice-GUI/pull/13) · Status: **done, merged**
 
