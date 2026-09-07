@@ -68,4 +68,32 @@ def test_calculate_average_section_thickness_happy_path_no_inf():
         bad_sections=None,
     )
     assert np.isfinite(thickness)
-    assert thickness == pytest.approx(-10.0)
+    assert thickness == pytest.approx(10.0)
+
+
+def test_calculate_average_section_thickness_supports_python_lists_and_arrays():
+    # Verify both raw Python lists and numpy arrays compute correctly without AttributeError
+    thickness_lists = spacing_and_indexing.calculate_average_section_thickness(
+        [1, 2, 3, 4],
+        [100.0, 120.0, 140.0, 160.0],
+        bad_sections=None,
+    )
+    assert thickness_lists == pytest.approx(20.0)
+
+    thickness_arrays = spacing_and_indexing.calculate_average_section_thickness(
+        np.array([1, 2, 3, 4]),
+        np.array([100.0, 120.0, 140.0, 160.0]),
+        bad_sections=None,
+    )
+    assert thickness_arrays == pytest.approx(20.0)
+
+
+def test_calculate_average_section_thickness_with_bad_sections_filtering():
+    # Bad section at index 1 (section 2) should be excluded cleanly
+    thickness = spacing_and_indexing.calculate_average_section_thickness(
+        pd.Series([1, 2, 3, 4]),
+        pd.Series([100.0, 999.0, 120.0, 130.0]),
+        bad_sections=[False, True, False, False],
+    )
+    assert np.isfinite(thickness)
+    assert thickness == pytest.approx(10.0)

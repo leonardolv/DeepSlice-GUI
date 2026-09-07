@@ -54,28 +54,30 @@ def calculate_average_section_thickness(
     :return: the average section thickness
     :rtype: float
     """
-    # inter section number differences
+    sec_numbers = np.asarray(section_numbers)
+    sec_depth = np.asarray(section_depth)
+
     if bad_sections is not None:
         good_mask = np.logical_not(np.asarray(bad_sections, dtype=bool))
-        section_numbers = section_numbers[good_mask].reset_index(drop=True)
-        section_depth = section_depth[good_mask]
+        sec_numbers = sec_numbers[good_mask]
+        sec_depth = sec_depth[good_mask]
 
-    if len(section_numbers) < 2:
+    if len(sec_numbers) < 2:
         raise ValueError(
             "At least two valid sections are required to calculate section thickness"
         )
 
-    number_spacing = section_numbers[:-1].values - section_numbers[1:].values
+    number_spacing = sec_numbers[:-1] - sec_numbers[1:]
     if np.any(number_spacing == 0):
         raise ValueError(
             "Duplicate section numbers detected (after dropping bad sections). "
             "Each section number must be unique to compute thickness."
         )
     # inter section depth differences
-    depth_spacing = section_depth[:-1] - section_depth[1:]
+    depth_spacing = sec_depth[:-1] - sec_depth[1:]
     # dividing depth spacing by number spacing allows us to control for missing sections
     weighted_accuracy = calculate_weighted_accuracy(
-        section_numbers, section_depth, species, None, method
+        sec_numbers, sec_depth, species, None, method
     )
     section_thicknesses = depth_spacing / number_spacing
     if not np.isfinite(section_thicknesses).all():
@@ -91,7 +93,7 @@ def calculate_average_section_thickness(
         thickness_weights = np.ones_like(section_thicknesses, dtype=float)
 
     average_thickness = np.average(section_thicknesses, weights=thickness_weights)
-    return average_thickness
+    return float(average_thickness)
 
 
 def ideal_spacing(
