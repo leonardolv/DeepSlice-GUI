@@ -6,6 +6,17 @@
 
 ## Completed
 
+### Task: Complete named-layer resolution refactor for weight loader (DS-007)
+- **Completed**: 2026-09-07 20:25:00
+- **Changes**:
+  - `DeepSlice/neural_network/neural_network.py`:
+    - Exported `XCEPTION_BASE_LAYER_NAME = "xception"` and `DENSE_HEAD_LAYER_NAMES = ("dense", "dense_1", "dense_2")`.
+    - Updated `initialise_network`: Added species validation `("mouse", "rat")`, assigned explicit `name=XCEPTION_BASE_LAYER_NAME` to `Xception(...)` and explicit names `DENSE_HEAD_LAYER_NAMES[0..2]` to the 3 dense head layers in both mouse and rat architectures.
+    - Updated `load_xception_weights`: Validated species at entry, resolved dense layers by name via `model.get_layer(layer_name)` instead of fragile positional indices, supported both `"kernel"` / `"kernel:0"` and `"bias"` / `"bias:0"` group keys, and raised clear `RuntimeError("missing expected layer '<name>'")` when layers are missing.
+    - Preserved complete Xception layer weight mapping and sub-layer verification.
+- **Verification**: Verified with `pytest tests/test_weight_loader.py -v` (7 passed in 35.87s) and test suite `pytest tests/ -k "not training"` (172 passed, 0 failures in 53.77s).
+- **Status**: Completed
+
 ### Task: Fix Series index alignment and shape broadcast crash in calculate_average_section_thickness
 - **Completed**: 2026-09-07 14:17:00
 - **Changes**:
