@@ -13,7 +13,8 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-09-08 UTC — Loading a QuickNII/QuINT session or previewing the atlas always crashed
-Branch `claude/dazzling-darwin-im7ui8` · Status: **done**
+Branch `claude/dazzling-darwin-im7ui8` · PR
+[#16](https://github.com/leonardolv/DeepSlice-GUI/pull/16) · Status: **done**
 
 **Claimed:** the Backlog's "Three smaller dead-code items" entry
 (`FunctionWorker.request_cancel()` and the unreachable GPU-probing
@@ -125,7 +126,7 @@ scope, and may be specific to this pip resolution rather than the pinned
 — filed to the Backlog rather than silently left for a future run to
 re-discover as a regression.
 
-**PR.** Not yet opened as of this entry — see the branch above.
+**PR.** [#16](https://github.com/leonardolv/DeepSlice-GUI/pull/16).
 
 ### 2026-08-24 UTC — Swallowed session-load failure re-parsed the same file as QuickNII on half-applied state; drag-and-drop toast miscounted
 Branch `claude/gallant-brahmagupta-0wdkdo` · PR [#15](https://github.com/leonardolv/DeepSlice-GUI/pull/15) · Status: **done, merged**
