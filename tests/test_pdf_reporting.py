@@ -183,9 +183,30 @@ class TestPdfReporting:
 
 
 class TestMainWindowPdfDefaults:
-    def test_pdf_checkboxes_defaults_in_main_window(self):
+    def test_pdf_checkboxes_defaults_in_main_window(self, monkeypatch):
+        """`DeepSliceMainWindow.__init__` arms `QTimer.singleShot(150, ...)`
+        to show a real, blocking `QMessageBox` (first-run onboarding, or
+        "what's new" on a version bump) shortly after construction.
+        Monkeypatching `QMessageBox.information` alone is not enough: the
+        dialog only pops 150ms later, on whatever Qt event loop turn
+        happens to process it - typically well after this test (and its
+        `monkeypatch` fixture) has already torn down - and `win.close()`
+        does not cancel the pending timer either. So instead this prevents
+        `_show_startup_dialogs` from ever being scheduled at all, by
+        patching `QTimer.singleShot` for the duration of construction.
+        Without it: this test itself still passes, but the deferred call
+        fires during the *next* test's `pytest-qt` teardown
+        `app.processEvents()`, hanging that unrelated test forever on a
+        modal nothing ever dismisses - reproduced directly, in this exact
+        stack (`_show_startup_dialogs` -> `_show_onboarding_dialog` ->
+        `QMessageBox.information` called from inside pytest-qt's own
+        `_process_events()`), on the pre-fix tree.
+        """
+        from PySide6.QtCore import QTimer
         from PySide6.QtWidgets import QApplication
         from DeepSlice.gui.main_window import DeepSliceMainWindow
+
+        monkeypatch.setattr(QTimer, "singleShot", staticmethod(lambda *a, **kw: None))
 
         app = QApplication.instance() or QApplication([])
         win = DeepSliceMainWindow()
