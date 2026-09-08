@@ -12,6 +12,121 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-08 UTC — Loading a QuickNII/QuINT session or previewing the atlas always crashed
+Branch `claude/dazzling-darwin-im7ui8` · Status: **done**
+
+**Claimed:** the Backlog's "Three smaller dead-code items" entry
+(`FunctionWorker.request_cancel()` and the unreachable GPU-probing
+auto-batch-size branch), plus fixed two already-stale strikethroughs for
+items PR #15 had already resolved (see the Backlog section). Investigating
+`request_cancel()`'s only real use — `FunctionWorker.run()`'s
+`inject_callbacks` auto-injecting `cancel_check=self.is_cancel_requested` —
+turned up a much bigger, previously-unreported bug in the same mechanism.
+
+**Root cause.** `FunctionWorker.run()` (`gui/workers.py`) used to add
+`progress_callback`/`log_callback`/`cancel_check` to every
+`inject_callbacks=True` call unconditionally. That was safe only as long as
+every target declared all three — true of `_run_prediction_task` — but
+`_atlas_preview_task` (atlas depth preview, `main_window.py:5772`) and
+`_load_quint_task` (Load Session's QuickNII/QuINT fallback,
+`main_window.py:7087`) both declare only `progress_callback`/`log_callback`
+and have no `**kwargs` catch-all. So the blind `cancel_check` injection
+raised `TypeError` on **every single call** to either — silently caught by
+`run`'s own broad `except Exception` and surfaced to the user as a generic
+"Failed to load QuickNII file" / atlas-preview error dialog. Verified
+directly (not just read): a standalone reproduction of the exact
+kwargs-building logic against a stand-in with `_load_quint_task`'s real
+signature raises `TypeError: _load_quint_task() got an unexpected keyword
+argument 'cancel_check'` every time. Since `_load_session_file` routes every
+`.json`/other file that is *not* the app's own `deepslice_gui_v1` format
+through this exact worker, **loading any real QuickNII/QuINT session file
+was completely broken** — only the app's own native session format ever
+loaded successfully. `tests/test_load_session_file.py` (the file this exact
+bug lives one call away from) mocks `FunctionWorker` out entirely, so this
+was invisible to the existing suite. Introduced by `134b393` ("Complete
+codebase audit and 10-phase remediation"), which added the unconditional
+`cancel_check` injection without updating either function's signature.
+
+**Fix.** `FunctionWorker._accepts_kwarg(name)` inspects `self.fn`'s real
+signature (accepting either a declared parameter or a `**kwargs`
+catch-all) and `run()` now only injects a callback the target actually
+declared. Also deleted `request_cancel`/`is_cancel_requested`/
+`_cancel_event` (and the `cancel_check` auto-injection itself) rather than
+fixing them: a repo-wide grep confirmed `request_cancel()` has zero
+callers anywhere in the app — no UI action ever requested a worker-level
+cancel for *any* `FunctionWorker`, atlas/quint included — so the mechanism
+it fed was permanently a no-op. The one real caller of `cancel_check`,
+`_run_prediction_task`, already has its own working cancellation source
+(`self._prediction_cancel_event`, wired to the visible Cancel button) and
+its `is_cancelled()` already treated a `None` `cancel_check` as "skip that
+check" — so removing the injected (always-`False`) one changes no
+observable behaviour there, confirmed by `test_quality_gate_wiring.py` and
+the rest of the suite staying green.
+
+**Not done.** The third item, `gui/state.py`'s unreachable GPU-probing
+auto-batch-size branch (`_recommended_inference_batch_size`'s
+`progress_callback is not None` path, dead because `run_prediction`'s one
+call site always passes a non-`None` `requested_batch_size`) — left as-is.
+Deleting it cleanly means deciding what `Optional[int]` on
+`requested_batch_size` is still for, and wiring an "auto-detect" UI control
+that passes `None` would be a real feature addition, not a dead-code
+cleanup; out of scope for this pass. Filed to the Backlog with this
+context so a future run doesn't have to re-derive it.
+
+**A second, independent bug found while validating: any test that
+constructs a real `DeepSliceMainWindow` hangs a LATER, unrelated test
+forever.** `MainWindow.__init__` arms `QTimer.singleShot(150,
+self._show_startup_dialogs)`, which pops a real, blocking `QMessageBox`
+(first-run onboarding, or "what's new" on a version bump). Running the
+full suite (not just the files this session's own change touches) hit
+this directly: `tests/test_pdf_reporting.py::TestMainWindowPdfDefaults::
+test_pdf_checkboxes_defaults_in_main_window` constructs a real window and
+itself passes — but its 150ms timer is still pending when the test
+returns (`win.close()` does not cancel it, and monkeypatching
+`QMessageBox.information` inside that test alone would not help either,
+since the patch reverts before the deferred call fires). The timer then
+fires during the *next* test's `pytest-qt` teardown `app.processEvents()`
+call, which is a direct violation of this repo's own CLAUDE.md ("Never
+spawn blocking GUI dialogs or popups during tests") and hung the entire
+suite indefinitely at whatever alphabetically-next file happened to run
+(`tests/test_quality_gate_wiring.py` here). Reproduced identically on the
+pre-fix tree (confirmed by `git stash`-ing this session's other changes
+and re-running) — completely unrelated to the `FunctionWorker` fix above,
+just found while trying to get a clean full-suite baseline. Fixed by
+patching `QTimer.singleShot` itself (not just the dialog call) for the
+duration of that one test's window construction, so `_show_startup_dialogs`
+is never scheduled in the first place.
+
+**Validation.** New `tests/test_function_worker.py` (7 tests, driving the
+real `FunctionWorker.run()` synchronously against stand-ins shaped like the
+app's actual `inject_callbacks=True` targets) — **4 of 7 fail on the
+pre-fix tree** (verified by `git stash`-ing just the two source files and
+re-running): the exact `_load_quint_task`-shaped `TypeError`, the
+`cancel_check`-still-accepted-but-now-`None` case, and the
+`request_cancel`/`is_cancel_requested` removal. Existing
+`test_load_session_file.py`/`test_quality_gate_wiring.py` unaffected (they
+mock `FunctionWorker` entirely, so they could not have caught this bug and
+do not need to change to keep passing).
+
+Full suite (built against a Python 3.11 venv with `tensorflow<2.16` + the
+GUI/PDF/atlas extras installed, `QT_QPA_PLATFORM=offscreen`,
+`PYTHONPATH=.`, `pytest-timeout` for diagnosing the hang above; this
+sandbox's network handled `pip install tensorflow` fine, unlike some other
+repos in this account's fleet whose full lockfiles pull in CUDA wheels):
+**234 collected, 230 passed, 4 failed**. The 4 failures
+(`test_weight_loader.py`'s `test_initialise_network_produces_named_layers`/
+`test_forward_pass_produces_9_vector`, both species) are **pre-existing and
+unrelated** — `Xception(..., name=...)` raises `TypeError: unexpected
+keyword argument 'name'` against this environment's resolved
+`tensorflow==2.15.1`/`keras==2.15.0`, reproduced identically with this
+session's changes fully `git stash`-ed. Not investigated further (out of
+scope, and may be specific to this pip resolution rather than the pinned
+`tensorflow>=2.13,<2.16` the real CI installs via `pip install -e .[dev]`)
+— filed to the Backlog rather than silently left for a future run to
+re-discover as a regression.
+
+**PR.** Not yet opened as of this entry — see the branch above.
+
 ### 2026-08-24 UTC — Swallowed session-load failure re-parsed the same file as QuickNII on half-applied state; drag-and-drop toast miscounted
 Branch `claude/gallant-brahmagupta-0wdkdo` · PR [#15](https://github.com/leonardolv/DeepSlice-GUI/pull/15) · Status: **done, merged**
 
@@ -425,6 +540,12 @@ against the code, not inferred from docs.
   is honoured once per full pass over the dataset rather than at the "safe
   batch boundary" the button's tooltip promises. Small: attach on every pass
   and offset reported `completed` by `pass_idx * total_images`.
+- ~~**A failed session load is swallowed, and then the same file is re-parsed
+  as QuickNII on top of half-applied state.**~~ Done by the 2026-08-24 run
+  (PR #15) — see the Completed entry. Left unstruck here until the
+  2026-09-08 run noticed the omission while looking for its next item; a
+  future run should not re-discover this as new.
+  (original entry follows)
 - **A failed session load is swallowed, and then the same file is re-parsed as
   QuickNII on top of half-applied state.** `gui/main_window.py:6976-6994`:
   anything raising after `load_session_dict` (which has already mutated
@@ -442,6 +563,9 @@ against the code, not inferred from docs.
   GUI inspection notes. Also fixed `self._settings` initialization order bug in `DeepSliceMainWindow.__init__`.
 - ~~**`is_dirty = True` is set before validation in the remaining eight
   mutators.**~~ Done by the 2026-08-20 run — see the Completed entry.
+- ~~**The drag-and-drop toast counts paths requested, not images added.**~~
+  Done by the 2026-08-24 run (PR #15) — see the Completed entry.
+  (original entry follows)
 - **The drag-and-drop toast counts paths requested, not images added.**
   `gui/main_window.py:775-787` reports `len(dropped_paths)` while
   `_handle_dropped_paths` → `state.add_images` → `set_images`
@@ -462,6 +586,13 @@ against the code, not inferred from docs.
   status, so wiring it up as-is would report six fixed bugs as current. This is
   "wire it, replace it, or delete it — but decide", and the decision comes
   before any code.
+- ~~**Three smaller dead-code items**~~ Two of the three done by the
+  2026-09-08 run — see the Completed entry, which found a real, severe bug
+  (`_load_quint_task`/`_atlas_preview_task` crashing on every call) hiding
+  behind the `request_cancel()` half of this item. The GPU-probing branch is
+  the one still open — struck through only for the two resolved halves;
+  restated below.
+  (original entry follows)
 - **Three smaller dead-code items**, worth folding into whichever pass touches
   their file rather than their own run: `gui/workers.py:34-39`'s
   `FunctionWorker.request_cancel()` has no caller (`_cancel_alignment` uses a
@@ -470,3 +601,31 @@ against the code, not inferred from docs.
   auto-batch-size branch is unreachable, because `run_prediction` always passes
   a non-`None` `requested_batch_size` (`:846`) and
   `_recommended_inference_batch_size` therefore always returns at `:697`.
+- **`_recommended_inference_batch_size`'s GPU-probing branch is still
+  unreachable dead code.** The one remaining third of the item above.
+  `run_prediction`'s single call site always passes
+  `requested_batch_size=self.inference_batch_size`, a plain `int` field
+  (default `8`, never `None`) — so the early-return branch always fires and
+  the `tensorflow`-import GPU-count probe below it (lines ~700-717) never
+  runs. `git log -S` shows no sign of an abandoned caller that used to pass
+  `None`. Two honest resolutions, neither attempted yet: delete the dead
+  branch and drop `requested_batch_size`'s `Optional`, or add a real
+  "auto-detect batch size" UI control that passes `None` — the latter is a
+  feature addition, not a cleanup, and needs a design decision (does
+  auto-detect need its own checkbox, or does emptying the spinbox mean
+  "auto"?) before it's a small fix.
+- **`test_weight_loader.py`'s two `Xception`-building tests fail in this
+  sandbox's environment**, `TypeError: Xception() got an unexpected
+  keyword argument 'name'` from `neural_network.py:609`'s
+  `Xception(include_top=True, weights=xception_weights,
+  name=XCEPTION_BASE_LAYER_NAME)`. Found by the 2026-09-08 run while
+  chasing a full-suite baseline for an unrelated fix; reproduces on a
+  clean checkout with no session changes applied, against
+  `tensorflow==2.15.1`/`keras==2.15.0` resolved into a fresh venv by `pip
+  install "tensorflow>=2.13,<2.16"` (the exact range `setup.py` pins).
+  Not investigated further: could be a genuine incompatibility between
+  that pin range and `Xception`'s `name=` kwarg at some patch version
+  within it, or an artifact of this sandbox's specific pip resolution
+  differing from what `pip install -e .[dev]` resolves in real CI (which
+  this session had no way to compare against directly). Worth a real CI
+  log check before assuming either way.

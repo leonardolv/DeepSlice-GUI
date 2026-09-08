@@ -4576,8 +4576,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.run_alignment_button.setText("Cancelling...")
 
     def _run_prediction_task(self, options: dict, progress_callback=None, log_callback=None, cancel_check=None):
-        # Use the thread-safe Event flag; respect any cancel_check injected by
-        # the worker for additional cooperative-cancellation paths.
+        # Use the thread-safe Event flag; cancel_check is accepted for any
+        # caller (e.g. a test) that wants to pass its own cooperative-
+        # cancellation source directly - FunctionWorker itself no longer
+        # injects one (see gui/workers.py's removed request_cancel/
+        # is_cancel_requested, which had no caller anywhere in the app).
         cancel_event = self._prediction_cancel_event
 
         def is_cancelled() -> bool:
