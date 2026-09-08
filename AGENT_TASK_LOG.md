@@ -434,15 +434,12 @@ against the code, not inferred from docs.
   `.deepslice-session.json` branch three lines above does this correctly with
   `_show_logged_exception` and is the shape to copy. Trivial — narrow the
   `except` to `json.JSONDecodeError`/`OSError` around the parse only.
-- **Two PDF report sections emit boilerplate, and both are on by default.**
-  `gui/reporting.py:144-158` writes a heading literally reading `"Sample Images
-  (Placeholder)"` and an angle section saying metrics "are summarized in the
-  GUI export panel"; `main_window.py:3418-3421` `setChecked(True)` on both. So
-  every report a user hands a collaborator contains a section headed
-  "(Placeholder)", while the tooltips promise real content. The angle data
-  already exists — `state.summary_metrics()` is computed at `:6683` and passed
-  in. Small to render the angle stats for real; trivial to default the boxes
-  off until it is done. Decide which; do not leave it as is.
+- ~~**Two PDF report sections emit boilerplate, and both are on by default.**~~
+  Done by the 2026-09-08 run: Enriched `state.summary_metrics()` to retain `mean_dv`,
+  `mean_ml`, `std_dv`, and `std_ml`; rendered real quantitative angle metrics
+  in `gui/reporting.py`; defaulted `pdf_include_images` to `False` in
+  `gui/main_window.py`; and removed placeholder wording in favor of professional
+  GUI inspection notes. Also fixed `self._settings` initialization order bug in `DeepSliceMainWindow.__init__`.
 - ~~**`is_dirty = True` is set before validation in the remaining eight
   mutators.**~~ Done by the 2026-08-20 run — see the Completed entry.
 - **The drag-and-drop toast counts paths requested, not images added.**

@@ -6,6 +6,27 @@
 
 ## Completed
 
+### Task: Clean up PDF report placeholder boilerplate and populate angle metrics
+- **Completed**: 2026-09-08 12:50:00
+- **Changes**:
+  - `DeepSlice/gui/state.py`:
+    - Enriched `DeepSliceAppState.summary_metrics()` to compute and return `mean_dv`, `mean_ml`, `std_dv`, and `std_ml` alongside `mean_angular_deviation`, providing real angle statistics to PDF reports and downstream callers.
+  - `DeepSlice/gui/reporting.py`:
+    - Replaced the placeholder "Angle Metrics" text with actual calculated values: Mean angular deviation (deg), Dorsoventral (DV) angle (mean +/- std deg), and Mediolateral (ML) angle (mean +/- std deg).
+    - Handled fallback gracefully when angle distributions are not computed.
+    - Updated "Sample Images" section heading to "Sample Section Alignments" and replaced placeholder text with a professional note on inspecting section overlays in the GUI viewer; defaulted `include_images` option to `False`.
+    - Added vertical page boundary check (`if y < ...: pdf.showPage()`) before starting new sections to prevent text from overflowing off the bottom of the page.
+  - `DeepSlice/gui/main_window.py`:
+    - Set default checked state of `self.pdf_include_images` checkbox to `False` so generated PDF reports are free of placeholder notes by default.
+    - Updated `pdf_include_angles` tooltip to accurately describe the quantitative angle metrics included in the PDF report.
+    - Fixed initialization order in `DeepSliceMainWindow.__init__`: initialized `self._settings = QSettings("DeepSlice", "GUI")` before calling `self._apply_startup_preferences_to_state()`, resolving an `AttributeError` on startup.
+  - `tests/test_pdf_reporting.py`:
+    - Added comprehensive unit tests covering `summary_metrics` angle metrics output, PDF report generation with quantitative angle metrics verification via Canvas string interception, sample image opt-in behavior, missing angle data handling, and `DeepSliceMainWindow` checkbox defaults.
+- **Verification**:
+  - Ran `pytest tests/test_pdf_reporting.py -v` (6 passed in 6.15s).
+  - Ran full test suite `pytest tests/ -v` (227 passed, 0 failures in 14.49s).
+- **Status**: Completed
+
 ### Task: Complete named-layer resolution refactor for weight loader (DS-007)
 - **Completed**: 2026-09-07 20:25:00
 - **Changes**:

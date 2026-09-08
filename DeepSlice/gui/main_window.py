@@ -691,12 +691,12 @@ class DeepSliceMainWindow(QMainWindow):
         self._last_error_analysis = None
 
         self.state = DeepSliceAppState()
-        self._apply_startup_preferences_to_state()
         # Reuse a single QSettings handle across the whole window instead of
         # instantiating a new one on every read/write. On macOS/Windows this
         # avoids repeated registry/plist opens, and on Linux avoids re-parsing
         # the ini file every time a spinbox fires valueChanged.
         self._settings = QSettings("DeepSlice", "GUI")
+        self._apply_startup_preferences_to_state()
         self._session_base_text = "Session: New"
         self.thread_pool = QThreadPool.globalInstance()
         # Use a set keyed by id() so the same worker can't be double-tracked
@@ -1106,7 +1106,7 @@ class DeepSliceMainWindow(QMainWindow):
             "pdf_include_stats": "Include summary statistics section in generated PDF report.",
             "pdf_include_plot": "Include linearity plot section in generated PDF report.",
             "pdf_include_images": "Include sample image section in generated PDF report.",
-            "pdf_include_angles": "Include angle-metrics notes section in generated PDF report.",
+            "pdf_include_angles": "Include angle metrics (DV, ML, angular deviation) in generated PDF report.",
             "quicknii_path_edit": "Optional QuickNII executable path for one-click launch with exported JSON.",
             "quicknii_browse_button": "Locate QuickNII executable on disk.",
             "open_quicknii_button": "Launch QuickNII with latest JSON export file.",
@@ -3425,7 +3425,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.pdf_include_plot = QCheckBox("Linearity Plot")
         self.pdf_include_plot.setChecked(True)
         self.pdf_include_images = QCheckBox("Sample Images")
-        self.pdf_include_images.setChecked(True)
+        self.pdf_include_images.setChecked(False)
         self.pdf_include_angles = QCheckBox("Angle Metrics")
         self.pdf_include_angles.setChecked(True)
         pdf_content_layout.addWidget(self.pdf_include_stats)

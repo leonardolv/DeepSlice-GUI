@@ -141,20 +141,47 @@ def generate_pdf_report(output_path: str, summary: dict, options: dict):
             line("Plot data unavailable for this session.")
             line("")
 
-    if options.get("include_images", True):
+    if options.get("include_images", False):
+        if y < 35 * mm:
+            pdf.showPage()
+            y = height - 20 * mm
         pdf.setFont("Helvetica-Bold", 12)
-        line("Sample Images (Placeholder)", 8 * mm)
+        line("Sample Section Alignments", 8 * mm)
         pdf.setFont("Helvetica", 10)
-        line("Representative section alignments will be included here in future versions.")
+        line("Section alignment previews are not embedded in this report format.")
+        line("Visual slice overlays can be inspected interactively in the GUI viewer.")
         line("")
 
     if options.get("include_angles", True):
+        if y < 45 * mm:
+            pdf.showPage()
+            y = height - 20 * mm
         pdf.setFont("Helvetica-Bold", 12)
         line("Angle Metrics", 8 * mm)
         pdf.setFont("Helvetica", 10)
-        line(
-            "Angle metrics are derived from DV/ML distributions and summarized in the GUI export panel."
-        )
+
+        mean_dev = summary.get("mean_angular_deviation")
+        mean_dv = summary.get("mean_dv")
+        std_dv = summary.get("std_dv")
+        mean_ml = summary.get("mean_ml")
+        std_ml = summary.get("std_ml")
+
+        has_angle_data = any(v is not None for v in (mean_dev, mean_dv, mean_ml))
+        if has_angle_data:
+            if mean_dev is not None:
+                line(f"Mean angular deviation: {mean_dev:.3f} deg")
+            if mean_dv is not None:
+                dv_str = f"{mean_dv:.2f} deg"
+                if std_dv is not None:
+                    dv_str += f" (+/- {std_dv:.2f} deg)"
+                line(f"Dorsoventral (DV) angle: {dv_str}")
+            if mean_ml is not None:
+                ml_str = f"{mean_ml:.2f} deg"
+                if std_ml is not None:
+                    ml_str += f" (+/- {std_ml:.2f} deg)"
+                line(f"Mediolateral (ML) angle: {ml_str}")
+        else:
+            line("Angle distributions were not computed for this session.")
         line("")
 
     pdf.save()

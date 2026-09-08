@@ -1378,6 +1378,10 @@ class DeepSliceAppState:
                 "excluded": 0,
                 "mean_angular_deviation": 0.0,
                 "slice_count": 0,
+                "mean_dv": 0.0,
+                "mean_ml": 0.0,
+                "std_dv": 0.0,
+                "std_ml": 0.0,
             }
 
         excluded = 0
@@ -1392,9 +1396,15 @@ class DeepSliceAppState:
 
         if len(dv_angles) == 0:
             mean_angular_deviation = 0.0
+            mean_dv = 0.0
+            mean_ml = 0.0
+            std_dv = 0.0
+            std_ml = 0.0
         else:
             mean_dv = float(np.mean(dv_angles))
             mean_ml = float(np.mean(ml_angles))
+            std_dv = float(np.std(dv_angles))
+            std_ml = float(np.std(ml_angles))
             mean_angular_deviation = float(
                 np.mean(np.sqrt((dv_angles - mean_dv) ** 2 + (ml_angles - mean_ml) ** 2))
             )
@@ -1404,6 +1414,10 @@ class DeepSliceAppState:
             "excluded": excluded,
             "mean_angular_deviation": mean_angular_deviation,
             "slice_count": int(len(self.predictions)),
+            "mean_dv": mean_dv,
+            "mean_ml": mean_ml,
+            "std_dv": std_dv,
+            "std_ml": std_ml,
         }
 
     def to_session_dict(self) -> Dict[str, object]:
