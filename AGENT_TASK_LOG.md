@@ -13,7 +13,7 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-09-09 UTC — `_recommended_inference_batch_size`'s unreachable GPU-probing branch removed
-Status: **done**
+Branch `claude/dazzling-darwin-7fqguu` · PR [#18](https://github.com/leonardolv/DeepSlice-GUI/pull/18) · Status: **done, PR open (watching CI)**
 
 **Claimed:** the Backlog's "`_recommended_inference_batch_size`'s GPU-probing
 branch is still unreachable dead code" item — the one third of the
