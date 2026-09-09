@@ -13,7 +13,8 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-09-09 UTC — `initialise_network()` crashed on EVERY prediction run against the officially pinned TensorFlow range
-Branch `claude/dazzling-darwin-qcsak4` · PR: see below · Status: **done**
+Branch `claude/dazzling-darwin-qcsak4` · PR
+[#17](https://github.com/leonardolv/DeepSlice-GUI/pull/17) · Status: **done**
 
 **Claimed:** not a pre-existing Backlog entry. Found while building a fresh
 venv to re-check the Backlog's "`test_weight_loader.py`'s two `Xception`-
@@ -111,7 +112,7 @@ collected` baseline). `ruff check` on both changed files: `neural_network.py`
 17 pre-existing findings before and after (unchanged, confirmed via `git
 stash`); `test_weight_loader.py` clean (`All checks passed!`).
 
-**PR.** _(opened this session — see below.)_
+**PR.** [#17](https://github.com/leonardolv/DeepSlice-GUI/pull/17) (draft).
 
 ### 2026-09-08 UTC — Loading a QuickNII/QuINT session or previewing the atlas always crashed
 Branch `claude/dazzling-darwin-im7ui8` · PR
