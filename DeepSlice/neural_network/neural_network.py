@@ -606,8 +606,20 @@ def initialise_network(xception_weights: str, weights: str, species: str) -> Any
     if species not in ("mouse", "rat"):
         raise ValueError("species must be one of 'mouse' or 'rat'")
 
-    base_model = Xception(
-        include_top=True, weights=xception_weights, name=XCEPTION_BASE_LAYER_NAME
+    # NOTE: keras.applications' Xception() is a plain builder function, not a
+    # Layer/Model subclass constructor — it takes no `name`/`**kwargs` at all
+    # (confirmed against tensorflow==2.15.1, the top of this module's own
+    # supported range) and raises TypeError if one is passed. Its returned
+    # model already defaults to name "xception" (== XCEPTION_BASE_LAYER_NAME)
+    # on every independent call, which is what load_xception_weights's
+    # model.get_layer(XCEPTION_BASE_LAYER_NAME) below actually depends on, so
+    # nothing is lost by not passing it explicitly. The assertion exists so a
+    # future TensorFlow/Keras release that changes that default fails loudly
+    # here instead of silently breaking name-based weight resolution again.
+    base_model = Xception(include_top=True, weights=xception_weights)
+    assert base_model.name == XCEPTION_BASE_LAYER_NAME, (
+        f"Xception()'s default model name changed to {base_model.name!r}; "
+        f"load_xception_weights looks it up as {XCEPTION_BASE_LAYER_NAME!r}"
     )
 
     if species == "rat":
