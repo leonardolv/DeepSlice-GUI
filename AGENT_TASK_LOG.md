@@ -47,14 +47,21 @@ log message is unchanged, and an end-to-end `run_prediction` call (fake
 model, `inference_batch_size=32`) confirms the configured batch size still
 reaches `model.predict(batch_size=...)`. Full suite:
 `QT_QPA_PLATFORM=offscreen xvfb-run -a python -m pytest tests/ -q` —
-**236 passed** (up from 230), same **4 pre-existing failures** as the
-Backlog's own note (`test_weight_loader.py`'s two `Xception`-building
-tests × 2 species, `Xception() got an unexpected keyword argument 'name'`
-— reproduced on a stash of just this change to confirm it's unrelated and
-pre-existing in this sandbox's `tensorflow`/`keras` resolution, not
-something this run's diff touches or introduces). `ruff check
-DeepSlice/gui/state.py`: same 7 pre-existing `E402` findings before and
-after (0 new).
+**236 passed** (up from 230), same **4 pre-existing failures** this run
+believed were an environment-only `tensorflow`/`keras` incompatibility
+(`test_weight_loader.py`'s two `Xception`-building tests × 2 species,
+`Xception() got an unexpected keyword argument 'name'`), reproduced on a
+stash of just this change to (wrongly) confirm it as unrelated. `ruff
+check DeepSlice/gui/state.py`: same 7 pre-existing `E402` findings before
+and after (0 new).
+
+**Correction, found merging this branch against `main`:** those 4 failures
+were a real, unrelated bug (an invalid `name=` kwarg on `Xception(...)`),
+not an environment artifact — fixed by a concurrent session's PR #17 (see
+the entry above), merged to `main` while this PR was open. Pulling that
+merge into this branch and re-running the full suite: **242 passed, 0
+failed** (up from 236/4-failed), confirming this branch's own change is
+independent of and unaffected by that fix.
 
 **Environment note for a future run:** `pip install -e ".[dev]"` fails in
 this sandbox with `AttributeError: 'NoneType' object has no attribute
@@ -74,6 +81,108 @@ investigated further since it didn't block this run, but worth fixing
 properly (drop the stray `[project]` table's partial metadata, or
 declare `dynamic` correctly) if a future run needs `pip install -e` to
 just work.
+
+### 2026-09-09 UTC — `initialise_network()` crashed on EVERY prediction run against the officially pinned TensorFlow range
+Branch `claude/dazzling-darwin-qcsak4` · PR
+[#17](https://github.com/leonardolv/DeepSlice-GUI/pull/17) · Status: **done**
+
+**Claimed:** not a pre-existing Backlog entry. Found while building a fresh
+venv to re-check the Backlog's "`test_weight_loader.py`'s two `Xception`-
+building tests fail in this sandbox's environment" item, which the two prior
+runs (2026-08-22, 2026-09-08) both reproduced but explicitly left
+uninvestigated as possibly sandbox-specific ("could be a genuine
+incompatibility... or an artifact of this sandbox's specific pip resolution
+differing from what `pip install -e .[dev]` resolves in real CI"). It is
+neither — see below.
+
+**Root cause.** `d216d79` ("resolve neural network layers by name in weight
+loader (DS-007)", 2026-09-07, this same maintenance track's own prior
+session under `GUI_UX_TASK_LOG.md`) changed
+`Xception(include_top=True, weights=xception_weights)` to
+`Xception(include_top=True, weights=xception_weights,
+name=XCEPTION_BASE_LAYER_NAME)` in `initialise_network()`
+(`DeepSlice/neural_network/neural_network.py`), as part of switching
+`load_xception_weights` to resolve layers by name instead of fragile
+positional indices. `keras.applications.xception.Xception` is a plain
+builder **function**, not a `Layer`/`Model` subclass constructor —
+`inspect.signature(Xception)` against a real `pip install
+"tensorflow>=2.13,<2.16"` (`setup.py`'s own pin, resolves to
+`tensorflow==2.15.1`/`keras==2.15.0`) shows exactly
+`(include_top=True, weights='imagenet', input_tensor=None,
+input_shape=None, pooling=None, classes=1000,
+classifier_activation='softmax')` — no `name`, no `**kwargs`. Calling it
+with `name=...` raises `TypeError: Xception() got an unexpected keyword
+argument 'name'` **unconditionally, on every call, for every species** —
+verified directly (`python -c "from tensorflow.keras.applications.xception
+import Xception; Xception(weights=None, name='xception')"` raises the exact
+error). `initialise_network()` is the one function both mouse and rat
+prediction call to build the model for every single run, so this is not an
+edge case: it means the shipped code, run against its own declared
+dependency range, cannot complete a single prediction.
+
+This is **not** sandbox/pip-resolution drift, and the two prior sessions'
+hedge was reasonable but wrong: `setup.py` pins exactly
+`tensorflow>=2.13,<2.16`, this sandbox's `pip install` resolved exactly
+into that range, and the failure is a hard Python-level `TypeError` from a
+function's real signature, not a numerical/behavioural difference that
+could plausibly vary by patch version or resolver quirk.
+
+**Why the introducing session's own tests passed.** Unclear, and not fully
+resolvable after the fact — `GUI_UX_TASK_LOG.md`'s entry for `d216d79`
+claims `pytest tests/test_weight_loader.py -v` passed 7/7 in that session's
+own environment immediately after the change. Whatever TensorFlow/Keras
+build that session's `pip install` resolved evidently accepted `name=` on
+`Xception()` (or the test import silently skipped via
+`pytest.importorskip("tensorflow")` without that session noticing) — either
+way, it did not match `setup.py`'s own declared range as resolved in this
+session's fresh venv, this session's `2026-08-22` predecessor's venv, or
+`2026-09-08`'s.
+
+**Fix.** `DeepSlice/neural_network/neural_network.py`: drop the invalid
+`name=XCEPTION_BASE_LAYER_NAME` kwarg from the `Xception(...)` call.
+Verified this does not undo DS-007's actual point (deterministic
+name-based layer resolution): a freshly-built `Xception(...)` model's own
+`.name` already defaults to exactly `"xception"` (`== 
+XCEPTION_BASE_LAYER_NAME`) on **every** independent call in the same
+process — confirmed directly, including that its internal weighted
+sub-layers (`block1_conv1`, `block1_conv1_bn`, ...) are consistently named
+across repeated calls too (only the unweighted `Input` layer's
+auto-numbered name differs, which nothing depends on). So
+`load_xception_weights`'s `model.get_layer(XCEPTION_BASE_LAYER_NAME)` keeps
+working with zero behavioural change. Added an `assert base_model.name ==
+XCEPTION_BASE_LAYER_NAME` right after construction (with a comment
+explaining why) so a future Keras release changing that default fails
+loudly at the call site instead of silently breaking name-based weight
+resolution again the same way this session's regression did silently the
+first time.
+
+**Validation.** New `tests/test_weight_loader.py::test_xception_is_never_called_with_a_name_kwarg`
+is a TensorFlow-independent AST check (deliberately not gated by
+`pytest.importorskip("tensorflow")`, unlike every other test in the file —
+gating it would have hidden this exact regression in any environment
+without TensorFlow installed, which is how it shipped unnoticed for two
+days across two prior maintenance sessions) asserting no `Xception(...)`
+call site in the module passes `name=`. Also added
+`test_xception_base_layer_name_matches_the_real_default`, pinning the
+"default name already matches" assumption the fix depends on, directly
+against the real Keras function. **5 of the file's 9 tests fail on the
+pre-fix tree** (verified via `git stash` on just the production file): the
+pre-existing `test_initialise_network_produces_named_layers`/
+`test_forward_pass_produces_9_vector` (×2 species each, exactly the 4
+failures the 2026-08-22/2026-09-08 sessions already knew about) plus the
+new AST test.
+
+`tests/test_weight_loader.py` alone: **9 passed** (was 3 passed / 4 failed
+pre-fix). Full suite (fresh venv: `pip install "tensorflow>=2.13,<2.16"
+numpy pandas scikit-image scipy h5py requests protobuf lxml Pillow
+matplotlib PySide6 pytest pytest-qt reportlab`, `QT_QPA_PLATFORM=offscreen`,
+`PYTHONPATH=.`): **236 passed, 0 failed** (up from 234 collected / 230
+passed / 4 failed under the same fresh install — the prior sessions' `234
+collected` baseline). `ruff check` on both changed files: `neural_network.py`
+17 pre-existing findings before and after (unchanged, confirmed via `git
+stash`); `test_weight_loader.py` clean (`All checks passed!`).
+
+**PR.** [#17](https://github.com/leonardolv/DeepSlice-GUI/pull/17) (draft).
 
 ### 2026-09-08 UTC — Loading a QuickNII/QuINT session or previewing the atlas always crashed
 Branch `claude/dazzling-darwin-im7ui8` · PR
@@ -683,6 +792,16 @@ against the code, not inferred from docs.
   feature addition, not a cleanup, and needs a design decision (does
   auto-detect need its own checkbox, or does emptying the spinbox mean
   "auto"?) before it's a small fix.
+- ~~**`test_weight_loader.py`'s two `Xception`-building tests fail in this
+  sandbox's environment.**~~ Done by the 2026-09-09 run — see the Completed
+  entry. It was **not** sandbox drift: `Xception()` is a plain builder
+  function with a fixed signature on the officially pinned
+  `tensorflow>=2.13,<2.16` range and genuinely does not accept `name=` —
+  every real install in that range crashes on every prediction run, for
+  both species. Fixed by dropping the invalid kwarg (the model's own
+  default name already matches what the name-based weight loader looks
+  up, so DS-007's actual fix is unaffected).
+  (original entry follows)
 - **`test_weight_loader.py`'s two `Xception`-building tests fail in this
   sandbox's environment**, `TypeError: Xception() got an unexpected
   keyword argument 'name'` from `neural_network.py:609`'s

@@ -22,3 +22,4 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 ### Fixed
 - Fixed mutable shared default markers list construction in QUINT JSON writer.
 - Improved inference error surfacing by wrapping model prediction failures with actionable RuntimeError messages.
+- Fixed `initialise_network()` crashing with `TypeError: Xception() got an unexpected keyword argument 'name'` on every mouse/rat prediction run against the officially pinned `tensorflow>=2.13,<2.16` range — a regression introduced while wiring up name-based weight resolution.
