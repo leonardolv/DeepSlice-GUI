@@ -684,40 +684,27 @@ class DeepSliceAppState:
 
     def _recommended_inference_batch_size(
         self,
-        progress_callback=None,
+        requested_batch_size: int,
         log_callback=None,
-        requested_batch_size: Optional[int] = None,
     ) -> int:
-        if requested_batch_size is not None:
-            requested = int(requested_batch_size)
-            if requested <= 0:
-                raise ValueError("inference_batch_size must be a positive integer")
-            if requested > 512:
-                raise ValueError("inference_batch_size must not exceed 512")
-            if log_callback is not None:
-                log_callback(f"Using user-configured inference batch size {requested}")
-            return requested
+        """Validate and return the batch size to run inference with.
 
-        if progress_callback is None:
-            return int(max(1, self.inference_batch_size))
-
-        batch_size = 2
-        try:
-
-
-            try:
-                import tensorflow as tf
-                gpu_count = len(tf.config.list_physical_devices("GPU"))
-            except Exception:
-                gpu_count = 0
-            if gpu_count > 0:
-                batch_size = 8
-        except Exception:
-            batch_size = 2
-
+        `run_prediction` is the only caller, and it always passes
+        `self.inference_batch_size` (an `int` field that defaults to 8
+        and is never `None`). This used to also carry an `Optional`
+        "auto-detect" path - a `progress_callback is None` check guarding
+        a GPU-probing block - that no call site could ever reach; removed
+        rather than left dead. See AGENT_TASK_LOG.md for the two
+        auto-detect options considered instead of this cleanup.
+        """
+        requested = int(requested_batch_size)
+        if requested <= 0:
+            raise ValueError("inference_batch_size must be a positive integer")
+        if requested > 512:
+            raise ValueError("inference_batch_size must not exceed 512")
         if log_callback is not None:
-            log_callback(f"Using inference batch size {batch_size} for current runtime")
-        return batch_size
+            log_callback(f"Using user-configured inference batch size {requested}")
+        return requested
 
     def _annotate_prediction_diagnostics(self) -> Dict[str, object]:
         diagnostics = {
@@ -842,9 +829,8 @@ class DeepSliceAppState:
 
         model = self.ensure_model(log_callback=log_callback)
         inference_batch_size = self._recommended_inference_batch_size(
-            progress_callback=progress_callback,
-            log_callback=log_callback,
             requested_batch_size=self.inference_batch_size,
+            log_callback=log_callback,
         )
         if progress_callback is not None:
             progress_callback(0, max(len(self.image_paths), 1), "prepare")

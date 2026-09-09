@@ -12,6 +12,69 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-09 UTC — `_recommended_inference_batch_size`'s unreachable GPU-probing branch removed
+Status: **done**
+
+**Claimed:** the Backlog's "`_recommended_inference_batch_size`'s GPU-probing
+branch is still unreachable dead code" item — the one third of the
+2026-09-08 "Three smaller dead-code items" entry that run left open, having
+fixed `request_cancel()` and the crash it uncovered.
+
+**Verified before touching code:** `run_prediction` (`gui/state.py`) is the
+method's only caller anywhere in the package, and its one call site always
+passes `requested_batch_size=self.inference_batch_size` — a plain `int`
+dataclass field defaulting to `8`, never `None`. So the early-return
+validation branch always fired, and everything below it (a
+`progress_callback is None` check, then a `try/except`-wrapped
+`tensorflow.config.list_physical_devices("GPU")` probe defaulting to a
+batch size of 2 or 8) could never run.
+
+**Took the "trivial" option the Backlog named** rather than the "real
+auto-detect UI control" alternative — that one needs a product decision
+(does emptying the spinbox mean "auto", or does it need its own checkbox?)
+this run wasn't in a position to make. Deleted the dead branch, dropped the
+unused `progress_callback` parameter (it only ever gated that branch), and
+made `requested_batch_size` a required `int` instead of `Optional[int]` —
+matching the codebase's own stated preference against defensive handling
+for scenarios that can't happen. The one call site (`run_prediction`)
+updated to match; `Optional` stays imported (used elsewhere in the file).
+
+**Validation.** New `tests/test_inference_batch_size.py`, 6 tests: the
+signature no longer accepts `progress_callback` (confirmed red on the
+pre-fix method via `git stash` of just `gui/state.py`, green after), valid
+batch sizes pass through unchanged, out-of-range values still raise, the
+log message is unchanged, and an end-to-end `run_prediction` call (fake
+model, `inference_batch_size=32`) confirms the configured batch size still
+reaches `model.predict(batch_size=...)`. Full suite:
+`QT_QPA_PLATFORM=offscreen xvfb-run -a python -m pytest tests/ -q` —
+**236 passed** (up from 230), same **4 pre-existing failures** as the
+Backlog's own note (`test_weight_loader.py`'s two `Xception`-building
+tests × 2 species, `Xception() got an unexpected keyword argument 'name'`
+— reproduced on a stash of just this change to confirm it's unrelated and
+pre-existing in this sandbox's `tensorflow`/`keras` resolution, not
+something this run's diff touches or introduces). `ruff check
+DeepSlice/gui/state.py`: same 7 pre-existing `E402` findings before and
+after (0 new).
+
+**Environment note for a future run:** `pip install -e ".[dev]"` fails in
+this sandbox with `AttributeError: 'NoneType' object has no attribute
+'get'` inside setuptools' `pyproject.toml`/`setup.py` hybrid-config
+handling (`_apply_project_table` → `_long_description`), reproduced both
+in-place and in a fresh venv, so it isn't specific to a dirty environment.
+Worked around by installing the plain dependency list from `setup.py`'s
+`install_requires`/`extras_require` directly (`pip install numpy pandas
+scikit-image scipy "tensorflow>=2.13,<2.16" h5py requests protobuf lxml
+Pillow matplotlib PySide6 nibabel reportlab pytest pytest-qt coverage`)
+into a venv and running pytest with `PYTHONPATH`/cwd at the repo root
+instead of an editable install. Also needed `apt-get install libegl1
+libegl-mesa0 libxcb-cursor0 libxcb-image0 libxcb-render-util0
+libxcb-util1` for `pytest-qt`'s `QtGui` import (`libEGL.so.1` missing) —
+`libegl-mesa0` 404'd until `apt-get update` was run first. Not
+investigated further since it didn't block this run, but worth fixing
+properly (drop the stray `[project]` table's partial metadata, or
+declare `dynamic` correctly) if a future run needs `pip install -e` to
+just work.
+
 ### 2026-09-08 UTC — Loading a QuickNII/QuINT session or previewing the atlas always crashed
 Branch `claude/dazzling-darwin-im7ui8` · PR
 [#16](https://github.com/leonardolv/DeepSlice-GUI/pull/16) · Status: **done**
@@ -602,6 +665,11 @@ against the code, not inferred from docs.
   auto-batch-size branch is unreachable, because `run_prediction` always passes
   a non-`None` `requested_batch_size` (`:846`) and
   `_recommended_inference_batch_size` therefore always returns at `:697`.
+- ~~**`_recommended_inference_batch_size`'s GPU-probing branch is still
+  unreachable dead code.**~~ Done by the 2026-09-09 run — see the Completed
+  entry. Took the "delete the dead branch and drop `Optional`" resolution
+  this entry named, not the auto-detect-UI alternative.
+  (original entry follows)
 - **`_recommended_inference_batch_size`'s GPU-probing branch is still
   unreachable dead code.** The one remaining third of the item above.
   `run_prediction`'s single call site always passes
