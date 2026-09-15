@@ -12,6 +12,33 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-15 — The diagnostics subsystem is inert, and its rule catalogue is stale
+Branch `claude/serene-fermat-4kgevh` · PR (see below) · Status: **done, PR open**
+
+**Claimed:** the Backlog entry filed by the 2026-08-19 20:10 run (`diagnostics.py`'s `flush_log`/`clear_log`/`get_issues_by_severity`/`get_trivial_fixes`/`run_static_audit` have zero call sites anywhere in `DeepSlice/`/`tests/`; `RULE_CATALOGUE` lists DS-001/003/006/009/011 as live when all five are already fixed in code). Decision, made before any code: wire a minimal, real surface rather than delete a working subsystem, and fix the stale catalogue first so nothing built on top of it can misreport.
+
+**Independently re-verified each of the five rules against the real source** (not trusted from the prior note alone):
+- **DS-001** (`gray_scale()` hard-coded `(299, 299, 1)` reshape, `neural_network.py`) — confirmed fixed: `h, w = img.shape[:2]` then `.reshape(h, w, 1)`, exactly the suggested patch.
+- **DS-003** (`number_sections()` hard-coded Windows `\\` separator, `spacing_and_indexing.py`) — confirmed fixed: `filenames = [Path(filename).name for filename in filenames]`.
+- **DS-006** (`initialise_network()` `training=True` for inference, `neural_network.py`) — confirmed fixed: `base_model(inputs, training=False)`.
+- **DS-009** (`download_file()` progress callback fires with `total_bytes=0`, `metadata_loader.py`) — confirmed fixed: guard is `if progress_callback is not None and total_bytes > 0:`.
+- **DS-011** (`get_mean_angle()` shadows builtins `min`/`max`, `angle_methods.py`) — confirmed fixed: renamed to `depth_min`/`depth_max`.
+
+All five matched their catalogue `suggested_fix` verbatim, so no code changes were needed for the underlying bugs. Did **not** mark any of the still-open rules (DS-002/004/005/008/010/012) resolved — none were in scope and none were checked for this pass; a test (`test_rules_with_open_bugs_are_left_alone`) pins that they stay untouched.
+
+**Solution:**
+1. `RULE_CATALOGUE` entries for DS-001/003/006/009/011 now carry `status: "resolved"` + `resolved_in`, mirroring DS-007's existing spelling exactly.
+2. `run_static_audit()` now skips any catalogue entry with `status == "resolved"` before emitting/logging it — six rules (five new plus DS-007) can no longer be reported as current. `get_issues_by_severity` is deliberately left unfiltered (it answers "what was logged this session", not "what is currently active").
+3. New "Diagnostics Log" `QToolButton` on the main window's top toolbar (next to About/Errors — this app has no traditional Help menu, so it sits where About/Preferences/Errors already live) opens `_show_diagnostics_log_dialog`: a read-only `QDialog` (`QListWidget` + Close, matching the shape of the existing fullscreen-preview/Preferences dialogs) populated from `get_issues_by_severity("ERROR"|"WARNING"|"INFO")`, with a "Clear" `QDialogButtonBox` action button wired to `clear_log()` (re-populates the list afterward). No new scanning, no nagging — just a caller for the already-correct logging path (`log_issue`, already called from `main.py`'s `propagate_angles` non-convergence path).
+
+**Tests added:**
+- `tests/test_diagnostics_subsystem.py` — pure-Python, no Qt: catalogue status assertions for all 5 rules (+ DS-007 untouched, + still-open rules untouched), `run_static_audit` excludes resolved rule ids from its emitted events even when `ISSUES` already independently contains a matching entry (proving the audit filters on `RULE_CATALOGUE` status, not merely on what's already logged).
+- `tests/test_diagnostics_log_dialog.py` — constructs the real `DeepSliceMainWindow` (mirroring `test_pdf_reporting.py::TestMainWindowPdfDefaults`'s `QTimer.singleShot` patch to suppress the startup dialog) with `QDialog.exec` monkeypatched per this repo's "never spawn blocking GUI dialogs in tests" standard: button existence/wiring, the dialog reads all three severities, logged events render in the list, an empty log shows a placeholder rather than nothing, and the Clear button calls `clear_log()` and re-reads (not just wipes the widget locally).
+
+**Validation:** new tests 18/18 green; batch of diagnostics-adjacent + main-window tests (dsmodel validation, curation state, angle-convergence, quality-gate wiring, pdf reporting, drop-event toast, session load, function worker, spacing/indexing, weight loader) 130/130 green; full suite 260/260 green (`QT_QPA_PLATFORM=offscreen`, this sandbox had no display and was also missing `tensorflow`/`scikit-image`/`lxml` — installed to actually run the GUI-import-chain tests rather than skip them).
+
+**PR:** see repository pull requests for branch `claude/serene-fermat-4kgevh`.
+
 ### 2026-09-09 UTC — `_recommended_inference_batch_size`'s unreachable GPU-probing branch removed
 Branch `claude/dazzling-darwin-7fqguu` · PR [#18](https://github.com/leonardolv/DeepSlice-GUI/pull/18) · Status: **done, PR open (watching CI)**
 

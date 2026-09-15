@@ -29,11 +29,12 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-001": {
         "title": "gray_scale() hard-coded output shape",
         "file": "DeepSlice/neural_network/neural_network.py",
+        "status": "resolved",
+        "resolved_in": "gray_scale() now reshapes to the image's own (h, w, 1)",
         "suggested_fix": {
             "patch": (
-                "- img = rgb2gray(img).reshape(299, 299, 1)\n"
-                "+ h, w = img.shape[:2]\n"
-                "+ img = rgb2gray(img).reshape(h, w, 1)"
+                "Resolved: gray_scale() now does h, w = img.shape[:2] and "
+                "reshapes to (h, w, 1) instead of the hard-coded (299, 299, 1)."
             ),
             "effort": "trivial",
         },
@@ -52,11 +53,13 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-003": {
         "title": "number_sections() uses hard-coded Windows backslash separator",
         "file": "DeepSlice/coord_post_processing/spacing_and_indexing.py",
+        "status": "resolved",
+        "resolved_in": "number_sections() now uses Path(filename).name",
         "suggested_fix": {
             "patch": (
-                "- filenames = [filename.split('\\\\')[-1] for filename in filenames]\n"
-                "+ from pathlib import Path\n"
-                "+ filenames = [Path(filename).name for filename in filenames]"
+                "Resolved: filenames are now normalized via "
+                "[Path(filename).name for filename in filenames], which is "
+                "platform-independent."
             ),
             "effort": "trivial",
         },
@@ -82,10 +85,11 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-006": {
         "title": "initialise_network() uses training=True for rat inference",
         "file": "DeepSlice/neural_network/neural_network.py",
+        "status": "resolved",
+        "resolved_in": "initialise_network() now calls base_model(inputs, training=False)",
         "suggested_fix": {
             "patch": (
-                "- base_model_layer = base_model(inputs, training=True)\n"
-                "+ base_model_layer = base_model(inputs, training=False)"
+                "Resolved: base_model_layer = base_model(inputs, training=False)."
             ),
             "effort": "trivial",
         },
@@ -111,10 +115,14 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-009": {
         "title": "download_file() progress callback receives total_bytes=0",
         "file": "DeepSlice/metadata/metadata_loader.py",
+        "status": "resolved",
+        "resolved_in": (
+            "download_file() now guards the callback with "
+            "'progress_callback is not None and total_bytes > 0'"
+        ),
         "suggested_fix": {
             "patch": (
-                "- if progress_callback is not None:\n"
-                "+ if progress_callback is not None and total_bytes > 0:"
+                "Resolved: if progress_callback is not None and total_bytes > 0:"
             ),
             "effort": "trivial",
         },
@@ -130,8 +138,10 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-011": {
         "title": "get_mean_angle() shadows built-in names min/max",
         "file": "DeepSlice/coord_post_processing/angle_methods.py",
+        "status": "resolved",
+        "resolved_in": "get_mean_angle() now uses depth_min/depth_max",
         "suggested_fix": {
-            "patch": "Rename min/max to depth_min/depth_max.",
+            "patch": "Resolved: min/max renamed to depth_min/depth_max.",
             "effort": "trivial",
         },
     },
@@ -258,9 +268,19 @@ def monitored(rule_id: str, severity: str = "ERROR") -> Callable:
 
 
 def run_static_audit() -> list[dict]:
-    """Emit one INFO event per catalogue entry and return emitted events."""
+    """
+    Emit one INFO event per still-active catalogue entry and return the
+    emitted events.
+
+    Entries carrying ``status: "resolved"`` are known-fixed bugs kept in
+    RULE_CATALOGUE for historical/provenance reasons (see DS-007 and
+    friends) and are deliberately excluded here so the audit never reports
+    an already-fixed issue as current.
+    """
     emitted = []
     for rule_id, entry in RULE_CATALOGUE.items():
+        if entry.get("status") == "resolved":
+            continue
         event = log_issue(
             rule_id=rule_id,
             severity="INFO",

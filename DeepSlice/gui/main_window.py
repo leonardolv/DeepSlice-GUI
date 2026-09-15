@@ -96,6 +96,7 @@ def _open_path_in_os(path: str) -> None:
         return
     subprocess.Popen(["xdg-open", path])
 
+from ..diagnostics import clear_log, get_issues_by_severity
 from ..error_auto_fix import ErrorAutoFixer
 from ..error_logging import (
     build_error_report,
@@ -1276,6 +1277,10 @@ class DeepSliceMainWindow(QMainWindow):
         self.about_button.setText("About")
         self.about_button.clicked.connect(self._show_about_dialog)
 
+        self.diagnostics_log_button = QToolButton()
+        self.diagnostics_log_button.setText("Diagnostics Log")
+        self.diagnostics_log_button.clicked.connect(self._show_diagnostics_log_dialog)
+
         self.error_menu_button = QPushButton("Errors")
         self.error_menu = QMenu(self.error_menu_button)
         
@@ -1311,6 +1316,7 @@ class DeepSliceMainWindow(QMainWindow):
         layout.addWidget(self.shortcut_help_button)
         layout.addWidget(self.preferences_button)
         layout.addWidget(self.about_button)
+        layout.addWidget(self.diagnostics_log_button)
         layout.addWidget(self.error_menu_button)
         return frame
 
@@ -1659,6 +1665,61 @@ class DeepSliceMainWindow(QMainWindow):
         )
         QMessageBox.information(self, "About DeepSlice", text)
 
+    def _show_diagnostics_log_dialog(self):
+        """Read-only viewer for this session's in-memory diagnostics.ISSUES.
+
+        Surfaces log_issue()'s output (get_issues_by_severity) so a user can
+        see what got logged this session, with a Clear button wired to
+        clear_log(). Deliberately minimal: no persistence, no new scanning.
+        """
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Diagnostics Log")
+        dialog.resize(640, 420)
+        layout = QVBoxLayout(dialog)
+
+        issue_list = QListWidget()
+        layout.addWidget(issue_list, stretch=1)
+
+        def _refresh():
+            issue_list.clear()
+            issues = (
+                get_issues_by_severity("ERROR")
+                + get_issues_by_severity("WARNING")
+                + get_issues_by_severity("INFO")
+            )
+            if not issues:
+                item = QListWidgetItem("No diagnostics logged this session.")
+                item.setFlags(Qt.NoItemFlags)
+                issue_list.addItem(item)
+                return
+            issues.sort(key=lambda event: event.get("timestamp", ""))
+            for event in issues:
+                timestamp = str(event.get("timestamp", "")).strip()
+                severity = str(event.get("severity", "INFO"))
+                rule_id = str(event.get("rule_id", ""))
+                description = str(event.get("description", ""))
+                item = QListWidgetItem(
+                    f"[{severity}] {rule_id} - {description}\n{timestamp}"
+                )
+                issue_list.addItem(item)
+
+        clear_button = QPushButton("Clear")
+
+        def _on_clear():
+            clear_log()
+            _refresh()
+
+        clear_button.clicked.connect(_on_clear)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.addButton(clear_button, QDialogButtonBox.ActionRole)
+        buttons.rejected.connect(dialog.reject)
+        buttons.accepted.connect(dialog.accept)
+        buttons.button(QDialogButtonBox.Close).setText("Close")
+        layout.addWidget(buttons)
+
+        _refresh()
+        dialog.exec()
 
     def _setup_shortcuts(self):
         self._shortcuts = []
