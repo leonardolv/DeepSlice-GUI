@@ -2,25 +2,29 @@
 Structured diagnostic logging for DeepSlice.
 
 Each event written by log_issue() is JSON serializable and follows a schema
-that an AI coding agent can parse to apply safe fixes semi-automatically.
+that an AI coding agent can parse when triaging a known issue from
+RULE_CATALOGUE below, or a runtime failure recorded by the monitored()
+decorator.
+
+log_issue() does not maintain its own persistence path: "DeepSlice.diagnostics"
+is a child of the "DeepSlice" logger that DeepSlice.error_logging attaches a
+RotatingFileHandler to at startup (configure_error_logging(), called from
+gui/app.py), so every event here already propagates to that same on-disk log
+(~/.deepslice/logs/errors.log by default) without this module writing a file
+of its own. A prior version of this module also kept an in-memory ISSUES list
+with flush_log()/clear_log()/get_issues_by_severity()/get_trivial_fixes()/
+run_static_audit() to query and dump it separately — none of those had a
+caller anywhere in the app or its tests, and they duplicated the persistence
+error_logging.py already provides, so they were removed rather than wired up.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import threading
 import traceback
 from datetime import datetime, timezone
 from functools import wraps
-from pathlib import Path
 from typing import Any, Callable, Dict, Optional
-
-# In-memory accumulator, queryable by tooling/agents. The lock guards mutation
-# from worker threads invoked by the GUI runtime.
-ISSUES: list[dict] = []
-_ISSUES_LOCK = threading.Lock()
 
 _logger = logging.getLogger("DeepSlice.diagnostics")
 
@@ -29,6 +33,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-001": {
         "title": "gray_scale() hard-coded output shape",
         "file": "DeepSlice/neural_network/neural_network.py",
+        "status": "resolved",
+        "resolved_in": "rgb2gray() calls now reshape to the image's own (h, w) instead of a hard-coded (299, 299)",
         "suggested_fix": {
             "patch": (
                 "- img = rgb2gray(img).reshape(299, 299, 1)\n"
@@ -41,6 +47,12 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-002": {
         "title": "Image size list misalignment after format filtering",
         "file": "DeepSlice/neural_network/neural_network.py",
+        "status": "resolved",
+        "resolved_in": (
+            "_resolve_generator_metadata() validates that any cached "
+            "deepslice_width/deepslice_height lines up 1:1 with the resolved "
+            "source paths and recomputes sizes from those paths when it doesn't"
+        ),
         "suggested_fix": {
             "patch": (
                 "Ensure sizes is built after VALID_IMAGE_FORMATS filtering and remains parallel "
@@ -52,6 +64,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-003": {
         "title": "number_sections() uses hard-coded Windows backslash separator",
         "file": "DeepSlice/coord_post_processing/spacing_and_indexing.py",
+        "status": "resolved",
+        "resolved_in": "filenames are now taken via pathlib.Path(filename).name",
         "suggested_fix": {
             "patch": (
                 "- filenames = [filename.split('\\\\')[-1] for filename in filenames]\n"
@@ -64,6 +78,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-004": {
         "title": "space_according_to_index() falsy check can ignore thickness=0 intent",
         "file": "DeepSlice/coord_post_processing/spacing_and_indexing.py",
+        "status": "resolved",
+        "resolved_in": "the thickness gate is now `is not None`/`is None`, not a falsy check",
         "suggested_fix": {
             "patch": "- if not section_thickness:\n+ if section_thickness is None:",
             "effort": "trivial",
@@ -72,6 +88,12 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-005": {
         "title": "load_QUINT() species switch bypasses model log callback",
         "file": "DeepSlice/main.py",
+        "status": "resolved",
+        "resolved_in": (
+            "all species-switch messages now route through DSModel._log(), "
+            "whose only remaining print() is the documented fallback used "
+            "when no log_callback was supplied"
+        ),
         "suggested_fix": {
             "patch": (
                 "Replace print() calls with self._log() and normalize message casing."
@@ -82,6 +104,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-006": {
         "title": "initialise_network() uses training=True for rat inference",
         "file": "DeepSlice/neural_network/neural_network.py",
+        "status": "resolved",
+        "resolved_in": "base_model(inputs, training=False)",
         "suggested_fix": {
             "patch": (
                 "- base_model_layer = base_model(inputs, training=True)\n"
@@ -103,6 +127,13 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-008": {
         "title": "propagate_angles() convergence loop has no non-convergence warning",
         "file": "DeepSlice/main.py",
+        "status": "resolved",
+        "resolved_in": (
+            "propagate_angles() now returns a bool the for/else loop sets, "
+            "logs DS-008 and warns via self._log() on non-convergence, and "
+            "the GUI's Normalize Angles handler surfaces the warning instead "
+            "of reporting unconditional success"
+        ),
         "suggested_fix": {
             "patch": "Add a for/else warning path with structured diagnostics.",
             "effort": "trivial",
@@ -111,6 +142,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-009": {
         "title": "download_file() progress callback receives total_bytes=0",
         "file": "DeepSlice/metadata/metadata_loader.py",
+        "status": "resolved",
+        "resolved_in": "progress_callback is now only invoked when total_bytes > 0",
         "suggested_fix": {
             "patch": (
                 "- if progress_callback is not None:\n"
@@ -122,6 +155,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-010": {
         "title": "set_bad_sections_util() may leave NaN bad_section values",
         "file": "DeepSlice/coord_post_processing/spacing_and_indexing.py",
+        "status": "resolved",
+        "resolved_in": "df['bad_section'] = False is set unconditionally before the conditional writes",
         "suggested_fix": {
             "patch": "Initialize df['bad_section'] = False before conditional writes.",
             "effort": "trivial",
@@ -130,6 +165,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-011": {
         "title": "get_mean_angle() shadows built-in names min/max",
         "file": "DeepSlice/coord_post_processing/angle_methods.py",
+        "status": "resolved",
+        "resolved_in": "renamed to depth_min/depth_max",
         "suggested_fix": {
             "patch": "Rename min/max to depth_min/depth_max.",
             "effort": "trivial",
@@ -138,6 +175,8 @@ RULE_CATALOGUE: dict[str, dict] = {
     "DS-012": {
         "title": "Species depth ranges duplicated across modules",
         "file": "DeepSlice/coord_post_processing/ (multiple files)",
+        "status": "resolved",
+        "resolved_in": "both call sites now read metadata_loader.get_species_depth_range(species)",
         "suggested_fix": {
             "patch": "Centralize depth bounds in config and load from metadata config.",
             "effort": "low",
@@ -183,44 +222,9 @@ def log_issue(
         ),
     }
 
-    with _ISSUES_LOCK:
-        ISSUES.append(event)
     level = getattr(logging, severity, logging.INFO)
     _logger.log(level, "[%s] %s | %s", rule_id, severity, description)
     return event
-
-
-def flush_log(output_path: Optional[str] = None) -> str:
-    """Write all accumulated events to JSON and return the output path."""
-    if output_path is None:
-        output_path = os.path.join(os.getcwd(), "deepslice_diagnostics.json")
-
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as file_handle:
-        json.dump(ISSUES, file_handle, indent=2, default=str)
-
-    _logger.info("Diagnostics written to %s (%d events)", output_path, len(ISSUES))
-    return output_path
-
-
-def clear_log() -> None:
-    """Clear all accumulated in-memory issues."""
-    with _ISSUES_LOCK:
-        ISSUES.clear()
-
-
-def get_issues_by_severity(severity: str) -> list[dict]:
-    """Return all events matching a severity."""
-    return [event for event in ISSUES if event["severity"] == severity.upper()]
-
-
-def get_trivial_fixes() -> list[dict]:
-    """Return events whose suggested fix effort is marked as trivial."""
-    return [
-        event
-        for event in ISSUES
-        if event.get("suggested_fix", {}).get("effort") == "trivial"
-    ]
 
 
 def monitored(rule_id: str, severity: str = "ERROR") -> Callable:
@@ -255,16 +259,3 @@ def monitored(rule_id: str, severity: str = "ERROR") -> Callable:
         return wrapper
 
     return decorator
-
-
-def run_static_audit() -> list[dict]:
-    """Emit one INFO event per catalogue entry and return emitted events."""
-    emitted = []
-    for rule_id, entry in RULE_CATALOGUE.items():
-        event = log_issue(
-            rule_id=rule_id,
-            severity="INFO",
-            description=f"[STATIC AUDIT] {entry['title']}",
-        )
-        emitted.append(event)
-    return emitted
