@@ -12,6 +12,85 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-15 — The diagnostics subsystem is inert, and its rule catalogue is stale enough to be actively wrong
+Branch `claude/serene-fermat-by8wa1` · PR [#20](https://github.com/leonardolv/DeepSlice-GUI/pull/20) · Status: **done, PR open (watching CI)**
+
+Claimed from Backlog. `DeepSlice/diagnostics.py`'s `RULE_CATALOGUE` documents
+twelve historical bugs (DS-001..DS-012) an AI agent is meant to be able to
+query; only DS-007 carried `status: "resolved"`, and `run_static_audit()`
+(had it ever been called) does not filter on status — so it would have
+reported eleven fixed bugs as still current.
+
+**Verified all twelve against the live code, individually, before touching
+anything** (not trusting the catalogue's own wording): read the exact call
+site named by each `file` field and confirmed the described bug is gone.
+**All twelve are in fact already fixed** — DS-001 (`gray_scale()` now
+reshapes to the image's own `(h, w)`), DS-002
+(`_resolve_generator_metadata()` validates the cached width/height lists
+against the resolved source paths and recomputes when they disagree),
+DS-003 (`Path(filename).name`), DS-004 (`is None`/`is not None`, not a
+falsy check), DS-005 (every species-switch message now routes through
+`DSModel._log()`; the one remaining `print()` is `_log()`'s own documented
+no-callback fallback), DS-006 (`training=False`), DS-008
+(`propagate_angles()` returns a bool, logs DS-008 and warns on
+non-convergence — this is the fix the 2026-08-19 "Normalize Angles" entry
+below made, which this rule had never been updated to reflect), DS-009
+(`total_bytes > 0` gate), DS-010 (`df['bad_section'] = False` set
+unconditionally before the conditional writes), DS-011 (renamed to
+`depth_min`/`depth_max`), DS-012 (both call sites now read
+`metadata_loader.get_species_depth_range(species)`). Marked all eleven
+`status: "resolved"` with a `resolved_in` note naming what actually fixed
+each one.
+
+**The "wire it, replace it, or delete it" decision, on `flush_log`,
+`clear_log`, `get_issues_by_severity`, `get_trivial_fixes` and
+`run_static_audit`**: deleted, not wired. The reason is concrete, not a
+preference — `DeepSlice.error_logging.configure_error_logging()` (called
+from `gui/app.py` at startup) attaches a `RotatingFileHandler` to the
+`"DeepSlice"` logger, and `diagnostics.py`'s own `_logger =
+logging.getLogger("DeepSlice.diagnostics")` is a child of it with
+`propagate` left at its default `True` — so every `log_issue()` event
+**already** reaches `~/.deepslice/logs/errors.log` today, through the
+app's one real, rotating, persistent error-logging path. `flush_log()`'s
+separate in-memory `ISSUES` list + JSON dump was a second, never-called,
+untested persistence mechanism duplicating one that already works, so
+kept it deleted rather than plumbing it into the GUI. `log_issue()`,
+`RULE_CATALOGUE` and `monitored()` are kept — real callers exist
+(`main.py:388`'s DS-008 log, `neural_network.py`'s `@monitored("DS-006")`),
+and they are now the module's whole surface.
+
+**Validation**: `git grep` confirms nothing else in the repo (app or
+tests) referenced any of the five removed names. Added
+`tests/test_diagnostics.py` (19 tests, all passing) — the module had zero
+test coverage before this: pins `log_issue()`'s schema/enrichment/severity
+normalization, `monitored()`'s pass-through and log-and-reraise behavior,
+that every current `RULE_CATALOGUE` entry is `resolved` with a
+`resolved_in` note (so a future genuinely-open rule stands out rather than
+blending in), the exact logger-propagation claim the deletion decision
+rests on, and that the five removed names stay removed rather than
+silently creeping back without a fresh decision. `python -m py_compile` and
+`python -m pytest tests/test_diagnostics.py` both clean; a full-suite run
+was not possible in this sandbox (`tensorflow` not installed — same
+constraint prior runs hit), but `log_issue`/`monitored`'s call signatures
+are byte-identical to before, so the two real call sites in
+`main.py`/`neural_network.py` are unaffected by construction, not just by
+inspection.
+
+**Impact**: an AI agent (or a person) consulting `RULE_CATALOGUE` now sees
+an accurate "0 open, 12 resolved" picture instead of 11 false positives;
+the module's surface shrinks to only what has a real caller; the
+persistence story for real runtime `log_issue()` events (like a genuine
+future DS-008 non-convergence) is now correctly documented rather than
+silently relying on two undocumented facts (propagation defaults, and
+`configure_error_logging()` running before any `log_issue()` call) holding
+by accident.
+
+**Future recommendation**: if a new rule is ever added to
+`RULE_CATALOGUE` for a bug that is *not* yet fixed, leave it without
+`status: "resolved"` — `test_every_catalogued_rule_currently_known_is_marked_resolved`
+only pins today's fully-resolved state, not a rule that every entry must
+carry that status forever.
+
 ### 2026-09-09 UTC — `_recommended_inference_batch_size`'s unreachable GPU-probing branch removed
 Branch `claude/dazzling-darwin-7fqguu` · PR [#18](https://github.com/leonardolv/DeepSlice-GUI/pull/18) · Status: **done, PR open (watching CI)**
 
@@ -747,6 +826,13 @@ against the code, not inferred from docs.
   PDFs says "Added 5" when zero were added. The toast is the only feedback on
   that path. Trivial — snapshot `len(state.image_paths)` before and after and
   report the delta.
+- ~~**The diagnostics subsystem is inert, and its rule catalogue is stale
+  enough to be actively wrong.**~~ Done by the 2026-09-15 run — see the
+  Completed entry. All twelve catalogue rules, not just the five this entry
+  named, turned out to already be fixed in code; the five unreachable
+  functions were deleted rather than wired, since `error_logging.py`'s
+  already-active logger propagation makes them redundant, not merely unused.
+  (original entry follows)
 - **The diagnostics subsystem is inert, and its rule catalogue is stale enough
   to be actively wrong.** `diagnostics.py:193-268` — `flush_log`, `clear_log`,
   `get_issues_by_severity`, `get_trivial_fixes` and `run_static_audit` have
