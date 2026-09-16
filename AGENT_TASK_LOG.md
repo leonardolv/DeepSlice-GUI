@@ -13,7 +13,7 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-09-15 — The diagnostics subsystem is inert, and its rule catalogue is stale enough to be actively wrong
-Branch `claude/serene-fermat-by8wa1` · PR [#20](https://github.com/leonardolv/DeepSlice-GUI/pull/20) · Status: **done, PR open (watching CI)**
+Branch `claude/serene-fermat-by8wa1` · PR [#20](https://github.com/leonardolv/DeepSlice-GUI/pull/20) · Status: **done, merged**
 
 Claimed from Backlog. `DeepSlice/diagnostics.py`'s `RULE_CATALOGUE` documents
 twelve historical bugs (DS-001..DS-012) an AI agent is meant to be able to
