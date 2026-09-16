@@ -12,6 +12,38 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-16 UTC — Resolved a duplicate-claim collision on the diagnostics item; merged and closed the competing PR (process note)
+Branch `claude/serene-fermat-qjb06m` · PR: see below · Status: **done**
+
+This run started with the Backlog showing only this repo's diagnostics
+item as previously claimed/in-progress, and no other open Backlog entries
+worth a few hours. Before starting fresh work, it checked open PRs
+(`list_pull_requests`) rather than trusting the log alone, and found two
+independent, unmerged resolutions of the same item already sitting open:
+**#19** ("wire it" — fixed 5 of 12 stale `RULE_CATALOGUE` statuses, added a
+"Diagnostics Log" toolbar dialog reading the in-memory `ISSUES` list) and
+**#20** ("delete it" — independently re-verified **all twelve** rules
+against the live source, found all resolved, and removed the five
+never-called functions after showing `log_issue()`'s events already
+propagate to the app's real on-disk log via logger inheritance).
+
+Checked out #20 into a worktree and independently ran `pytest
+tests/test_diagnostics.py` (19/19 passed) and spot-verified three of its
+additional rule claims (DS-004, DS-010, DS-012) directly against the
+source before trusting the rest. Merged #20 (more thorough — 12/12 rules
+vs. 5/12 — and its deletion decision rests on a demonstrated, tested fact
+rather than a preference) and closed #19 with a comment crediting its
+"Diagnostics Log" UI idea as a reasonable independent follow-up, since
+reviving the functions #20 correctly identified as redundant would be the
+wrong way to get it.
+
+**Takeaway (same one recorded in VALIS-GUI's log the same day):** two
+concurrent runs against one repo can each build a full, valid resolution
+of the same Backlog item before either merges, because a completed run's
+own log entry lives only on its own branch until its PR merges. Checking
+`list_pull_requests` for the target repo before starting — not just this
+file — is now worth doing on every run, everywhere in this task.
+
 ### 2026-09-15 — The diagnostics subsystem is inert, and its rule catalogue is stale enough to be actively wrong
 Branch `claude/serene-fermat-by8wa1` · PR [#20](https://github.com/leonardolv/DeepSlice-GUI/pull/20) · Status: **done, merged**
 
