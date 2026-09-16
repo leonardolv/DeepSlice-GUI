@@ -13,7 +13,8 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-09-16 UTC — A superseded atlas-preview request's stale failure/progress could blank out a newer, already-succeeded preview
-Branch `claude/exciting-wright-06xj0c` · PR: see below · Status: **done**
+Branch `claude/exciting-wright-06xj0c` · PR
+[#24](https://github.com/leonardolv/DeepSlice-GUI/pull/24) · Status: **done, merged**
 
 **Claimed:** not a pre-existing Backlog entry — the Backlog is fully
 resolved (every entry struck through) and `list_pull_requests` returned
@@ -86,7 +87,7 @@ dozens of, on the two new parameters — no new finding *category*, 0
 `ruff`-clean regressions); `ruff check tests/test_atlas_preview_staleness.py`:
 clean (`All checks passed!`).
 
-**PR.** See repository pull requests for this branch.
+**PR.** [#24](https://github.com/leonardolv/DeepSlice-GUI/pull/24) — merged.
 
 
 
