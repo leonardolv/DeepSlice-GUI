@@ -12,6 +12,79 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-16 UTC — "Try Auto-Fix" could silently reinstall an incompatible TensorFlow, bypassing the project's own Keras-3 pin
+Branch `claude/focused-dirac-01nad7` · PR: see below · Status: **done**
+
+**Claimed:** not a pre-existing Backlog entry — the Backlog is fully
+resolved (verified: every entry struck through, and `list_pull_requests`
+against the repo returned zero open PRs, so nothing was already in flight
+elsewhere). Found by auditing `DeepSlice/error_auto_fix.py`, the module
+behind the "Try Auto-Fix Last Error" menu action
+(`gui/main_window.py:1291-1299`), which had **zero** test coverage despite
+running real `pip install` commands (`_install_and_verify`) when a user
+clicks it.
+
+**The bug.** `MODULE_PACKAGE_MAP["tensorflow"]` hardcoded the install spec
+`"tensorflow<3.0"` — independent of, and strictly looser than, `setup.py`'s
+actual pin, `tensorflow>=2.13,<2.16` (whose own comment reads: *"Keras 3
+(TF 2.16+) changed callback APIs we depend on; pin until tested."*). If a
+user's TensorFlow install ever went missing (a corrupted venv, a bad
+manual `pip uninstall`, an interrupted install) and they clicked "Try
+Auto-Fix", the auto-fixer would run `pip install "tensorflow<3.0"` for
+real — which today resolves to a current TF 2.16+/Keras 3 release, the
+exact incompatibility class `setup.py`'s pin exists to avoid, and the same
+class of bug PR #17 (2026-09-09, same log) fixed
+(`initialise_network()` crashing unconditionally against an
+unpinned-environment TensorFlow). The app's own self-healing feature would
+have been the thing that broke it. `_install_and_verify`'s own
+verification step only checks `import tensorflow` succeeds — not that
+model construction/prediction still works — so this would not have been
+caught by the auto-fixer itself; it would surface later as a fresh,
+confusing crash report.
+
+**Fix.** Changed the `tensorflow` entry in `MODULE_PACKAGE_MAP` to
+`"tensorflow>=2.13,<2.16"`, matching `setup.py` exactly, with a comment
+pointing at both `setup.py`'s pin and the regression test. Every other
+entry in the map was audited against `setup.py`'s `install_requires` too:
+all of them are `>=`-only (no upper bound) in `setup.py`, so a bare
+package name (which `pip install` resolves to "latest compatible") is
+already correct for those — `tensorflow` was the one exception, and the
+only one that needed a change.
+
+**Validation.** New `tests/test_error_auto_fix.py` (34 tests, the module's
+first ever coverage): behavioral tests for `analyze_error`/
+`format_analysis`/`try_auto_fix`/`_extract_missing_module`/
+`_resolve_install_target` across all five classification categories
+(missing dependency with/without a safe mapping, workflow precondition,
+filename validation, permission error, unknown), plus end-to-end wiring
+tests with `subprocess.run` mocked (so nothing is actually installed) that
+assert the exact string handed to `pip install` for a real "No module
+named 'tensorflow'" error, a failed install, and an install command that
+raises. The regression pin,
+`test_tensorflow_install_spec_matches_setup_py_pin`, extracts the real
+pinned spec straight out of `setup.py` via regex (not a copy-pasted
+literal) so a future change to the pin without a matching update here
+fails loudly instead of silently drifting again. **5 of the 34 tests fail
+on the pre-fix tree** (verified via `git stash` on just
+`DeepSlice/error_auto_fix.py`): the regression pin itself, the
+`_resolve_install_target("tensorflow")` behavioral test, the
+`analyze_error`/`format_analysis` plan-text assertions, and the
+end-to-end pip-install wiring test — the last of which shows the exact
+pre-fix command: `pip install tensorflow<3.0`.
+
+Full suite (`QT_QPA_PLATFORM=offscreen PYTHONPATH=. python -m pytest
+tests/ -q`, fresh venv per this file's documented `pip install numpy
+pandas scikit-image scipy "tensorflow>=2.13,<2.16" h5py requests protobuf
+lxml Pillow matplotlib PySide6 nibabel reportlab pytest pytest-qt
+coverage` workaround — no `pyproject.toml`/`setup.py` install issues hit
+this session): **295 passed, 0 failed** (up from 261 passed, 0 failed
+before this session's new test file). `ruff check
+DeepSlice/error_auto_fix.py`: 14 pre-existing findings before and after
+(confirmed via `git stash`, 0 new); `ruff check
+tests/test_error_auto_fix.py`: clean (`All checks passed!`).
+
+**PR.** See repository pull requests for this branch.
+
 ### 2026-09-16 UTC — Resolved a duplicate-claim collision on the diagnostics item; merged and closed the competing PR (process note)
 Branch `claude/serene-fermat-qjb06m` · PR: see below · Status: **done**
 

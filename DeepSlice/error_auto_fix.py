@@ -22,7 +22,14 @@ MODULE_PACKAGE_MAP: Dict[str, Tuple[str, str]] = {
     "nibabel": ("nibabel", "nibabel"),
     "reportlab": ("reportlab", "reportlab"),
     "lxml": ("lxml", "lxml"),
-    "tensorflow": ("tensorflow<3.0", "tensorflow"),
+    # Must stay in lockstep with setup.py's install_requires pin. Keras 3
+    # (shipped in TensorFlow 2.16+) changed callback APIs this codebase
+    # depends on (see neural_network.py's PredictionProgressCallback usage
+    # and setup.py's own comment on the pin), so a bare upper bound of
+    # "<3.0" here would let this auto-fixer `pip install` a TensorFlow
+    # release the rest of the app was never verified against -- see
+    # tests/test_error_auto_fix.py::test_tensorflow_install_spec_matches_setup_py_pin.
+    "tensorflow": ("tensorflow>=2.13,<2.16", "tensorflow"),
 }
 
 
