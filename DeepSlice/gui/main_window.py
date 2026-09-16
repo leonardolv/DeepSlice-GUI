@@ -5779,9 +5779,20 @@ class DeepSliceMainWindow(QMainWindow):
             request_token,
             inject_callbacks=True,
         )
-        worker.signals.progress.connect(self._on_atlas_progress)
+        # Bind this request's own token to the progress/error signals (they
+        # carry no token of their own - WorkerSignals is shared by every
+        # FunctionWorker in the app) so a superseded request's late progress
+        # tick or failure can be told apart from the current one, the same
+        # way `_on_atlas_ready` already tells apart a superseded success.
+        worker.signals.progress.connect(
+            lambda completed, total, phase, token=request_token: self._on_atlas_progress(
+                completed, total, phase, token
+            )
+        )
         worker.signals.log.connect(self._append_console_log)
-        worker.signals.error.connect(self._on_atlas_error)
+        worker.signals.error.connect(
+            lambda error_text, token=request_token: self._on_atlas_error(error_text, token)
+        )
         worker.signals.finished.connect(self._on_atlas_ready)
         self._track_worker(worker)
         self.thread_pool.start(worker)
@@ -5803,7 +5814,13 @@ class DeepSliceMainWindow(QMainWindow):
         result["request_token"] = request_token
         return result
 
-    def _on_atlas_progress(self, completed: int, total: int, phase: str):
+    def _on_atlas_progress(self, completed: int, total: int, phase: str, request_token: Optional[int] = None):
+        # A superseded request (the user already scrubbed to a different row)
+        # ticking in late must not overwrite the label the current, still
+        # in-flight or already-finished request owns - see `_on_atlas_ready`,
+        # which already applies this rule to a superseded success.
+        if request_token is not None and request_token != self._atlas_request_token:
+            return
         if phase == "atlas-download":
             if total > 0:
                 percent = (completed / total) * 100.0
@@ -5813,7 +5830,13 @@ class DeepSliceMainWindow(QMainWindow):
         elif phase == "atlas-ready":
             self.atlas_slice_info_label.setText("Atlas: rendering")
 
-    def _on_atlas_error(self, error_text: str):
+    def _on_atlas_error(self, error_text: str, request_token: Optional[int] = None):
+        # Same staleness guard as `_on_atlas_ready`/`_on_atlas_progress`: a
+        # superseded request's failure (e.g. a transient download error on a
+        # row the user already scrubbed past) must not blank out an atlas
+        # preview a newer, already-succeeded request just rendered.
+        if request_token is not None and request_token != self._atlas_request_token:
+            return
         self._record_error("Atlas preview task failed", error_text)
         self.atlas_slice_info_label.setText("Atlas: failed")
         self._latest_atlas_slice = None

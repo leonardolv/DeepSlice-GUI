@@ -12,6 +12,84 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-16 UTC — A superseded atlas-preview request's stale failure/progress could blank out a newer, already-succeeded preview
+Branch `claude/exciting-wright-06xj0c` · PR: see below · Status: **done**
+
+**Claimed:** not a pre-existing Backlog entry — the Backlog is fully
+resolved (every entry struck through) and `list_pull_requests` returned
+zero open PRs, so nothing was already in flight. This branch's own prior
+PR (#23) had already merged into `main` before this run started, so the
+branch was reset fresh from `origin/main` per this task's own instructions
+before picking new work. Found by auditing every `FunctionWorker` call site
+in `gui/main_window.py` for the same "stale worker result" bug class this
+log has fixed once already (`_on_atlas_ready`'s own `request_token` check).
+
+**The bug.** `_request_atlas_preview` (fired on every curation-row
+selection change — arrow-key navigation, clicking a row, changing the
+atlas volume, toggling the blend overlay) mints a fresh
+`self._atlas_request_token` per call and spawns a `FunctionWorker` to fetch
+that row's atlas slice. `_on_atlas_ready` (the `finished` handler) already
+discards a result whose `request_token` no longer matches
+`self._atlas_request_token` — the correct behaviour for a request the user
+has since scrubbed past. `_on_atlas_progress`/`_on_atlas_error` (the
+`progress`/`error` handlers on the exact same worker) had no such check:
+`WorkerSignals` is one shared class used by every `FunctionWorker` in the
+app, so neither signal carries a token of its own, and both handlers
+applied unconditionally. Scrubbing quickly through several rows while an
+older row's atlas fetch is still in flight — normal use when reviewing many
+sections — means an old, superseded request can report its failure (e.g. a
+transient download error) or a late progress tick *after* a newer request
+has already rendered successfully. Pre-fix, a stale failure unconditionally
+called `atlas_viewer.clear_with_text(...)` and set "Atlas: failed",
+discarding whatever the current, correct preview had just shown; a stale
+progress tick could overwrite the label with an outdated percentage after
+the current request had already finished.
+
+**Fix.** `_request_atlas_preview` now binds each worker's own
+`request_token` to its `progress`/`error` signal connections via a small
+lambda default-arg capture (the established idiom already used one call
+away, in `_track_worker`'s own `error`/`finished` connections) rather than
+widening `WorkerSignals`' signature, which is shared by every other
+`FunctionWorker` consumer (auto-fix, quality-gate scan, prediction,
+QuickNII load) and must not change. `_on_atlas_progress`/`_on_atlas_error`
+gained an optional `request_token: Optional[int] = None` parameter and the
+same staleness guard `_on_atlas_ready` already applies: a token that
+disagrees with the current `self._atlas_request_token` is ignored outright;
+`None` (nothing bound it, defensively) behaves exactly as before.
+
+**Validation.** New `tests/test_atlas_preview_staleness.py` (9 tests).
+Following the established convention for `main_window.py` methods that
+can't be driven directly (no full `QMainWindow` needed — see
+`test_load_session_file.py`/`test_drop_event_toast.py`), these call the
+unbound `DeepSliceMainWindow._request_atlas_preview`/`_on_atlas_error`/
+`_on_atlas_progress` against a lightweight stub, with the real production
+`_on_atlas_progress`/`_on_atlas_error` bound onto the stub via
+`types.MethodType` so the wiring tests exercise the actual staleness guard
+rather than a mock of it, and a synchronous fake `thread_pool` (matching
+`test_function_worker.py`'s "drive `FunctionWorker.run()` directly, no real
+`QThreadPool` needed" precedent). **6 of the 9 fail on the pre-fix tree**
+(verified via `git stash` on just `gui/main_window.py`): the two
+`_on_atlas_error`/`_on_atlas_progress` staleness-guard unit tests raise
+`TypeError` outright (the old signatures take no `request_token`), and the
+end-to-end wiring test reproduces the exact bug — a stale failure/late
+progress tick from a superseded request still reaching the label/viewer.
+
+Full suite (fresh venv per this file's documented `pip install numpy
+pandas scikit-image scipy "tensorflow>=2.13,<2.16" h5py requests protobuf
+lxml Pillow matplotlib PySide6 nibabel reportlab pytest pytest-qt
+coverage` workaround, `QT_QPA_PLATFORM=offscreen PYTHONPATH=. python -m
+pytest tests/ -q`): **304 passed, 0 failed** (up from 295 passed, 0 failed
+before this session's new test file). `ruff check DeepSlice/gui/main_window.py`:
+180 → 182 findings (both new ones are the same pre-existing `UP045`
+"`Optional[int]` → `int | None`" style finding this file already carries
+dozens of, on the two new parameters — no new finding *category*, 0
+`ruff`-clean regressions); `ruff check tests/test_atlas_preview_staleness.py`:
+clean (`All checks passed!`).
+
+**PR.** See repository pull requests for this branch.
+
+
+
 ### 2026-09-16 UTC — "Try Auto-Fix" could silently reinstall an incompatible TensorFlow, bypassing the project's own Keras-3 pin
 Branch `claude/focused-dirac-01nad7` · PR
 [#23](https://github.com/leonardolv/DeepSlice-GUI/pull/23) · Status: **done, merged**
