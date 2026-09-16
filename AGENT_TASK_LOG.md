@@ -13,7 +13,12 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-09-16 UTC — "Try Auto-Fix" could silently reinstall an incompatible TensorFlow, bypassing the project's own Keras-3 pin
-Branch `claude/focused-dirac-01nad7` · PR: see below · Status: **done**
+Branch `claude/focused-dirac-01nad7` · PR
+[#23](https://github.com/leonardolv/DeepSlice-GUI/pull/23) · Status: **done, merged**
+(this repo's GitHub Actions runs never actually fire — confirmed via the
+Actions API showing 0 workflow runs ever recorded for either configured
+workflow — so merged on local validation, matching this file's own
+established precedent, not on a green CI check.)
 
 **Claimed:** not a pre-existing Backlog entry — the Backlog is fully
 resolved (verified: every entry struck through, and `list_pull_requests`
