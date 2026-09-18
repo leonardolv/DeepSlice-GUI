@@ -198,3 +198,60 @@ class TestARealEditDirties:
         replaced = state.interpolate_bad_section_depths()
         assert replaced == 1
         assert state.is_dirty is True
+
+
+class RaisingFakeModel:
+    """A stand-in `DSModel` whose curation op raises past the point where
+    `ensure_model()` has already succeeded - the shape of a real, reachable
+    failure (a QuickNII-loaded, one-section prediction table hitting
+    "Enforce Index Order"/"Enforce Index Spacing", or a degenerate plane
+    hitting `propagate_angles()`'s depth math), not a precondition check."""
+
+    species = "mouse"
+
+    def __init__(self, message="model op failed"):
+        self.predictions = None
+        self._message = message
+
+    def _raise(self):
+        raise ValueError(self._message)
+
+    def adjust_angles(self, ML, DV):
+        self._raise()
+
+    def enforce_index_order(self):
+        self._raise()
+
+    def enforce_index_spacing(self, section_thickness=None):
+        self._raise()
+
+    def propagate_angles(self, method="weighted_mean"):
+        self._raise()
+
+
+class TestAModelRaiseAfterEnsureModelNeverDirties:
+    """`ensure_model()` succeeding is not the same as the edit succeeding -
+    `adjust_angles`/`enforce_index_order`/`enforce_index_spacing` validate
+    (or can otherwise fail on degenerate data) *inside* the `DSModel` call
+    that runs after it, e.g. an out-of-range angle, a table with no "nr"
+    column, or exactly one section. `is_dirty` and the undo snapshot used to
+    fire before that call, so a raise here still nagged the user about
+    unsaved changes and left a no-op entry on the undo stack."""
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda st: st.adjust_angles(1.0, 2.0),
+            lambda st: st.enforce_index_order(),
+            lambda st: st.enforce_index_spacing(),
+            lambda st: st.propagate_angles(),
+        ],
+    )
+    def test_a_model_raise_does_not_dirty_or_snapshot(self, monkeypatch, state, call):
+        monkeypatch.setattr(state, "ensure_model", lambda *a, **k: RaisingFakeModel())
+        state.is_dirty = False
+        assert len(state.undo_stack) == 0
+        with pytest.raises(ValueError, match="model op failed"):
+            call(state)
+        assert state.is_dirty is False
+        assert len(state.undo_stack) == 0
