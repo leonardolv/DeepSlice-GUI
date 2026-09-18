@@ -1102,40 +1102,46 @@ class DeepSliceAppState:
         """
         if self.predictions is None:
             raise ValueError("No predictions available")
-        self.is_dirty = True
-        self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
+        # `ensure_model()`/`model.propagate_angles()` can still raise past this
+        # point (e.g. a degenerate plane that is parallel to the Y axis) -
+        # `is_dirty`/the undo snapshot must not fire until that call has
+        # actually returned, same rule as `undo()`'s own comment.
         converged = model.propagate_angles()
+        self.is_dirty = True
+        self.snapshot_predictions()
         self.predictions = model.predictions.copy()
         return bool(converged)
 
     def adjust_angles(self, ml_angle: float, dv_angle: float):
         if self.predictions is None:
             raise ValueError("No predictions available")
-        self.is_dirty = True
-        self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
-        # Keyword-only to prevent ML/DV positional swaps regressions.
+        # Keyword-only to prevent ML/DV positional swaps regressions. This can
+        # still raise (out-of-range/non-finite angles) - see the ordering note
+        # in propagate_angles() above.
         model.adjust_angles(ML=ml_angle, DV=dv_angle)
+        self.is_dirty = True
+        self.snapshot_predictions()
         self.predictions = model.predictions.copy()
 
     def enforce_index_order(self):
         if self.predictions is None:
             raise ValueError("No predictions available")
-        self.is_dirty = True
-        self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
+        # Can raise (no "nr" column, or exactly one section) - see the
+        # ordering note in propagate_angles() above.
         model.enforce_index_order()
+        self.is_dirty = True
+        self.snapshot_predictions()
         self.predictions = model.predictions.copy()
 
     def enforce_index_spacing(self, section_thickness_um: Optional[float] = None):
         if self.predictions is None:
             raise ValueError("No predictions available")
-        self.is_dirty = True
-        self.snapshot_predictions()
         model = self.ensure_model()
         model.predictions = self.predictions.copy()
 
@@ -1146,7 +1152,11 @@ class DeepSliceAppState:
             elif self.selected_indexing_direction == "caudal-rostro":
                 requested_thickness = abs(requested_thickness)
 
+        # Can raise (no "nr" column, or exactly one section) - see the
+        # ordering note in propagate_angles() above.
         model.enforce_index_spacing(section_thickness=requested_thickness)
+        self.is_dirty = True
+        self.snapshot_predictions()
         self.predictions = model.predictions.copy()
 
     def detect_indexing_direction(self) -> Optional[str]:

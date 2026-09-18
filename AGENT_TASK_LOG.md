@@ -12,6 +12,111 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-18 UTC — Four curation mutators marked the session dirty (and pushed a no-op undo snapshot) before the edit that could still fail
+Branch `claude/exciting-wright-hwyngk` · PR
+[#25](https://github.com/leonardolv/DeepSlice-GUI/pull/25) · Status: **done, merged**
+
+**Claimed:** not a pre-existing Backlog entry — every Backlog item was
+struck through. The one loose thread this run's brief flagged,
+`gui/workers.py`'s `FunctionWorker.request_cancel()`, turned out to be
+already fully resolved: `grep -rn request_cancel` across the repo shows
+only comments/tests describing its **deletion** (the 2026-09-09 run removed
+`request_cancel`/`is_cancel_requested` outright alongside the GPU-probing
+branch cleanup, per `gui/workers.py:34-39`'s own docstring and
+`tests/test_function_worker.py:149`'s `assert not hasattr(worker,
+"request_cancel")`). Found by re-auditing `gui/state.py` for the exact bug
+class this log has fixed twice before (2026-08-19 PR #10, 2026-08-20) —
+`is_dirty`/the undo snapshot flipping before an operation that can still
+fail — since both prior fixes assumed "past `ensure_model()` and into the
+`DSModel` call" was the safe boundary, which is not the same as "the edit
+is guaranteed to succeed."
+
+**The bug.** `DeepSliceAppState.propagate_angles`/`adjust_angles`/
+`enforce_index_order`/`enforce_index_spacing` (`gui/state.py`, previously
+lines 1096-1150) all followed the same shape: `is_dirty = True` +
+`snapshot_predictions()` (pushes an undo entry), *then* `ensure_model()`
+and the actual `DSModel.<op>()` call — which can still raise for entirely
+realistic, GUI-reachable input, not just the "no predictions loaded"
+precondition the 2026-08-20 fix covered:
+- `adjust_angles()` → `DSModel.adjust_angles` (`main.py:343-358`) raises
+  `ValueError` for a non-finite or out-of-[-90, 90] ML/DV angle. The GUI's
+  own spinboxes clamp to that range (`main_window.py:3082-3088`), so this
+  specific raise is unreachable *through the shipped UI* today, but it is
+  live, uncontained `DeepSliceAppState` API behaviour (tests, scripts, a
+  future control without the same clamp).
+- `enforce_index_order()` → `spacing_and_indexing.enforce_section_ordering`
+  (`spacing_and_indexing.py:160-168`) raises `ValueError` for either a
+  predictions table with no `"nr"` column, or exactly one section —
+  reachable by loading a QuickNII session that never had section-number
+  parsing enabled or that has a single section
+  (`gui/state.py`'s `load_quint` puts no floor on section count or columns)
+  and then clicking "Enforce Index Order."
+- `enforce_index_spacing()` → `spacing_and_indexing.space_according_to_index`
+  (`spacing_and_indexing.py:224-227`) raises the same two `ValueError`s
+  (single section / missing `"nr"`) — reachable the same way; the GUI's own
+  "at least 2 sections" gate at `main_window.py:4357` only guards the
+  *prediction* flow, not a loaded QuickNII file.
+- `propagate_angles()` → `depth_estimation.calculate_brain_center_depth`
+  raises `ValueError("Cannot estimate brain center depth for a plane
+  parallel to the Y axis")` for a degenerate/near-degenerate U/V/O vector
+  triple — reachable from hand-edited or unusual QuickNII coordinates.
+
+In every case the user got a `_show_logged_exception` dialog (the GUI
+handlers already wrap these calls in `try/except`) **and** a phantom
+"unsaved changes" flag plus a no-op entry sitting on the undo stack for a
+change that never happened — eroding the same unsaved-changes-prompt trust
+the 2026-08-20 fix was written to restore, and (for `enforce_index_order`/
+`enforce_index_spacing`, both realistically QuickNII-reachable with no
+range clamp standing in the way) not merely a latent API gap.
+
+**Fix.** Same rule as the earlier fixes and as `undo()`'s own long-standing
+comment ("Do not flip is_dirty until we know the swap can succeed"), pushed
+one call further out: `ensure_model()` + the `DSModel.<op>()` call now run
+*before* `is_dirty = True`/`snapshot_predictions()`, using the model's own
+still-unmodified copy of `self.predictions`; only once that call returns
+without raising do the flag flip, the undo entry get pushed (of the correct
+pre-edit `self.predictions`, since it hasn't been overwritten yet), and
+`self.predictions` get replaced with the model's result. Applied
+identically to all four methods; no behavioural change to the
+already-correct success path (`propagate_angles`'s non-convergence case
+still dirties and snapshots, since the model call itself did not raise —
+only its return value signals no-convergence, per the 2026-08-19 fix this
+preserves).
+
+**Validation.** Extended `tests/test_mutators_defer_is_dirty.py` (24 tests,
+up from 20) with a `RaisingFakeModel` + `TestAModelRaiseAfterEnsureModelNeverDirties`
+class covering all four methods: asserts both `is_dirty is False` and
+`len(undo_stack) == 0` after the raise. **4 of 4 new tests fail on the
+pre-fix tree** (verified via `git stash push -- DeepSlice/gui/state.py`,
+confirming `is_dirty` ends up `True`), 20/20 pre-existing tests in that file
+unaffected either way.
+
+Full suite (fresh venv, `pip install numpy pandas scikit-image scipy
+"tensorflow>=2.13,<2.16" h5py requests protobuf lxml Pillow matplotlib
+PySide6 nibabel reportlab pytest pytest-qt coverage ruff`,
+`QT_QPA_PLATFORM=offscreen PYTHONPATH=. python -m pytest tests/ -q`): **308
+passed, 0 failed** (up from 304 before this session's new tests), including
+`test_weight_loader.py`'s TensorFlow-dependent tests (green, no
+sandbox-drift issue this run). `ruff check DeepSlice/gui/state.py`: 94
+findings before and after this change (identical count/positions outside
+the edited region — no new finding introduced, matching this file's
+pre-existing, already-tracked style baseline). `ruff check
+tests/test_mutators_defer_is_dirty.py`: 1 pre-existing `I001` import-sort
+finding, present identically before this session's additions (confirmed via
+the same stash technique) — not introduced by the new test class.
+
+**Found but not taken (left for a future run, not re-filed to Backlog since
+each is low-value/low-urgency on its own):**
+`DeepSlice/coord_post_processing/angle_methods.py:11-41`'s
+`calculate_brain_center_coordinate` has zero callers anywhere in
+`DeepSlice/` or `tests/` (confirmed via a whole-repo AST reference sweep,
+not a single grep) and is not part of the package's public surface
+(`DeepSlice/__init__.py`'s `__all__` is only `["DSModel", "launch_gui"]`).
+Safe, boundable dead-code deletion whenever someone is next in this file,
+but has zero user-facing effect on its own, unlike the fix above.
+
+**PR.** [#25](https://github.com/leonardolv/DeepSlice-GUI/pull/25) — merged.
+
 ### 2026-09-16 UTC — A superseded atlas-preview request's stale failure/progress could blank out a newer, already-succeeded preview
 Branch `claude/exciting-wright-06xj0c` · PR
 [#24](https://github.com/leonardolv/DeepSlice-GUI/pull/24) · Status: **done, merged**
