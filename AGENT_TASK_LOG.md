@@ -12,6 +12,71 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-22 UTC (cont.) — `load_session_dict()` cleared `is_dirty` before the payload it was parsing had actually been applied
+Branch `claude/tender-goldberg-v4wwey` · Status: **done, pushed, awaiting PR**
+
+**Claimed:** not a pre-existing Backlog entry — every entry in
+`AGENT_TASK_LOG.md`'s Backlog is struck through. Found by re-checking every
+`self.is_dirty = False` assignment in `gui/state.py` for the exact bug class
+the same-day 2026-09-22 run had just fixed in `load_quint` (PR #26, merged
+immediately before this run started): `load_session_dict` had the identical
+shape.
+
+**The bug.** `DeepSliceAppState.load_session_dict` (`gui/state.py`) set
+`self.is_dirty = False` as its very first statement, before applying any of
+the payload. Several fields a few lines below are coerced with an unguarded
+`int(...)`/`float(...)` (`min_resolution_px`, `blur_variance_threshold`,
+`dark_intensity_threshold`, `bright_intensity_threshold`,
+`saturated_fraction_threshold`, `artifact_blank_fraction_threshold`,
+`section_dropout_passes`) that raise `ValueError`/`TypeError` on realistic
+malformed input, and `image_paths` is iterated later in the method (the
+missing-file scan) without ever checking it is actually a list. Both of
+`main_window.py`'s call sites (the native `.deepslice-session.json` loader
+and the `.json` `session_format == "deepslice_gui_v1"` loader) already catch
+the exception and show a dialog — but `is_dirty` had already been silently
+cleared before the raise, so a session with genuinely unsaved curation edits
+(`is_dirty == True`) that then attempted to load a corrupted or
+hand-edited-and-now-malformed session file lost the close-confirmation
+prompt and the window-title `*`/status-bar `●` indicator immediately, even
+though nothing had actually loaded. Both call sites also redundantly set
+`self.state.is_dirty = False` again right after a *successful*
+`load_session_dict()` call, which is exactly why the symptom was only
+reachable on the failure path — the same shape the `load_quint` fix
+documented for its own callers.
+
+**Fix.** Same rule as `load_quint`'s same-day fix and `undo()`'s own comment
+("Do not flip is_dirty until we know the swap can succeed"): `is_dirty =
+False` now runs as the last statement of `load_session_dict`, after every
+field application, the undo/redo-stack clear, and `_sync_model_predictions()`
+— past everything in the method that can still raise.
+`clear_partial_prediction_candidate()` stays at the top, unconditional,
+matching the established pattern.
+
+**Validation.** Extended `tests/test_mutators_defer_is_dirty.py` (36 tests,
+up from 32) with a `TestLoadSessionDictDefersIsDirty` class: a malformed
+numeric field (`min_resolution_px="not-a-number"`) with a pre-existing
+`is_dirty = True` stays `True`; a non-list `image_paths` (raises later, in
+the missing-file scan) the same; a genuine successful load still clears it
+to `False`; and the partial-prediction-candidate-clearing ordering is pinned
+as intentional. **2 of the 4 new tests fail on the pre-fix tree** (verified
+via `git stash push -- DeepSlice/gui/state.py`, re-running just the new
+class, then `git stash pop`) — both reproduce the exact bug: `is_dirty`
+reads `False` after a failed load that started `True`.
+
+Full suite (venv with `numpy pandas scikit-image scipy
+"tensorflow>=2.13,<2.16" h5py requests protobuf lxml Pillow matplotlib
+PySide6 nibabel reportlab pytest pytest-qt coverage ruff`,
+`QT_QPA_PLATFORM=offscreen PYTHONPATH=. python -m pytest tests/ -q`): **316
+passed, 0 failed** (up from 312 before this session's new tests). `ruff
+check DeepSlice/gui/state.py`: 94 findings, identical count to the
+same-day PR #26 entry (no new finding introduced). `ruff check
+tests/test_mutators_defer_is_dirty.py`: 1 pre-existing `I001` import-sort
+finding, same as documented for this file previously — not introduced by
+the new test class.
+
+**PR.** Not yet opened (per this task's instructions, PR creation is handled
+by the orchestrating session).
+
 ### 2026-09-22 UTC — `load_quint()` cleared `is_dirty` before the file it was loading had actually been parsed
 Branch `claude/exciting-wright-xzjgca` · PR
 [#26](https://github.com/leonardolv/DeepSlice-GUI/pull/26) · Status: **done, merged**
