@@ -12,6 +12,75 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-22 UTC — `load_quint()` cleared `is_dirty` before the file it was loading had actually been parsed
+Branch `claude/exciting-wright-xzjgca` · PR: see below · Status: **done**
+
+**Claimed:** not a pre-existing Backlog entry — every entry in
+`AGENT_TASK_LOG.md`'s Backlog is struck through and `list_pull_requests`
+returned zero open PRs, so a fresh triage pass was run per this task's own
+instructions. Found by re-auditing every `self.is_dirty = ...` assignment
+in `gui/state.py` for the exact bug class this log has now fixed three
+times (2026-08-19 PR #10, 2026-08-20, 2026-09-18 PR #25) — those three
+sweeps covered every mutator that sets `is_dirty = True`; `load_quint` sets
+it to `False` and sits in a different part of the file, which is why it
+was missed by all three.
+
+**The bug.** `DeepSliceAppState.load_quint` (`gui/state.py`) set
+`self.is_dirty = False` as its very first statement, before
+`ensure_model()`/`model.load_QUINT(filename)` — both of which can raise for
+entirely realistic, GUI-reachable input, not an edge case:
+`DSModel.load_QUINT` (`main.py:408-427`) raises
+`ValueError("File must be a JSON or XML")` outright for any filename that
+isn't `.json`/`.xml`, and `_load_session_file`'s QuickNII fallback
+(`main_window.py:7113`) is exactly the path that hands `load_quint` any
+file that wasn't recognized as a native DeepSlice session — a `.txt`, a
+`.csv`, or any other extension dropped onto "Load Session." A malformed
+`.json`/`.xml` (bad QuickNII content) or an `ensure_model()` failure
+(species-model weights download) raise the same way. So: a session with
+unsaved curation edits (`is_dirty == True`) that then attempts to load an
+incompatible file as QuickNII silently had `is_dirty` cleared to `False`
+*before* the load failed — the close-confirmation prompt (`closeEvent`)
+and the window-title `*`/status-bar `●` indicator (`_update_session_status`)
+both went quiet immediately, even though the prior unsaved edits were
+still unsaved and the attempted load never completed. A user who then
+closed the app believing nothing was unsaved would lose that work with no
+warning.
+
+**Fix.** Same rule as the three prior fixes and `undo()`'s own comment
+("Do not flip is_dirty until we know the swap can succeed"): `is_dirty =
+False` now runs immediately after `model.load_QUINT(filename)` returns
+successfully, mirroring the ordering `propagate_angles`/`adjust_angles`/
+`enforce_index_order`/`enforce_index_spacing` already use a few lines
+below it in the same file (past `ensure_model()` *and* past the call that
+can still raise). `clear_partial_prediction_candidate()` stays at the top,
+unconditional — pinned as deliberate (matching `run_prediction`'s own
+existing, unchanged behaviour) rather than swept up as a second bug.
+
+**Validation.** Extended `tests/test_mutators_defer_is_dirty.py` (32 tests,
+up from 28) with a `QuintFakeModel` + `TestLoadQuintDefersIsDirty` class:
+a `load_QUINT` failure with a pre-existing `is_dirty = True` stays `True`;
+an `ensure_model()` failure the same; a genuine successful load still
+clears it to `False`; and the partial-prediction-candidate-clearing
+ordering is pinned as intentional. **2 of the 4 new tests fail on the
+pre-fix tree** (verified via `git stash push -- DeepSlice/gui/state.py`,
+re-running just the new class, then `git stash pop`) — both reproduce the
+exact bug: `is_dirty` reads `False` after a failed load that started
+`True`.
+
+Full suite (fresh venv, `pip install numpy pandas scikit-image scipy
+"tensorflow>=2.13,<2.16" h5py requests protobuf lxml Pillow matplotlib
+PySide6 nibabel reportlab pytest pytest-qt coverage ruff`,
+`QT_QPA_PLATFORM=offscreen PYTHONPATH=. python -m pytest tests/ -q`): **312
+passed, 0 failed** (up from 308 before this session's new tests). `ruff
+check DeepSlice/gui/state.py`: 94 findings before and after (verified via
+the same stash technique — identical count, no new finding). `ruff check
+tests/test_mutators_defer_is_dirty.py`: 1 pre-existing `I001` import-sort
+finding, present identically before this session's additions (same as the
+2026-09-18 entry already documents for this file) — not introduced by the
+new test class.
+
+**PR.** See repository pull requests for this branch.
+
 ### 2026-09-18 UTC — Four curation mutators marked the session dirty (and pushed a no-op undo snapshot) before the edit that could still fail
 Branch `claude/exciting-wright-hwyngk` · PR
 [#25](https://github.com/leonardolv/DeepSlice-GUI/pull/25) · Status: **done, merged**

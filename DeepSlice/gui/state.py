@@ -896,10 +896,17 @@ class DeepSliceAppState:
         }
 
     def load_quint(self, filename: str, log_callback=None) -> Dict[str, object]:
-        self.is_dirty = False
         self.clear_partial_prediction_candidate()
         model = self.ensure_model(log_callback=log_callback)
+        # `ensure_model()`/`model.load_QUINT()` can still raise past this point
+        # (a non-JSON/XML file, malformed QuickNII content, a species-model
+        # download failure) - `is_dirty` must not flip until the load has
+        # actually succeeded, same rule as `propagate_angles()`/`adjust_angles()`
+        # above and `undo()`'s own comment. Clearing it first meant a failed
+        # load of an incompatible file silently discarded whatever "unsaved
+        # changes" state the session had before the attempt.
         model.load_QUINT(filename)
+        self.is_dirty = False
         self.species = model.species
         self.predictions = model.predictions.copy()
         self.undo_stack.clear()
