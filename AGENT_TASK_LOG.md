@@ -13,7 +13,8 @@ _(nothing claimed)_
 ## Completed
 
 ### 2026-09-22 UTC — `load_quint()` cleared `is_dirty` before the file it was loading had actually been parsed
-Branch `claude/exciting-wright-xzjgca` · PR: see below · Status: **done**
+Branch `claude/exciting-wright-xzjgca` · PR
+[#26](https://github.com/leonardolv/DeepSlice-GUI/pull/26) · Status: **done, merged**
 
 **Claimed:** not a pre-existing Backlog entry — every entry in
 `AGENT_TASK_LOG.md`'s Backlog is struck through and `list_pull_requests`
@@ -79,7 +80,7 @@ finding, present identically before this session's additions (same as the
 2026-09-18 entry already documents for this file) — not introduced by the
 new test class.
 
-**PR.** See repository pull requests for this branch.
+**PR.** [#26](https://github.com/leonardolv/DeepSlice-GUI/pull/26) — merged.
 
 ### 2026-09-18 UTC — Four curation mutators marked the session dirty (and pushed a no-op undo snapshot) before the edit that could still fail
 Branch `claude/exciting-wright-hwyngk` · PR
