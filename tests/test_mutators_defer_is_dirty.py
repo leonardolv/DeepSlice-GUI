@@ -255,3 +255,89 @@ class TestAModelRaiseAfterEnsureModelNeverDirties:
             call(state)
         assert state.is_dirty is False
         assert len(state.undo_stack) == 0
+
+
+class QuintFakeModel:
+    """A stand-in `DSModel` for `load_quint`, whose real `load_QUINT`
+    (`main.py`) raises `ValueError("File must be a JSON or XML")` outright
+    for any filename that isn't `.json`/`.xml` - exactly what
+    `_load_session_file`'s QuickNII fallback hands it for any file that
+    isn't a native DeepSlice session."""
+
+    species = "mouse"
+
+    def __init__(self, predictions=None, raise_message=None):
+        self.predictions = predictions
+        self._raise_message = raise_message
+
+    def load_QUINT(self, filename):
+        if self._raise_message is not None:
+            raise ValueError(self._raise_message)
+        # A real successful load replaces `predictions` in place, same as
+        # `DSModel.load_QUINT`.
+        self.predictions = sample_predictions()
+
+
+class TestLoadQuintDefersIsDirty:
+    """`load_quint` used to set `is_dirty = False` as its very first
+    statement, before `ensure_model()`/`model.load_QUINT()` - both of which
+    can raise for realistic input (an incompatible file extension, malformed
+    QuickNII content, a species-model download failure). A failed load of an
+    unrelated/bad file therefore silently discarded whatever "unsaved
+    changes" state the session already had, defeating the close-confirmation
+    prompt and the window-title `*` indicator."""
+
+    def test_a_load_failure_does_not_clear_a_pending_dirty_flag(self, monkeypatch):
+        st = DeepSliceAppState()
+        model = QuintFakeModel(raise_message="File must be a JSON or XML")
+        monkeypatch.setattr(st, "ensure_model", lambda *a, **k: model)
+        st.is_dirty = True  # simulating pre-existing, genuinely unsaved edits
+        with pytest.raises(ValueError, match="File must be a JSON or XML"):
+            st.load_quint("not_a_session.txt")
+        assert st.is_dirty is True
+
+    def test_ensure_model_raising_does_not_clear_a_pending_dirty_flag(self, monkeypatch):
+        st = DeepSliceAppState()
+
+        def _raise(*a, **k):
+            raise RuntimeError("weights download failed")
+
+        monkeypatch.setattr(st, "ensure_model", _raise)
+        st.is_dirty = True
+        with pytest.raises(RuntimeError, match="weights download failed"):
+            st.load_quint("session.json")
+        assert st.is_dirty is True
+
+    def test_a_successful_load_still_clears_is_dirty(self, monkeypatch):
+        st = DeepSliceAppState()
+        model = QuintFakeModel()
+        monkeypatch.setattr(st, "ensure_model", lambda *a, **k: model)
+        # `load_quint`'s own post-load bookkeeping (`detect_indexing_direction`)
+        # calls into the plane-geometry math; stub it out the same way
+        # `test_interpolate_bad_section_depths` does above so this test is
+        # about `is_dirty` ordering, not about `sample_predictions()`
+        # happening to describe a real, non-degenerate imaging plane.
+        monkeypatch.setattr(
+            "DeepSlice.gui.state.calculate_brain_center_depths",
+            lambda predictions, species=None: list(range(len(predictions))),
+        )
+        st.is_dirty = True
+        result = st.load_quint("session.xml")
+        assert st.is_dirty is False
+        assert result["slice_count"] == len(model.predictions)
+
+    def test_a_load_failure_also_leaves_a_pending_partial_candidate_cleared(
+        self, monkeypatch
+    ):
+        """`clear_partial_prediction_candidate()` runs unconditionally at the
+        top, matching `run_prediction`'s own existing (unchanged) behaviour -
+        pinned here so a future change to that ordering is a deliberate
+        decision, not an accident of touching this method again."""
+        st = DeepSliceAppState()
+        st._partial_prediction_candidate = sample_predictions()
+        st._partial_prediction_reason = "prior ensemble failure"
+        model = QuintFakeModel(raise_message="File must be a JSON or XML")
+        monkeypatch.setattr(st, "ensure_model", lambda *a, **k: model)
+        with pytest.raises(ValueError):
+            st.load_quint("not_a_session.txt")
+        assert st.has_partial_prediction_candidate() is False
