@@ -12,6 +12,80 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-09-23 UTC — `SliceGraphicsView`'s confidence-level border rendered as a hairline, not the intended 4px border
+Branch `claude/tender-goldberg-7ad206` · PR: see below · Status: **done**
+
+**Claimed:** not a pre-existing Backlog entry — the Backlog is fully resolved
+(every entry struck through) and `list_pull_requests` shows only one other
+open item, PR #27 (`is_dirty` cleared before `load_session_dict` applies its
+payload, on branch `claude/tender-goldberg-v4wwey`), which is unrelated to
+this fix — so a fresh triage pass was run per this task's own instructions.
+First checked the Backlog's explicitly-flagged leading candidate, "the
+diagnostics subsystem is inert" — confirmed already fully resolved (PR #20,
+merged, plus the #19/#20 duplicate-claim reconciliation entry) and struck
+through, so moved on to a fresh `ruff` sweep (`ruff check DeepSlice/
+--select F401,F811,F821,F841,F823,B023`), which surfaced
+`gui/main_window.py:438`'s unused `pen_width` local.
+
+**The bug.** `SliceGraphicsView.set_image` (`gui/main_window.py:414-454`)
+computed `pen_width = 4` and then never used it —
+`self._scene.addRect(pix_item.boundingRect(), border_color)` passed the bare
+`QColor` as the pen argument, which Qt implicitly widens to a
+default-constructed `QPen(border_color)` (width 1, not 4). `set_array_image`
+(`gui/main_window.py:456-527`) had the identical `addRect(..., border_color)`
+call with no `pen_width` variable at all — the same bug, without even the
+unused-variable trace (`git log -S pen_width` shows the line has been this
+way since the repo's initial WIP import, so this was never wired correctly
+rather than a regression). Both viewers this feeds —
+`confidence_overlay_viewer`/`curation_viewer` (`main_window.py:3293`/`3306`,
+both `SliceGraphicsView` instances) — use `border_color` specifically to
+flag high/medium/low **confidence** sections green/amber/red
+(`_render_confidence_overlay_preview`/`_render_histology_preview`) during
+manual curation review, the workflow this app exists for. The one visual cue
+meant to make a low-confidence/bad section stand out at a glance rendered as
+a near-invisible 1px hairline instead of the evidently-intended bold 4px
+border — a real, if minor, UX/safety-signal regression in the curation
+review flow, and one with zero prior test coverage (`grep` for
+`SliceGraphicsView`/`set_array_image`/`border_color` across `tests/`
+returned nothing before this change).
+
+**Fix.** Both call sites now build an explicit `QPen(border_color,
+pen_width)` (the `QPen` class was already imported at module scope) instead
+of relying on Qt's implicit `QColor`→`QPen` widening. `set_array_image`
+gained the same `pen_width = 4` local `set_image` already had, so both
+viewers now draw the identical bold border their confidence-level color
+coding was designed to be seen through.
+
+**Validation.** New `tests/test_slice_graphics_view_border.py` (5 tests),
+driving the real `SliceGraphicsView` widget (no mocks) — one `QApplication`
+instance per module via the same `QApplication.instance() or
+QApplication([])` idiom `test_pdf_reporting.py` already uses, no
+`QMainWindow` needed since `SliceGraphicsView` has no startup-dialog timer
+to guard against. Tests inspect the actual `QGraphicsRectItem` Qt added to
+the scene for both `set_image` (against a real temp PNG built via `QImage`)
+and `set_array_image` (against a random `uint8` array), asserting the pen's
+`widthF()` and color match what was requested, plus a "no border item when
+`border_color=None`" control case for each. **2 of the 5 fail on the
+pre-fix tree** (verified via `git stash push -- DeepSlice/gui/main_window.py`):
+both `test_border_pen_width_matches_the_intended_four_pixels` tests report
+`assert 1.0 == 4`, reproducing the exact hairline-vs-bold-border bug.
+
+Full suite (fresh venv: `pip install numpy pandas scikit-image scipy
+"tensorflow>=2.13,<2.16" h5py requests protobuf lxml Pillow matplotlib
+PySide6 nibabel reportlab pytest pytest-qt coverage ruff` + `apt-get install
+libegl1 libegl-mesa0 libxcb-cursor0 libxcb-image0 libxcb-render-util0
+libxcb-util1 libgl1-mesa-dri libgl1` for PySide6's offscreen platform,
+matching this file's own documented environment-setup precedent;
+`QT_QPA_PLATFORM=offscreen PYTHONPATH=. python -m pytest tests/ -q`): **317
+passed, 0 failed** (up from 312 before this session's new test file — the
+312 baseline matches PR #26's own last-recorded count exactly, confirming a
+clean starting point). `ruff check DeepSlice/gui/main_window.py`: 10 → 9
+findings (the resolved `F841` unused-`pen_width` finding, confirmed via the
+same `git stash` technique — no new finding introduced); `ruff check
+tests/test_slice_graphics_view_border.py`: clean (`All checks passed!`).
+
+**PR.** _(placeholder — updated after PR creation)_
+
 ### 2026-09-22 UTC — `load_quint()` cleared `is_dirty` before the file it was loading had actually been parsed
 Branch `claude/exciting-wright-xzjgca` · PR
 [#26](https://github.com/leonardolv/DeepSlice-GUI/pull/26) · Status: **done, merged**
