@@ -438,7 +438,7 @@ class SliceGraphicsView(QGraphicsView):
             pen_width = 4
             self._scene.addRect(
                 pix_item.boundingRect(),
-                border_color,
+                QPen(border_color, pen_width),
             )
 
         if overlay_lines:
@@ -524,7 +524,8 @@ class SliceGraphicsView(QGraphicsView):
         pix_item = self._scene.addPixmap(pixmap)
 
         if border_color is not None:
-            self._scene.addRect(pix_item.boundingRect(), border_color)
+            pen_width = 4
+            self._scene.addRect(pix_item.boundingRect(), QPen(border_color, pen_width))
 
         if overlay_lines:
             overlay_text = "\n".join(overlay_lines)
