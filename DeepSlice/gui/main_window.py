@@ -1555,27 +1555,40 @@ class DeepSliceMainWindow(QMainWindow):
         if hasattr(self, "curation_vertical_split"):
             settings.setValue("curation_split_sizes", self.curation_vertical_split.sizes())
 
-    def _open_preferences_dialog(self):
+    def _create_preferences_dialog(self) -> QDialog:
         settings = self._settings
 
         dialog = QDialog(self)
+        dialog.setObjectName("preferencesDialog")
         dialog.setWindowTitle("Preferences")
         layout = QVBoxLayout(dialog)
         form = QFormLayout()
 
         species_combo = QComboBox()
+        species_combo.setObjectName("prefSpeciesCombo")
+        species_combo.setAccessibleName("Default species for new sessions")
+        species_combo.setToolTip("Select default animal model for new sessions")
         species_combo.addItems(["mouse", "rat"])
         current_default_species = str(settings.value("default_species", self.state.species)).strip().lower()
         if current_default_species in {"mouse", "rat"}:
             species_combo.setCurrentText(current_default_species)
 
         theme_combo = QComboBox()
+        theme_combo.setObjectName("prefThemeCombo")
+        theme_combo.setAccessibleName("Application theme")
+        theme_combo.setToolTip("Select UI color theme")
         theme_combo.addItems(["dark", "light"])
         theme_combo.setCurrentText(self._theme_name)
 
         output_dir_row = QHBoxLayout()
         output_dir_edit = QLineEdit(str(settings.value("default_output_directory", "")).strip())
+        output_dir_edit.setObjectName("prefOutputDirEdit")
+        output_dir_edit.setAccessibleName("Default output directory path")
+        output_dir_edit.setToolTip("Directory where exports and results will be saved")
         output_dir_browse = QPushButton("Browse")
+        output_dir_browse.setObjectName("prefOutputDirBrowse")
+        output_dir_browse.setAccessibleName("Browse default output directory")
+        output_dir_browse.setToolTip("Browse filesystem for default output directory")
 
         def _browse_default_output_dir():
             selected = QFileDialog.getExistingDirectory(dialog, "Default Output Directory")
@@ -1588,7 +1601,13 @@ class DeepSliceMainWindow(QMainWindow):
 
         quicknii_row = QHBoxLayout()
         quicknii_edit = QLineEdit(str(settings.value("quicknii_path", "")).strip())
+        quicknii_edit.setObjectName("prefQuickNiiEdit")
+        quicknii_edit.setAccessibleName("Default QuickNII executable path")
+        quicknii_edit.setToolTip("Path to the QuickNII executable")
         quicknii_browse = QPushButton("Browse")
+        quicknii_browse.setObjectName("prefQuickNiiBrowse")
+        quicknii_browse.setAccessibleName("Browse QuickNII executable")
+        quicknii_browse.setToolTip("Browse filesystem for QuickNII executable")
 
         def _browse_default_quicknii_path():
             selected, _ = QFileDialog.getOpenFileName(
@@ -1605,6 +1624,9 @@ class DeepSliceMainWindow(QMainWindow):
         quicknii_row.addWidget(quicknii_browse)
 
         console_always_visible = QCheckBox("Show runtime console by default")
+        console_always_visible.setObjectName("prefConsoleVisibleCheck")
+        console_always_visible.setAccessibleName("Show runtime console by default")
+        console_always_visible.setToolTip("Keep runtime log console visible automatically upon launching")
         console_always_visible.setChecked(
             self._setting_to_bool(settings.value("console_always_visible", False))
         )
@@ -1616,19 +1638,59 @@ class DeepSliceMainWindow(QMainWindow):
         form.addRow("Console", console_always_visible)
         layout.addLayout(form)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.RestoreDefaults
+        )
+        buttons.setObjectName("prefDialogButtons")
+        ok_btn = buttons.button(QDialogButtonBox.Ok)
+        if ok_btn:
+            ok_btn.setAccessibleName("Save preferences")
+        cancel_btn = buttons.button(QDialogButtonBox.Cancel)
+        if cancel_btn:
+            cancel_btn.setAccessibleName("Cancel preferences")
+        reset_btn = buttons.button(QDialogButtonBox.RestoreDefaults)
+        if reset_btn:
+            reset_btn.setText("Reset to Defaults")
+            reset_btn.setAccessibleName("Reset preferences to factory defaults")
+            reset_btn.setToolTip("Restore all preference options back to default values")
+
+            def _reset_to_defaults():
+                species_combo.setCurrentText("mouse")
+                theme_combo.setCurrentText("dark")
+                output_dir_edit.setText("")
+                quicknii_edit.setText("")
+                console_always_visible.setChecked(False)
+
+            reset_btn.clicked.connect(_reset_to_defaults)
+
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
 
+        dialog.species_combo = species_combo
+        dialog.theme_combo = theme_combo
+        dialog.output_dir_edit = output_dir_edit
+        dialog.output_dir_browse = output_dir_browse
+        dialog.quicknii_edit = quicknii_edit
+        dialog.quicknii_browse = quicknii_browse
+        dialog.console_always_visible = console_always_visible
+        dialog.reset_btn = reset_btn
+        dialog.buttons = buttons
+
+        return dialog
+
+    def _open_preferences_dialog(self):
+        settings = self._settings
+        dialog = self._create_preferences_dialog()
+
         if dialog.exec() != QDialog.Accepted:
             return
 
-        selected_species = species_combo.currentText().strip().lower()
-        selected_theme = theme_combo.currentText().strip().lower()
-        default_output_dir = output_dir_edit.text().strip()
-        default_quicknii_path = quicknii_edit.text().strip()
-        always_console = bool(console_always_visible.isChecked())
+        selected_species = dialog.species_combo.currentText().strip().lower()
+        selected_theme = dialog.theme_combo.currentText().strip().lower()
+        default_output_dir = dialog.output_dir_edit.text().strip()
+        default_quicknii_path = dialog.quicknii_edit.text().strip()
+        always_console = bool(dialog.console_always_visible.isChecked())
 
         settings.setValue("default_species", selected_species)
         settings.setValue("theme", selected_theme)
@@ -2445,21 +2507,33 @@ class DeepSliceMainWindow(QMainWindow):
     def _open_fullscreen_thumbnail_preview(self, item: QListWidgetItem):
         image_path = str(item.data(Qt.UserRole))
         dialog = QDialog(self)
+        dialog.setObjectName("fullscreenThumbnailPreviewDialog")
         dialog.setWindowTitle(f"Preview - {os.path.basename(image_path)}")
         dialog.setWindowState(Qt.WindowFullScreen)
         root = QVBoxLayout(dialog)
         viewer = SliceGraphicsView()
+        viewer.setObjectName("previewSliceViewer")
+        viewer.setAccessibleName("Full-screen section slice image view")
+        viewer.setToolTip("Zoom and pan the section image")
         viewer.set_image(image_path)
         info = QLabel(image_path)
+        info.setObjectName("previewImagePathLabel")
+        info.setAccessibleName("Previewed section file path")
         info.setWordWrap(True)
         controls = QDialogButtonBox(QDialogButtonBox.Close)
+        controls.setObjectName("previewDialogButtons")
         controls.rejected.connect(dialog.reject)
         controls.accepted.connect(dialog.accept)
-        controls.button(QDialogButtonBox.Close).setText("Close")
+        close_btn = controls.button(QDialogButtonBox.Close)
+        if close_btn:
+            close_btn.setText("Close")
+            close_btn.setAccessibleName("Close fullscreen preview")
+            close_btn.setToolTip("Close preview dialog")
         root.addWidget(viewer, stretch=1)
         root.addWidget(info)
         root.addWidget(controls)
-        dialog.exec()
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
+            dialog.exec()
 
     def _clear_console(self):
         self.console_output.clear()

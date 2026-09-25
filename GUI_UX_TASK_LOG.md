@@ -6,6 +6,18 @@
 
 ## Completed
 
+### Task: Implement Preferences Dialog Reset to Defaults, Accessible Naming, and Preview Dialog Ergonomics
+- **Completed**: 2026-09-26
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Extracted `_create_preferences_dialog(self) -> QDialog`: Added screen-reader accessible names and descriptive tooltips across all configuration controls (`prefSpeciesCombo`, `prefThemeCombo`, `prefOutputDirEdit`, `prefOutputDirBrowse`, `prefQuickNiiEdit`, `prefQuickNiiBrowse`, `prefConsoleVisibleCheck`, `Ok`, `Cancel`).
+    - Added "Reset to Defaults" button (`QDialogButtonBox.RestoreDefaults`) restoring species ("mouse"), theme ("dark"), output directory (""), QuickNII path (""), and runtime console visibility (False).
+    - Updated `_open_fullscreen_thumbnail_preview`: Added accessible names and tooltips to the full-screen slice viewer, path display, and Close button; guarded modal `dialog.exec()` when running headlessly in offscreen environments.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_preferences_dialog_accessibility_and_reset_to_defaults` verifying all accessible names, tooltips, and click restoration of initial settings.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py -v` (7 passed in 14.28s with 0 errors).
+- **Status**: Completed
+
 ### Task: Enhance UI Accessibility, DropArea/Thumbnail List Affordances, and Headless Non-blocking Startup
 - **Completed**: 2026-09-25
 - **Changes**:
