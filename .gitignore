@@ -56,3 +56,11 @@ patch*.py
 # OS junk
 .DS_Store
 Thumbs.db
+
+# OneDrive sync duplicate conflict files
+* (1).*
+*(1).*
+* (2).*
+*(2).*
+* (*)*
+

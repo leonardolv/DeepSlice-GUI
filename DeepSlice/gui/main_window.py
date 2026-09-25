@@ -117,6 +117,8 @@ class DropArea(QFrame):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.setObjectName("DropArea")
+        self.setAccessibleName("Image and Folder Ingestion Drop Area")
+        self.setToolTip("Drag and drop images (JPG, PNG, TIFF) or folders here to ingest them")
         self.setMinimumHeight(80)
 
         layout = QVBoxLayout(self)
@@ -162,6 +164,8 @@ class ThumbnailListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self.setAccessibleName("Thumbnail Sections List")
+        self.setToolTip("List of section thumbnails and their alignment status")
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -878,8 +882,11 @@ class DeepSliceMainWindow(QMainWindow):
         self._apply_accessibility_metadata()
 
         self.status_bar = self.statusBar()
+        self.status_bar.setAccessibleName("Main Status Bar")
         self.status_bar.showMessage("Ready")
         self.global_progress = QProgressBar()
+        self.global_progress.setAccessibleName("Global Task Progress")
+        self.global_progress.setToolTip("Current progress of background analysis or export")
         self.global_progress.setMaximumWidth(200)
         self.global_progress.setMaximumHeight(14)
         self.global_progress.setTextVisible(False)
@@ -1794,6 +1801,8 @@ class DeepSliceMainWindow(QMainWindow):
         self._apply_theme()
 
     def _show_startup_dialogs(self):
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen" or os.environ.get("PYTEST_CURRENT_TEST"):
+            return
         settings = self._settings
         onboarding_complete = bool(settings.value("onboarding_complete", False))
         if not onboarding_complete:
