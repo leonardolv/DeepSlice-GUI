@@ -5,6 +5,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pytest
+pytest.importorskip("reportlab")
 from reportlab.pdfgen import canvas
 
 from DeepSlice.gui.reporting import generate_pdf_report
