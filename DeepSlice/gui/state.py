@@ -1473,8 +1473,12 @@ class DeepSliceAppState:
         }
 
     def load_session_dict(self, payload: Dict[str, object]):
-        self.is_dirty = False
         self.clear_partial_prediction_candidate()
+        # Do not flip is_dirty until the payload has actually been applied -
+        # several fields below raise on malformed input (bad numeric
+        # coercions, a non-list `image_paths`), and raising here must not
+        # silently discard whatever genuinely-unsaved edits the session
+        # already had. See load_quint's identical fix for the same reason.
         # Route species changes through set_species() so the atlas cache and
         # loaded model are invalidated when the species actually changes.
         target_species = str(payload.get("species", "mouse")).strip().lower()
@@ -1618,3 +1622,4 @@ class DeepSliceAppState:
         if self.model is not None and self.model.species != self.species:
             self.model = None
         self._sync_model_predictions()
+        self.is_dirty = False

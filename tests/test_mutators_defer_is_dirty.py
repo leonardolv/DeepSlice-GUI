@@ -341,3 +341,64 @@ class TestLoadQuintDefersIsDirty:
         with pytest.raises(ValueError):
             st.load_quint("not_a_session.txt")
         assert st.has_partial_prediction_candidate() is False
+
+
+class TestLoadSessionDictDefersIsDirty:
+    """`load_session_dict` had the identical bug `load_quint` was fixed for
+    above: `is_dirty = False` ran as its very first statement, ahead of
+    several unguarded numeric coercions of payload fields (e.g.
+    `min_resolution_px`, `blur_variance_threshold`,
+    `section_dropout_passes`) that raise `ValueError`/`TypeError` on a
+    malformed `.deepslice-session.json` file - or on a plain `.json` file
+    that merely declares `session_format: "deepslice_gui_v1"` without
+    actually being one. `main_window.py`'s two call sites already catch the
+    exception and show a dialog, but the pre-existing `is_dirty` flag had
+    already been silently cleared before the raise, discarding whatever
+    genuinely-unsaved edits the session had."""
+
+    def _base_payload(self, **overrides):
+        payload = {
+            "species": "mouse",
+            "image_paths": [],
+            "predictions": None,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_a_malformed_numeric_field_does_not_clear_a_pending_dirty_flag(self):
+        st = DeepSliceAppState()
+        st.is_dirty = True  # simulating pre-existing, genuinely unsaved edits
+        payload = self._base_payload(min_resolution_px="not-a-number")
+        with pytest.raises(ValueError):
+            st.load_session_dict(payload)
+        assert st.is_dirty is True
+
+    def test_a_non_list_image_paths_does_not_clear_a_pending_dirty_flag(self):
+        st = DeepSliceAppState()
+        st.is_dirty = True
+        # `image_paths` is iterated later in the method (the missing-file
+        # scan) - a payload shaped like an in-progress hand-edit (a bare
+        # int instead of a list) raises there, well after the old
+        # `is_dirty = False` used to run.
+        payload = self._base_payload(image_paths=123)
+        with pytest.raises(TypeError):
+            st.load_session_dict(payload)
+        assert st.is_dirty is True
+
+    def test_a_successful_load_still_clears_is_dirty(self):
+        st = DeepSliceAppState()
+        st.is_dirty = True
+        st.load_session_dict(self._base_payload())
+        assert st.is_dirty is False
+
+    def test_a_load_failure_also_leaves_a_pending_partial_candidate_cleared(self):
+        """Mirrors `load_quint`'s equivalent test: `clear_partial_prediction_
+        candidate()` stays unconditional at the top even though `is_dirty`
+        no longer is."""
+        st = DeepSliceAppState()
+        st._partial_prediction_candidate = sample_predictions()
+        st._partial_prediction_reason = "prior ensemble failure"
+        payload = self._base_payload(min_resolution_px="not-a-number")
+        with pytest.raises(ValueError):
+            st.load_session_dict(payload)
+        assert st.has_partial_prediction_candidate() is False
