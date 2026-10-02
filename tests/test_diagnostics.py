@@ -13,6 +13,17 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from DeepSlice import diagnostics
 
 
+@pytest.fixture(autouse=True)
+def _restore_deepslice_propagation():
+    deepslice_logger = logging.getLogger("DeepSlice")
+    prev_propagate = deepslice_logger.propagate
+    deepslice_logger.propagate = True
+    try:
+        yield
+    finally:
+        deepslice_logger.propagate = prev_propagate
+
+
 # ---------------------------------------------------------------------------
 # RULE_CATALOGUE bookkeeping
 # ---------------------------------------------------------------------------

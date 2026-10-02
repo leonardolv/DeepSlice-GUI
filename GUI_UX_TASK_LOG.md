@@ -6,8 +6,16 @@
 
 ## Completed
 
-### Task: Implement Preferences Dialog Reset to Defaults, Accessible Naming, and Preview Dialog Ergonomics
-- **Completed**: 2026-09-26
+### Task: Decouple GUI State from Eager TensorFlow Import and Remediate Diagnostic Test Logger Propagation
+- **Completed**: 2026-10-02
+- **Changes**:
+  - `DeepSlice/gui/state.py`:
+    - Converted eager top-level `from ..neural_network import neural_network` import to lazy imports inside `inspect_image_batch` and `preview_preprocessed_image`.
+    - Prevents failure during GUI state, session loading, metadata extraction, or coordinate processing on machines where TensorFlow native libraries are restricted or unloaded.
+  - `tests/test_diagnostics.py`:
+    - Added `_restore_deepslice_propagation` test fixture to ensure `DeepSlice` logger propagates to root during diagnostic logging assertions regardless of preceding test suite configurations.
+- **Verification**: Verified headlessly with `pytest tests/ -q` (315 passed, 1 skipped, 0 errors in 13.18s).
+- **Status**: Completed
 - **Changes**:
   - `DeepSlice/gui/main_window.py`:
     - Extracted `_create_preferences_dialog(self) -> QDialog`: Added screen-reader accessible names and descriptive tooltips across all configuration controls (`prefSpeciesCombo`, `prefThemeCombo`, `prefOutputDirEdit`, `prefOutputDirBrowse`, `prefQuickNiiEdit`, `prefQuickNiiBrowse`, `prefConsoleVisibleCheck`, `Ok`, `Cancel`).

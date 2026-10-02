@@ -17,7 +17,6 @@ import pandas as pd
 from ..coord_post_processing import angle_methods, spacing_and_indexing
 from ..coord_post_processing.depth_estimation import calculate_brain_center_depths
 from ..metadata import metadata_loader
-from ..neural_network import neural_network
 from ..training import training_utils
 
 if TYPE_CHECKING:
@@ -361,6 +360,8 @@ class DeepSliceAppState:
                 "dimensions": [],
             }
 
+        from ..neural_network import neural_network
+
         return neural_network.inspect_image_batch(
             self.image_paths,
             preprocessing_options=self.preprocessing_options(),
@@ -369,6 +370,8 @@ class DeepSliceAppState:
     def preview_preprocessed_image(self, image_path: str) -> Dict[str, object]:
         if not image_path:
             raise ValueError("Image path is required for preprocessing preview")
+        from ..neural_network import neural_network
+
         return neural_network.preview_preprocessed_image(
             image_path,
             preprocessing_options=self.preprocessing_options(),
