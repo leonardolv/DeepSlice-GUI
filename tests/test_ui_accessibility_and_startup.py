@@ -118,3 +118,74 @@ def test_console_and_prediction_controls_accessibility():
         win.deleteLater()
 
 
+def test_header_toolbar_accessibility_and_cursors():
+    from PySide6.QtCore import Qt
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        assert win.hardware_button.accessibleName() == "Hardware Health and Acceleration Info"
+        assert "diagnostics" in win.hardware_button.toolTip().lower()
+        assert win.hardware_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.theme_toggle_button.accessibleName() == "Toggle Application Theme"
+        assert win.theme_toggle_button.toolTip() != ""
+        assert win.theme_toggle_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.new_session_button.accessibleName() == "Start New Session"
+        assert "workspace" in win.new_session_button.toolTip().lower()
+        assert win.new_session_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.save_session_button.accessibleName() == "Save Current Session"
+        assert "save" in win.save_session_button.toolTip().lower()
+        assert win.save_session_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.load_session_button.accessibleName() == "Load Session or QuickNII Project"
+        assert "load" in win.load_session_button.toolTip().lower()
+        assert win.load_session_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.session_io_spinner.accessibleName() == "Session I/O Activity Progress"
+        assert win.session_io_spinner.toolTip() != ""
+
+        assert win.shortcut_help_button.accessibleName() == "Keyboard Shortcuts Reference"
+        assert "shortcut" in win.shortcut_help_button.toolTip().lower()
+        assert win.shortcut_help_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.preferences_button.accessibleName() == "Application Preferences"
+        assert "preferences" in win.preferences_button.toolTip().lower()
+        assert win.preferences_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.about_button.accessibleName() == "About DeepSlice Desktop"
+        assert "version" in win.about_button.toolTip().lower()
+        assert win.about_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.error_menu_button.accessibleName() == "Runtime Error Center"
+        assert "error" in win.error_menu_button.toolTip().lower()
+        assert win.error_menu_button.cursor().shape() == Qt.PointingHandCursor
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_hardware_health_cpu_fallback(monkeypatch):
+    import sys
+    from unittest.mock import patch
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Simulate tensorflow import error
+        with patch.dict(sys.modules, {"tensorflow": None}):
+            with patch("PySide6.QtWidgets.QMessageBox.information") as mock_info:
+                win._show_hardware_health()
+                mock_info.assert_called_once()
+                args, _ = mock_info.call_args
+                assert "Hardware Health" in args
+                assert "Mode: CPU (Lightweight)" in args[2]
+                assert "CPU fallback" in args[2]
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+

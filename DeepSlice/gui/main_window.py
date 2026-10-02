@@ -1234,10 +1234,16 @@ class DeepSliceMainWindow(QMainWindow):
         self.hardware_mode_label.setObjectName("HardwareLabel")
 
         self.hardware_button = QPushButton("Hardware Health")
+        self.hardware_button.setAccessibleName("Hardware Health and Acceleration Info")
+        self.hardware_button.setToolTip("View GPU acceleration, TensorFlow version, CUDA/cuDNN status, and memory")
+        self.hardware_button.setCursor(Qt.PointingHandCursor)
         self.hardware_button.clicked.connect(self._show_hardware_health)
 
         self.theme_toggle_button = QToolButton()
         self.theme_toggle_button.setText("Theme")
+        self.theme_toggle_button.setAccessibleName("Toggle Application Theme")
+        self.theme_toggle_button.setToolTip("Switch between dark and light themes")
+        self.theme_toggle_button.setCursor(Qt.PointingHandCursor)
         self.theme_menu = QMenu(self.theme_toggle_button)
         self.theme_dark_action = self.theme_menu.addAction("Dark")
         self.theme_light_action = self.theme_menu.addAction("Light")
@@ -1247,12 +1253,21 @@ class DeepSliceMainWindow(QMainWindow):
         self.theme_toggle_button.setPopupMode(QToolButton.InstantPopup)
 
         self.new_session_button = QPushButton("New Session")
+        self.new_session_button.setAccessibleName("Start New Session")
+        self.new_session_button.setToolTip("Reset the workspace and begin a new session (Ctrl+N)")
+        self.new_session_button.setCursor(Qt.PointingHandCursor)
         self.new_session_button.clicked.connect(self._reset_session)
 
         self.save_session_button = QPushButton("Save Session")
+        self.save_session_button.setAccessibleName("Save Current Session")
+        self.save_session_button.setToolTip("Save the current state and alignments to file (Ctrl+S)")
+        self.save_session_button.setCursor(Qt.PointingHandCursor)
         self.save_session_button.clicked.connect(self._save_session)
 
         self.load_session_button = QPushButton("Load Session / QuickNII")
+        self.load_session_button.setAccessibleName("Load Session or QuickNII Project")
+        self.load_session_button.setToolTip("Load a saved session or import QuickNII alignment files (Ctrl+O)")
+        self.load_session_button.setCursor(Qt.PointingHandCursor)
         self.load_session_menu = QMenu(self.load_session_button)
         self.load_session_action = self.load_session_menu.addAction("Browse...")
         self.load_session_action.triggered.connect(self._load_session_or_quint)
@@ -1270,21 +1285,35 @@ class DeepSliceMainWindow(QMainWindow):
         self.session_io_spinner.setTextVisible(False)
         self.session_io_spinner.setMaximumWidth(70)
         self.session_io_spinner.setMaximumHeight(12)
+        self.session_io_spinner.setAccessibleName("Session I/O Activity Progress")
+        self.session_io_spinner.setToolTip("Indicates background session saving and loading activity")
         self.session_io_spinner.setVisible(False)
 
         self.shortcut_help_button = QToolButton()
         self.shortcut_help_button.setText("Shortcuts")
+        self.shortcut_help_button.setAccessibleName("Keyboard Shortcuts Reference")
+        self.shortcut_help_button.setToolTip("View available keyboard shortcuts (Ctrl+/)")
+        self.shortcut_help_button.setCursor(Qt.PointingHandCursor)
         self.shortcut_help_button.clicked.connect(self._show_shortcuts_help)
 
         self.preferences_button = QToolButton()
         self.preferences_button.setText("Preferences")
+        self.preferences_button.setAccessibleName("Application Preferences")
+        self.preferences_button.setToolTip("Open preferences and global application settings")
+        self.preferences_button.setCursor(Qt.PointingHandCursor)
         self.preferences_button.clicked.connect(self._open_preferences_dialog)
 
         self.about_button = QToolButton()
         self.about_button.setText("About")
+        self.about_button.setAccessibleName("About DeepSlice Desktop")
+        self.about_button.setToolTip("View DeepSlice version, citations, and licenses")
+        self.about_button.setCursor(Qt.PointingHandCursor)
         self.about_button.clicked.connect(self._show_about_dialog)
 
         self.error_menu_button = QPushButton("Errors")
+        self.error_menu_button.setAccessibleName("Runtime Error Center")
+        self.error_menu_button.setToolTip("View runtime error log and automated diagnostics")
+        self.error_menu_button.setCursor(Qt.PointingHandCursor)
         self.error_menu = QMenu(self.error_menu_button)
         
         self._unread_error_count = 0
@@ -7446,6 +7475,18 @@ class DeepSliceMainWindow(QMainWindow):
                 except Exception:
                     lines.append("  VRAM usage unavailable in this TensorFlow build")
 
+            QMessageBox.information(self, "Hardware Health", "\n".join(lines))
+        except (ImportError, ModuleNotFoundError):
+            import platform
+            mode = "CPU (Lightweight)"
+            self.hardware_mode_label.setText(f"Mode: {mode}")
+            lines = [
+                f"Mode: {mode}",
+                "TensorFlow: Not loaded (running in lightweight CPU fallback mode)",
+                f"Platform: {platform.system()} {platform.release()} ({platform.machine()})",
+                f"Python: {platform.python_version()}",
+                "Acceleration: GPU acceleration libraries optional or unavailable in current environment.",
+            ]
             QMessageBox.information(self, "Hardware Health", "\n".join(lines))
         except Exception as exc:
             self._show_logged_exception(

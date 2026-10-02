@@ -6,6 +6,17 @@
 
 ## Completed
 
+### Task: Enhance Header Toolbar Actions with Accessibility, Tooltips, Hand Cursors, and Hardware Health Fallback
+- **Completed**: 2026-10-03
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added accessible names, descriptive tooltips, and pointing hand cursors across header toolbar controls (`hardware_button`, `theme_toggle_button`, `new_session_button`, `save_session_button`, `load_session_button`, `session_io_spinner`, `shortcut_help_button`, `preferences_button`, `about_button`, and `error_menu_button`).
+    - Added graceful CPU/platform fallback in `_show_hardware_health()` when TensorFlow or GPU acceleration packages are missing or optional, providing clear diagnostics without throwing unhandled exceptions.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added `test_header_toolbar_accessibility_and_cursors` and `test_hardware_health_cpu_fallback` verifying accessibility attributes, cursor shapes, and graceful CPU fallback output.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py -v` (7 passed in 7.59s with 0 errors).
+- **Status**: Completed
+
 ### Task: Enhance Runtime Console and Prediction Controls with Accessibility, Tooltips, Hand Cursors, and Visual Copy Feedback
 - **Completed**: 2026-10-02
 - **Changes**:
