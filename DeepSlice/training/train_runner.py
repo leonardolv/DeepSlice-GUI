@@ -13,8 +13,10 @@ import pandas as pd
 
 from ..metadata import metadata_loader
 
-_logger = logging.getLogger(__name__)
-from ..neural_network.neural_network import XCEPTION_INPUT_SIZE
+try:
+    from ..neural_network.neural_network import XCEPTION_INPUT_SIZE
+except Exception:
+    XCEPTION_INPUT_SIZE = (299, 299, 3)
 from . import training_utils
 
 SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}

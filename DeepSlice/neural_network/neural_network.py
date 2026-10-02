@@ -1,19 +1,44 @@
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras import Model
-import tensorflow as tf
-from tensorflow.keras.applications.xception import Xception
-from tensorflow.keras.utils import Sequence
+try:
+    import tensorflow as tf
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense, Input
+    from tensorflow.keras import Model
+    from tensorflow.keras.applications.xception import Xception
+    from tensorflow.keras.utils import Sequence
+except Exception:
+    tf = None
+    Sequential = None
+    Dense = None
+    Input = None
+    Model = None
+    Xception = None
+
+    class Sequence:  # type: ignore[no-redef]
+        """Fallback base class when tensorflow is not installed."""
+
+        def __getitem__(self, index):
+            raise NotImplementedError
+
+        def __len__(self):
+            raise NotImplementedError
 from glob import glob
 from typing import Any
 import pandas as pd
 import numpy as np
 import os
 import logging
-from skimage import color, exposure, filters, measure, morphology, restoration, transform
-from skimage.color import rgb2gray
+try:
+    from skimage import color, exposure, filters, measure, morphology, restoration, transform
+    from skimage.color import rgb2gray
+except Exception:
+    color = exposure = filters = measure = morphology = restoration = transform = None
+    rgb2gray = None
+
 import warnings
-import h5py
+try:
+    import h5py
+except Exception:
+    h5py = None
 from PIL import Image
 from ..diagnostics import monitored
 
@@ -549,7 +574,10 @@ class EnsemblePartialResultError(RuntimeError):
         self.partial_predictions = partial_predictions
 
 
-class PredictionProgressCallback(tf.keras.callbacks.Callback):
+_CallbackBase = tf.keras.callbacks.Callback if tf is not None else object
+
+
+class PredictionProgressCallback(_CallbackBase):
     """Keras callback used to expose prediction progress to the GUI."""
 
     def __init__(self, total_images, phase, progress_callback, cancel_check=None, batch_size: int = 1):

@@ -6,7 +6,18 @@
 
 ## Completed
 
-### Task: Decouple GUI State from Eager TensorFlow Import and Remediate Diagnostic Test Logger Propagation
+### Task: Make TensorFlow and Heavy ML Dependencies Gracefully Optional on Import
+- **Completed**: 2026-10-02
+- **Changes**:
+  - `DeepSlice/neural_network/neural_network.py`:
+    - Wrapped eager top-level `tensorflow`, `skimage`, and `h5py` imports in robust `try-except` blocks with fallback `Sequence` base class and `_CallbackBase`.
+    - Prevents 19 test collection errors and GUI startup crashes when TensorFlow is omitted or unloaded.
+  - `DeepSlice/training/train_runner.py`:
+    - Added fallback for `XCEPTION_INPUT_SIZE = (299, 299, 3)` to avoid top-level dependency cascade from `neural_network.py`.
+  - `tests/test_optional_tf_import.py`:
+    - Added regression unit tests validating `DeepSlice.gui.state`, `DeepSlice.training.train_runner`, and `DeepSlice.neural_network.neural_network` import cleanly in restricted runtime environments.
+- **Verification**: Verified headlessly with `pytest tests/ -q` (316 passed, 9 skipped, 0 failures in 6.87s).
+- **Status**: Completed
 - **Completed**: 2026-10-02
 - **Changes**:
   - `DeepSlice/gui/state.py`:
