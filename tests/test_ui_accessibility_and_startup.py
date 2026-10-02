@@ -77,3 +77,44 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
         win.close()
         win.deleteLater()
 
+
+def test_console_and_prediction_controls_accessibility():
+    from PySide6.QtCore import Qt
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        assert win.prediction_progress_bar.accessibleName() == "Prediction Task Progress"
+        assert win.accept_predicted_thickness_button.accessibleName() == "Accept Predicted Section Thickness"
+        assert "estimated section thickness" in win.accept_predicted_thickness_button.toolTip()
+        assert win.accept_predicted_thickness_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.console_toggle.accessibleName() == "Toggle Runtime Console"
+        assert win.console_toggle.toolTip() != ""
+        assert win.console_toggle.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.console_autoscroll_toggle.accessibleName() == "Toggle Console Auto-scroll"
+        assert win.console_autoscroll_toggle.toolTip() != ""
+        assert win.console_autoscroll_toggle.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.clear_console_button.accessibleName() == "Clear Runtime Console"
+        assert win.clear_console_button.toolTip() != ""
+        assert win.clear_console_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.copy_console_button.accessibleName() == "Copy Runtime Console"
+        assert win.copy_console_button.toolTip() != ""
+        assert win.copy_console_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.console_output.accessibleName() == "Runtime Console Log Output"
+        assert win.console_output.toolTip() != ""
+
+        # Test copy console action
+        win.console_output.setPlainText("sample deepslice log")
+        win._copy_console()
+        assert QApplication.clipboard().text() == "sample deepslice log"
+        assert win.copy_console_button.text() == "✓ Copied!"
+    finally:
+        win.close()
+        win.deleteLater()
+
+

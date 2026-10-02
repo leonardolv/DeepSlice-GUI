@@ -6,6 +6,18 @@
 
 ## Completed
 
+### Task: Enhance Runtime Console and Prediction Controls with Accessibility, Tooltips, Hand Cursors, and Visual Copy Feedback
+- **Completed**: 2026-10-02
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added accessible names, descriptive tooltips, and pointing hand cursors across all runtime console toolbar controls (`console_toggle`, `console_autoscroll_toggle`, `clear_console_button`, `copy_console_button`) and the log output viewer (`console_output`).
+    - Added accessible names, tooltips, and pointing hand cursor to `accept_predicted_thickness_button` and `prediction_progress_bar`.
+    - Added temporary inline visual confirmation (`✓ Copied!`) in `_copy_console()` on the copy button via `QTimer.singleShot`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_console_and_prediction_controls_accessibility` validating all accessibility attributes, cursors, clipboard copy, and visual button feedback.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py -v` (5 passed in 38.95s with 0 errors).
+- **Status**: Completed
+
 ### Task: Make TensorFlow and Heavy ML Dependencies Gracefully Optional on Import
 - **Completed**: 2026-10-02
 - **Changes**:

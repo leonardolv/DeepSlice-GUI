@@ -2540,6 +2540,10 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _copy_console(self):
         QApplication.clipboard().setText(self.console_output.toPlainText())
+        if hasattr(self, "copy_console_button"):
+            original_text = self.copy_console_button.text()
+            self.copy_console_button.setText("✓ Copied!")
+            QTimer.singleShot(1500, lambda: self.copy_console_button.setText(original_text))
 
     @staticmethod
     def _format_duration(total_seconds: int) -> str:
@@ -2963,11 +2967,17 @@ class DeepSliceMainWindow(QMainWindow):
         self.prediction_elapsed_label = QLabel("Elapsed: 00:00")
         self.prediction_eta_label = QLabel("Remaining: --:--")
         self.prediction_progress_bar = QProgressBar()
+        self.prediction_progress_bar.setObjectName("predictionProgressBar")
+        self.prediction_progress_bar.setAccessibleName("Prediction Task Progress")
         self.prediction_progress_bar.setRange(0, 100)
         self.prediction_progress_bar.setValue(0)
 
         self.predicted_thickness_label = QLabel("Estimated thickness: -")
         self.accept_predicted_thickness_button = QPushButton("Use Predicted Thickness")
+        self.accept_predicted_thickness_button.setObjectName("acceptPredictedThicknessBtn")
+        self.accept_predicted_thickness_button.setAccessibleName("Accept Predicted Section Thickness")
+        self.accept_predicted_thickness_button.setToolTip("Apply estimated section thickness to all sections in the dataset")
+        self.accept_predicted_thickness_button.setCursor(Qt.PointingHandCursor)
         self.accept_predicted_thickness_button.clicked.connect(
             self._accept_predicted_thickness
         )
@@ -2977,22 +2987,38 @@ class DeepSliceMainWindow(QMainWindow):
 
         console_tools = QHBoxLayout()
         self.console_toggle = QToolButton()
+        self.console_toggle.setObjectName("consoleToggle")
+        self.console_toggle.setAccessibleName("Toggle Runtime Console")
+        self.console_toggle.setToolTip("Show or hide the runtime logging console")
+        self.console_toggle.setCursor(Qt.PointingHandCursor)
         self.console_toggle.setCheckable(True)
         self.console_toggle.setText("Show Runtime Console")
         self.console_toggle.toggled.connect(self._toggle_console)
 
         self.console_autoscroll_toggle = QToolButton()
+        self.console_autoscroll_toggle.setObjectName("consoleAutoscrollToggle")
+        self.console_autoscroll_toggle.setAccessibleName("Toggle Console Auto-scroll")
+        self.console_autoscroll_toggle.setToolTip("Automatically scroll console output to newest log entries")
+        self.console_autoscroll_toggle.setCursor(Qt.PointingHandCursor)
         self.console_autoscroll_toggle.setCheckable(True)
         self.console_autoscroll_toggle.setChecked(True)
         self.console_autoscroll_toggle.setText("Auto-scroll")
         self.console_autoscroll_toggle.setVisible(False)
         
         self.clear_console_button = QToolButton()
+        self.clear_console_button.setObjectName("clearConsoleButton")
+        self.clear_console_button.setAccessibleName("Clear Runtime Console")
+        self.clear_console_button.setToolTip("Clear all text from the runtime console")
+        self.clear_console_button.setCursor(Qt.PointingHandCursor)
         self.clear_console_button.setText("Clear")
         self.clear_console_button.clicked.connect(self._clear_console)
         self.clear_console_button.setVisible(False)
         
         self.copy_console_button = QToolButton()
+        self.copy_console_button.setObjectName("copyConsoleButton")
+        self.copy_console_button.setAccessibleName("Copy Runtime Console")
+        self.copy_console_button.setToolTip("Copy complete runtime console text to clipboard")
+        self.copy_console_button.setCursor(Qt.PointingHandCursor)
         self.copy_console_button.setText("Copy")
         self.copy_console_button.clicked.connect(self._copy_console)
         self.copy_console_button.setVisible(False)
@@ -3008,6 +3034,9 @@ class DeepSliceMainWindow(QMainWindow):
         console_tools.addWidget(self.copy_console_button)
 
         self.console_output = QTextEdit()
+        self.console_output.setObjectName("consoleOutput")
+        self.console_output.setAccessibleName("Runtime Console Log Output")
+        self.console_output.setToolTip("Real-time application execution and error logs")
         self.console_output.setReadOnly(True)
         self.console_output.setVisible(False)
 
