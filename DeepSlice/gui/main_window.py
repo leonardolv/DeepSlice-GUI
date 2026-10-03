@@ -106,7 +106,7 @@ from ..error_logging import (
 )
 from ..metadata import metadata_loader
 from . import reporting
-from .state import DeepSliceAppState, SUPPORTED_IMAGE_FORMATS
+from .state import DeepSliceAppState, SUPPORTED_IMAGE_FORMATS, write_json_atomic
 from .workers import FunctionWorker
 
 
@@ -7151,8 +7151,7 @@ class DeepSliceMainWindow(QMainWindow):
                 str(index): float(depth)
                 for index, depth in self._anchor_depth_targets.items()
             }
-            with open(filename, "w", encoding="utf-8") as file_handle:
-                json.dump(payload, file_handle, indent=2)
+            write_json_atomic(filename, payload, indent=2)
         except Exception as exc:
             self._set_session_io_busy(False)
             self.save_session_button.setText("Save Session")
