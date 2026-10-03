@@ -6,6 +6,19 @@
 
 ## Completed
 
+### Task: Enhance Export Page Controls with Accessibility, Tooltips, Hand Cursors, Visual Copy Confirmation, and Dialog Headless Safety
+- **Completed**: 2026-10-03
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added screen-reader accessible names, descriptive tooltips, and pointing hand cursors across all Export page controls: `output_dir_edit`, `browse_output_dir_button`, `output_basename_edit`, `output_format_combo`, `output_format_help_button`, `export_size_estimate_label`, `export_button`, `open_export_dir_button`, `copy_export_path_button`, `report_button`, `preview_report_button`, `pdf_content_group`, `pdf_include_stats`, `pdf_include_plot`, `pdf_include_images`, `pdf_include_angles`, `quicknii_path_edit`, `quicknii_browse_button`, `open_quicknii_button`, `summary_label`, `deviation_label`, `markers_label`, and `export_notes`.
+    - Added instant inline visual feedback (`✓ Copied!`) via `QTimer.singleShot` when clicking `copy_export_path_button`.
+    - Implemented non-blocking headless execution safety guards (`if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:`) across all guide and information dialogs (`_show_about_dialog`, `_show_shortcuts_help`, `_show_naming_helper`, `_show_orientation_guide`, `_show_direction_guide`, `_show_ensemble_explanation`, `_show_configuration_validation`, `_show_export_format_help`, and `_show_logged_error`) while setting screen-reader accessible names.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added `test_export_page_accessibility_and_copy_feedback` and `test_helper_dialogs_accessibility_and_headless_safety` validating accessibility attributes, pointing hand cursors, clipboard copy feedback, and headless dialog safety.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py -v` (9 passed, 0 failures in 7.64s).
+- **Status**: Completed
+
+
 ### Task: Enhance Header Toolbar Actions with Accessibility, Tooltips, Hand Cursors, and Hardware Health Fallback
 - **Completed**: 2026-10-03
 - **Changes**:

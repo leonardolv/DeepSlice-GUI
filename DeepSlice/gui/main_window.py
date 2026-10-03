@@ -1756,7 +1756,14 @@ class DeepSliceMainWindow(QMainWindow):
             "License: See LICENSE file in this repository.\n"
             "Documentation: docs/gui_help.html or built docs/index.html"
         )
-        QMessageBox.information(self, "About DeepSlice", text)
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("About DeepSlice")
+        msg_box.setText(text)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setAccessibleName("About DeepSlice Information Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
 
     def _setup_shortcuts(self):
@@ -1843,7 +1850,14 @@ class DeepSliceMainWindow(QMainWindow):
             "Ctrl+/ or Ctrl+? : Show shortcuts\n"
             "F1 : Open page-specific help"
         )
-        QMessageBox.information(self, "Shortcuts", text)
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Shortcuts")
+        msg_box.setText(text)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setAccessibleName("Keyboard Shortcuts Help Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
     def _open_context_help(self):
         anchors = {
@@ -2163,7 +2177,8 @@ class DeepSliceMainWindow(QMainWindow):
         auto_fix_button = None
         if can_auto_fix:
             auto_fix_button = message_box.addButton("Try Auto-Fix", QMessageBox.ActionRole)
-        message_box.exec()
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            message_box.exec()
 
         if message_box.clickedButton() == copy_button:
             self._copy_last_error_report(show_message=False)
@@ -2366,7 +2381,14 @@ class DeepSliceMainWindow(QMainWindow):
             "  - `mouse_A_s142_fluoro.tif` -> Index 142\n\n"
             "If this fails, you can try the 'Legacy parser fallback' which looks at the last 3 digits in the filename."
         )
-        QMessageBox.information(self, "Naming Convention", text)
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Naming Convention")
+        msg_box.setText(text)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setAccessibleName("Naming Convention Help Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
     def _show_orientation_guide(self):
         guide = (
@@ -2376,7 +2398,14 @@ class DeepSliceMainWindow(QMainWindow):
             "Horizontal: top-to-bottom slice stack.\n\n"
             "Tip: current release is optimized for coronal workflows."
         )
-        QMessageBox.information(self, "Orientation Guide", guide)
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Orientation Guide")
+        msg_box.setText(guide)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setAccessibleName("Orientation Guide Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
     def _show_direction_guide(self):
         text = (
@@ -2385,22 +2414,35 @@ class DeepSliceMainWindow(QMainWindow):
             "caudal-rostro: index numbers increase from caudal toward rostral.\n"
             "Auto: inferred from predicted AP depths."
         )
-        QMessageBox.information(self, "Direction Guide", text)
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Direction Guide")
+        msg_box.setText(text)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setAccessibleName("Direction Guide Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
     def _show_ensemble_explanation(self):
-        QMessageBox.information(
-            self,
-            "Ensemble Prediction",
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Ensemble Prediction")
+        msg_box.setText(
+            "Ensemble Prediction\n\n"
             "Ensemble runs both primary and secondary models and averages outputs.\n\n"
             "Pros: often higher stability/accuracy.\n"
-            "Cons: slower and higher memory use.",
+            "Cons: slower and higher memory use."
         )
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setAccessibleName("Ensemble Prediction Help Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
     def _show_configuration_validation(self):
         errors, warnings = self._validate_before_prediction()
         if len(errors) == 0 and len(warnings) == 0:
             self._show_toast("Configuration looks good", timeout_ms=2500, level="success")
-            return
+            return None
         lines = []
         if errors:
             lines.append("Errors:")
@@ -2410,16 +2452,30 @@ class DeepSliceMainWindow(QMainWindow):
                 lines.append("")
             lines.append("Warnings:")
             lines.extend([f"- {item}" for item in warnings])
-        QMessageBox.warning(self, "Validation", "\n".join(lines))
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Validation")
+        msg_box.setText("\n".join(lines))
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setAccessibleName("Configuration Validation Warnings Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
     def _show_export_format_help(self):
-        QMessageBox.information(
-            self,
-            "Export Format Help",
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Export Format Help")
+        msg_box.setText(
+            "Export Format Help\n\n"
             "JSON: recommended for QuickNII and VisuAlign pipelines.\n"
             "Legacy XML: compatibility mode for older tooling.\n\n"
-            "CSV sidecar is always generated.",
+            "CSV sidecar is always generated."
         )
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setAccessibleName("Export Format Documentation Dialog")
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
+
 
     @staticmethod
     def _format_bytes(total_bytes: int) -> str:
@@ -3503,15 +3559,24 @@ class DeepSliceMainWindow(QMainWindow):
 
         output_dir_row = QHBoxLayout()
         self.output_dir_edit = QLineEdit()
+        self.output_dir_edit.setAccessibleName("Export Output Directory")
+        self.output_dir_edit.setToolTip("Directory where exported files and reports will be saved")
         self.output_dir_edit.setText(self._get_persisted_export_path())
         self.output_dir_edit.textChanged.connect(self._persist_export_path)
         self.browse_output_dir_button = QPushButton("Browse")
+        self.browse_output_dir_button.setAccessibleName("Browse Export Output Directory")
+        self.browse_output_dir_button.setToolTip("Select output directory for exports")
+        self.browse_output_dir_button.setCursor(Qt.PointingHandCursor)
         self.browse_output_dir_button.clicked.connect(self._browse_output_directory)
         output_dir_row.addWidget(self.output_dir_edit)
         output_dir_row.addWidget(self.browse_output_dir_button)
 
         self.output_basename_edit = QLineEdit("DeepSliceResults")
+        self.output_basename_edit.setAccessibleName("Export Base Filename")
+        self.output_basename_edit.setToolTip("Base filename prefix for exported files")
         self.output_format_combo = QComboBox()
+        self.output_format_combo.setAccessibleName("Export Format")
+        self.output_format_combo.setToolTip("Select export format (QuickNII/VisuAlign JSON or Legacy XML)")
         self.output_format_combo.addItems(
             [
                 "JSON (QuickNII/VisuAlign)",
@@ -3520,12 +3585,16 @@ class DeepSliceMainWindow(QMainWindow):
         )
         self.output_format_help_button = QToolButton()
         self.output_format_help_button.setText("?")
+        self.output_format_help_button.setAccessibleName("Export Format Documentation Help")
+        self.output_format_help_button.setToolTip("View information about supported export formats")
+        self.output_format_help_button.setCursor(Qt.PointingHandCursor)
         self.output_format_help_button.clicked.connect(self._show_export_format_help)
         output_format_row = QHBoxLayout()
         output_format_row.addWidget(self.output_format_combo)
         output_format_row.addWidget(self.output_format_help_button)
         
         self.export_size_estimate_label = QLabel("~0 MB")
+        self.export_size_estimate_label.setAccessibleName("Estimated Export File Size")
         self.output_format_combo.currentIndexChanged.connect(self._update_export_size_estimate)
 
         output_layout.addRow("Output Directory", output_dir_row)
@@ -3535,14 +3604,23 @@ class DeepSliceMainWindow(QMainWindow):
 
         export_actions_layout = QHBoxLayout()
         self.export_button = QPushButton("Export Predictions")
+        self.export_button.setAccessibleName("Export Predictions Button")
+        self.export_button.setToolTip("Export alignment predictions in selected format")
+        self.export_button.setCursor(Qt.PointingHandCursor)
         self.export_button.clicked.connect(self._export_predictions)
         
         self.open_export_dir_button = QToolButton()
         self.open_export_dir_button.setText("Open Folder")
+        self.open_export_dir_button.setAccessibleName("Open Export Folder")
+        self.open_export_dir_button.setToolTip("Open the export directory in file explorer")
+        self.open_export_dir_button.setCursor(Qt.PointingHandCursor)
         self.open_export_dir_button.clicked.connect(self._open_export_directory)
         
         self.copy_export_path_button = QToolButton()
         self.copy_export_path_button.setText("Copy Path")
+        self.copy_export_path_button.setAccessibleName("Copy Export File Path")
+        self.copy_export_path_button.setToolTip("Copy full export file path to clipboard")
+        self.copy_export_path_button.setCursor(Qt.PointingHandCursor)
         self.copy_export_path_button.clicked.connect(self._copy_export_path)
         
         export_actions_layout.addWidget(self.export_button, stretch=1)
@@ -3550,10 +3628,16 @@ class DeepSliceMainWindow(QMainWindow):
         export_actions_layout.addWidget(self.copy_export_path_button)
 
         self.report_button = QPushButton("Generate Report (PDF)")
+        self.report_button.setAccessibleName("Generate PDF Report Button")
+        self.report_button.setToolTip("Generate comprehensive PDF summary report")
+        self.report_button.setCursor(Qt.PointingHandCursor)
         self.report_button.clicked.connect(self._generate_report)
         
         self.preview_report_button = QToolButton()
         self.preview_report_button.setText("Preview Report")
+        self.preview_report_button.setAccessibleName("Preview PDF Report Button")
+        self.preview_report_button.setToolTip("Preview the generated PDF report")
+        self.preview_report_button.setCursor(Qt.PointingHandCursor)
         self.preview_report_button.clicked.connect(self._preview_report)
         
         report_layout = QHBoxLayout()
@@ -3561,14 +3645,27 @@ class DeepSliceMainWindow(QMainWindow):
         report_layout.addWidget(self.preview_report_button, stretch=1)
 
         self.pdf_content_group = QGroupBox("PDF Contents")
+        self.pdf_content_group.setAccessibleName("PDF Report Contents Configuration")
         pdf_content_layout = QHBoxLayout(self.pdf_content_group)
         self.pdf_include_stats = QCheckBox("Summary Stats")
+        self.pdf_include_stats.setAccessibleName("Include Summary Stats in Report")
+        self.pdf_include_stats.setToolTip("Include section count and coverage statistics in PDF report")
+        self.pdf_include_stats.setCursor(Qt.PointingHandCursor)
         self.pdf_include_stats.setChecked(True)
         self.pdf_include_plot = QCheckBox("Linearity Plot")
+        self.pdf_include_plot.setAccessibleName("Include Linearity Plot in Report")
+        self.pdf_include_plot.setToolTip("Include spacing linearity chart in PDF report")
+        self.pdf_include_plot.setCursor(Qt.PointingHandCursor)
         self.pdf_include_plot.setChecked(True)
         self.pdf_include_images = QCheckBox("Sample Images")
+        self.pdf_include_images.setAccessibleName("Include Sample Images in Report")
+        self.pdf_include_images.setToolTip("Include sample registered section thumbnails in PDF report")
+        self.pdf_include_images.setCursor(Qt.PointingHandCursor)
         self.pdf_include_images.setChecked(False)
         self.pdf_include_angles = QCheckBox("Angle Metrics")
+        self.pdf_include_angles.setAccessibleName("Include Angle Metrics in Report")
+        self.pdf_include_angles.setToolTip("Include cutting angle breakdown in PDF report")
+        self.pdf_include_angles.setCursor(Qt.PointingHandCursor)
         self.pdf_include_angles.setChecked(True)
         pdf_content_layout.addWidget(self.pdf_include_stats)
         pdf_content_layout.addWidget(self.pdf_include_plot)
@@ -3577,20 +3674,30 @@ class DeepSliceMainWindow(QMainWindow):
 
         quicknii_row = QHBoxLayout()
         self.quicknii_path_edit = QLineEdit()
+        self.quicknii_path_edit.setAccessibleName("QuickNII Executable Path")
         self.quicknii_path_edit.setPlaceholderText("Optional path to QuickNII executable")
         self.quicknii_path_edit.setText(self._get_persisted_quicknii_path())
         self.quicknii_path_edit.textChanged.connect(self._persist_quicknii_path)
         self.quicknii_browse_button = QPushButton("Browse")
+        self.quicknii_browse_button.setAccessibleName("Browse QuickNII Executable")
+        self.quicknii_browse_button.setToolTip("Browse for QuickNII executable")
+        self.quicknii_browse_button.setCursor(Qt.PointingHandCursor)
         self.quicknii_browse_button.clicked.connect(self._browse_quicknii_path)
         quicknii_row.addWidget(self.quicknii_path_edit)
         quicknii_row.addWidget(self.quicknii_browse_button)
 
         self.open_quicknii_button = QPushButton("Open in QuickNII")
+        self.open_quicknii_button.setAccessibleName("Open in QuickNII Button")
+        self.open_quicknii_button.setToolTip("Launch exported series in QuickNII")
+        self.open_quicknii_button.setCursor(Qt.PointingHandCursor)
         self.open_quicknii_button.clicked.connect(self._open_in_quicknii)
 
         self.summary_label = QLabel("Processed: 0 | Excluded: 0")
+        self.summary_label.setAccessibleName("Export Processed Section Count Summary")
         self.deviation_label = QLabel("Mean angular deviation: 0.00 deg")
+        self.deviation_label.setAccessibleName("Mean Angular Deviation Metric")
         self.markers_label = QLabel("")
+        self.markers_label.setAccessibleName("Export Validation Markers")
         self.markers_label.setWordWrap(True)
         self.markers_label.setObjectName("WarningText")
 
@@ -3609,6 +3716,7 @@ class DeepSliceMainWindow(QMainWindow):
         right_layout = QVBoxLayout(right)
 
         self.export_notes = QPlainTextEdit()
+        self.export_notes.setAccessibleName("Export Format Instructions and Notes")
         self.export_notes.setReadOnly(True)
         self.export_notes.setPlainText(
             "Export details:\n\n"
@@ -6802,6 +6910,9 @@ class DeepSliceMainWindow(QMainWindow):
         
         QApplication.clipboard().setText(target_file)
         self._show_toast(f"Copied export path: {target_file}", timeout_ms=3000)
+        original_text = self.copy_export_path_button.text()
+        self.copy_export_path_button.setText("✓ Copied!")
+        QTimer.singleShot(2000, lambda: self.copy_export_path_button.setText(original_text))
 
     def _export_predictions(self):
         if self.state.predictions is None:

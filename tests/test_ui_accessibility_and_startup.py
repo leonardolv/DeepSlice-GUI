@@ -188,4 +188,114 @@ def test_hardware_health_cpu_fallback(monkeypatch):
         win.deleteLater()
 
 
+def test_export_page_accessibility_and_copy_feedback():
+    from PySide6.QtCore import Qt
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        assert win.output_dir_edit.accessibleName() == "Export Output Directory"
+        assert ("directory" in win.output_dir_edit.toolTip().lower() or "folder" in win.output_dir_edit.toolTip().lower())
+
+        assert win.browse_output_dir_button.accessibleName() == "Browse Export Output Directory"
+        assert win.browse_output_dir_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.output_basename_edit.accessibleName() == "Export Base Filename"
+        assert win.output_format_combo.accessibleName() == "Export Format"
+
+        assert win.output_format_help_button.accessibleName() == "Export Format Documentation Help"
+        assert win.output_format_help_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.export_size_estimate_label.accessibleName() == "Estimated Export File Size"
+
+        assert win.export_button.accessibleName() == "Export Predictions Button"
+        assert win.export_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.open_export_dir_button.accessibleName() == "Open Export Folder"
+        assert win.open_export_dir_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.copy_export_path_button.accessibleName() == "Copy Export File Path"
+        assert win.copy_export_path_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.report_button.accessibleName() == "Generate PDF Report Button"
+        assert win.report_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.preview_report_button.accessibleName() == "Preview PDF Report Button"
+        assert win.preview_report_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.pdf_content_group.accessibleName() == "PDF Report Contents Configuration"
+        assert win.pdf_include_stats.accessibleName() == "Include Summary Stats in Report"
+        assert win.pdf_include_stats.cursor().shape() == Qt.PointingHandCursor
+        assert win.pdf_include_plot.accessibleName() == "Include Linearity Plot in Report"
+        assert win.pdf_include_plot.cursor().shape() == Qt.PointingHandCursor
+        assert win.pdf_include_images.accessibleName() == "Include Sample Images in Report"
+        assert win.pdf_include_images.cursor().shape() == Qt.PointingHandCursor
+        assert win.pdf_include_angles.accessibleName() == "Include Angle Metrics in Report"
+        assert win.pdf_include_angles.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.quicknii_path_edit.accessibleName() == "QuickNII Executable Path"
+        assert win.quicknii_browse_button.accessibleName() == "Browse QuickNII Executable"
+        assert win.quicknii_browse_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.open_quicknii_button.accessibleName() == "Open in QuickNII Button"
+        assert win.open_quicknii_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.summary_label.accessibleName() == "Export Processed Section Count Summary"
+        assert win.deviation_label.accessibleName() == "Mean Angular Deviation Metric"
+        assert win.markers_label.accessibleName() == "Export Validation Markers"
+        assert win.export_notes.accessibleName() == "Export Format Instructions and Notes"
+
+        # Test visual copy confirmation on copy_export_path
+        win.last_export_basepath = "/fake/path/to/result"
+        win._copy_export_path()
+        assert win.copy_export_path_button.text() == "✓ Copied!"
+        assert "/fake/path/to/result.json" in QApplication.clipboard().text()
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_helper_dialogs_accessibility_and_headless_safety():
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # About dialog
+        about_box = win._show_about_dialog()
+        assert about_box.accessibleName() == "About DeepSlice Information Dialog"
+        assert "DeepSlice Desktop" in about_box.text()
+
+        # Shortcuts dialog
+        shortcuts_box = win._show_shortcuts_help()
+        assert shortcuts_box.accessibleName() == "Keyboard Shortcuts Help Dialog"
+        assert "Keyboard Shortcuts" in shortcuts_box.text()
+
+        # Naming helper dialog
+        naming_box = win._show_naming_helper()
+        assert naming_box.accessibleName() == "Naming Convention Help Dialog"
+        assert "Naming Convention" in naming_box.text()
+
+        # Orientation guide dialog
+        orient_box = win._show_orientation_guide()
+        assert orient_box.accessibleName() == "Orientation Guide Dialog"
+        assert "Orientation Guide" in orient_box.text()
+
+        # Direction guide dialog
+        dir_box = win._show_direction_guide()
+        assert dir_box.accessibleName() == "Direction Guide Dialog"
+        assert "Direction Override" in dir_box.text()
+
+        # Ensemble explanation dialog
+        ens_box = win._show_ensemble_explanation()
+        assert ens_box.accessibleName() == "Ensemble Prediction Help Dialog"
+        assert "Ensemble Prediction" in ens_box.text()
+
+        # Export format help dialog
+        fmt_box = win._show_export_format_help()
+        assert fmt_box.accessibleName() == "Export Format Documentation Dialog"
+        assert "QuickNII" in fmt_box.text()
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+
 
