@@ -297,5 +297,70 @@ def test_helper_dialogs_accessibility_and_headless_safety():
         win.deleteLater()
 
 
+def test_ingestion_and_configuration_pages_accessibility_and_cursors():
+    from PySide6.QtCore import Qt
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Ingestion page controls
+        assert win.add_folder_button.accessibleName() == "Add Folder"
+        assert win.add_folder_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.add_files_button.accessibleName() == "Add Files"
+        assert win.add_files_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.clear_images_button.accessibleName() == "Clear All Images"
+        assert win.clear_images_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.naming_helper_button.accessibleName() == "Naming Helper"
+        assert win.naming_helper_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.orientation_guide_button.accessibleName() == "Orientation Guide"
+        assert win.orientation_guide_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.enable_section_numbers_checkbox.accessibleName() == "Detect Section Numbers"
+        assert win.enable_section_numbers_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.legacy_parsing_checkbox.accessibleName() == "Legacy Parser Fallback"
+        assert win.legacy_parsing_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.orientation_combo.accessibleName() == "Anatomical Orientation"
+        assert win.thumbnail_sort_combo.accessibleName() == "Thumbnail Sort Order"
+        assert win.thumbnail_filter_edit.accessibleName() == "Thumbnail Filter"
+        assert win.index_table.accessibleName() == "Section Indices Table"
+        assert win.slice_count_label.accessibleName() == "Slice Count Label"
+        assert win.file_size_summary_label.accessibleName() == "File Size Summary Label"
+        assert win.ingestion_summary_banner.accessibleName() == "Ingestion Summary Banner"
+        assert win.ingestion_warning_label.accessibleName() == "Ingestion Warning Label"
+
+        # Configuration page controls
+        assert win.mouse_radio.accessibleName() == "Mouse CCFv3 Atlas"
+        assert win.mouse_radio.cursor().shape() == Qt.PointingHandCursor
+        assert win.rat_radio.accessibleName() == "Rat Waxholm Atlas"
+        assert win.rat_radio.cursor().shape() == Qt.PointingHandCursor
+        assert win.auto_thickness_checkbox.accessibleName() == "Auto-estimate Thickness"
+        assert win.auto_thickness_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.suggest_thickness_button.accessibleName() == "Suggest Thickness"
+        assert win.suggest_thickness_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.direction_guide_button.accessibleName() == "Direction Guide"
+        assert win.direction_guide_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.ensemble_checkbox.accessibleName() == "Ensemble Prediction"
+        assert win.ensemble_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.ensemble_help_button.accessibleName() == "Ensemble Help"
+        assert win.ensemble_help_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.secondary_model_checkbox.accessibleName() == "Secondary Model Only"
+        assert win.secondary_model_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.legacy_from_config_checkbox.accessibleName() == "Legacy Section Parser"
+        assert win.legacy_from_config_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.preview_training_split_button.accessibleName() == "Preview Training Split"
+        assert win.preview_training_split_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.save_training_split_button.accessibleName() == "Save Split Manifest"
+        assert win.save_training_split_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.save_training_metadata_button.accessibleName() == "Save Training Metadata"
+        assert win.save_training_metadata_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.validate_configuration_button.accessibleName() == "Validate Configuration"
+        assert win.validate_configuration_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.tech_toggle.accessibleName() == "Technical Insights Toggle"
+        assert win.tech_toggle.cursor().shape() == Qt.PointingHandCursor
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+
 
 

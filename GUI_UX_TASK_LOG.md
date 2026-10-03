@@ -6,6 +6,17 @@
 
 ## Completed
 
+### Task: Enhance Ingestion and Configuration Page Controls with Accessibility, Tooltips, and Hand Cursors
+- **Completed**: 2026-10-03
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added screen-reader accessible names, descriptive tooltips, and `PointingHandCursor` shapes across all Ingestion page controls: `add_folder_button`, `add_files_button`, `clear_images_button`, `enable_section_numbers_checkbox`, `naming_helper_button`, `legacy_parsing_checkbox`, `orientation_combo`, `orientation_guide_button`, `slice_count_label`, `file_size_summary_label`, `ingestion_summary_banner`, `ingestion_warning_label`, `index_table`, `thumbnail_sort_combo`, and `thumbnail_filter_edit`.
+    - Added screen-reader accessible names, descriptive tooltips, and `PointingHandCursor` shapes across Configuration page controls: `mouse_radio`, `rat_radio`, `auto_thickness_checkbox`, `thickness_spin`, `suggest_thickness_button`, `direction_override_combo`, `direction_guide_button`, `ensemble_checkbox`, `ensemble_help_button`, `secondary_model_checkbox`, `legacy_from_config_checkbox`, `training_mixed_precision_checkbox`, `preview_training_split_button`, `save_training_split_button`, `save_training_metadata_button`, `validate_configuration_button`, and `tech_toggle`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added `test_ingestion_and_configuration_pages_accessibility_and_cursors` validating accessibility attributes, pointing hand cursors, and control metadata.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py -v` (10 passed, 0 failures in 5.27s).
+- **Status**: Completed
+
 ### Task: Enhance Export Page Controls with Accessibility, Tooltips, Hand Cursors, Visual Copy Confirmation, and Dialog Headless Safety
 - **Completed**: 2026-10-03
 - **Changes**:

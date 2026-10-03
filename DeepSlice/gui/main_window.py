@@ -2244,10 +2244,16 @@ class DeepSliceMainWindow(QMainWindow):
 
         button_row = QHBoxLayout()
         self.add_folder_button = QPushButton("Add Folder")
+        self.add_folder_button.setCursor(Qt.PointingHandCursor)
+        self.add_folder_button.setAccessibleName("Add Folder")
         self.add_folder_button.clicked.connect(self._add_folder)
         self.add_files_button = QPushButton("Add Files")
+        self.add_files_button.setCursor(Qt.PointingHandCursor)
+        self.add_files_button.setAccessibleName("Add Files")
         self.add_files_button.clicked.connect(self._add_files)
         self.clear_images_button = QPushButton("Clear All")
+        self.clear_images_button.setCursor(Qt.PointingHandCursor)
+        self.clear_images_button.setAccessibleName("Clear All Images")
         self.clear_images_button.clicked.connect(self._clear_images)
         button_row.addWidget(self.add_folder_button)
         button_row.addWidget(self.add_files_button)
@@ -2261,9 +2267,13 @@ class DeepSliceMainWindow(QMainWindow):
         self.enable_section_numbers_checkbox = QCheckBox(
             "Detect section numbers from filename (_sXXX)"
         )
+        self.enable_section_numbers_checkbox.setCursor(Qt.PointingHandCursor)
+        self.enable_section_numbers_checkbox.setAccessibleName("Detect Section Numbers")
         self.enable_section_numbers_checkbox.setChecked(True)
         self.enable_section_numbers_checkbox.toggled.connect(self._update_run_button_state)
         self.naming_helper_button = QToolButton()
+        self.naming_helper_button.setCursor(Qt.PointingHandCursor)
+        self.naming_helper_button.setAccessibleName("Naming Helper")
         self.naming_helper_button.setText("?")
         self.naming_helper_button.setToolTip("Help with naming conventions")
         self.naming_helper_button.clicked.connect(self._show_naming_helper)
@@ -2274,8 +2284,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.legacy_parsing_checkbox = QCheckBox(
             "Legacy parser fallback (last 3 digits)"
         )
+        self.legacy_parsing_checkbox.setCursor(Qt.PointingHandCursor)
+        self.legacy_parsing_checkbox.setAccessibleName("Legacy Parser Fallback")
         self.legacy_parsing_checkbox.toggled.connect(self._refresh_ingestion_views)
         self.orientation_combo = QComboBox()
+        self.orientation_combo.setAccessibleName("Anatomical Orientation")
         self.orientation_combo.addItems(
             [
                 "Coronal (supported)",
@@ -2285,6 +2298,8 @@ class DeepSliceMainWindow(QMainWindow):
         )
         self.orientation_combo.currentIndexChanged.connect(self._update_run_button_state)
         self.orientation_guide_button = QToolButton()
+        self.orientation_guide_button.setCursor(Qt.PointingHandCursor)
+        self.orientation_guide_button.setAccessibleName("Orientation Guide")
         self.orientation_guide_button.setText("Guide")
         self.orientation_guide_button.clicked.connect(self._show_orientation_guide)
         options_layout.addLayout(section_number_layout)
@@ -2296,10 +2311,14 @@ class DeepSliceMainWindow(QMainWindow):
         left_layout.addWidget(options_group)
 
         self.slice_count_label = QLabel("Slices: 0")
+        self.slice_count_label.setAccessibleName("Slice Count Label")
         self.file_size_summary_label = QLabel("0 files loaded - 0 B")
+        self.file_size_summary_label.setAccessibleName("File Size Summary Label")
         self.ingestion_summary_banner = QLabel("No files loaded")
+        self.ingestion_summary_banner.setAccessibleName("Ingestion Summary Banner")
         self.ingestion_summary_banner.setObjectName("SummaryBanner")
         self.ingestion_warning_label = QLabel("")
+        self.ingestion_warning_label.setAccessibleName("Ingestion Warning Label")
         self.ingestion_warning_label.setWordWrap(True)
         self.ingestion_warning_label.setObjectName("WarningText")
         left_layout.addWidget(self.slice_count_label)
@@ -2308,6 +2327,7 @@ class DeepSliceMainWindow(QMainWindow):
         left_layout.addWidget(self.ingestion_warning_label)
 
         self.index_table = QTableWidget(0, 3)
+        self.index_table.setAccessibleName("Section Indices Table")
         self.index_table.setHorizontalHeaderLabels(["Filename", "Detected Index", "Status"])
         self.index_table.horizontalHeader().setStretchLastSection(True)
         self.index_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -2323,6 +2343,7 @@ class DeepSliceMainWindow(QMainWindow):
         thumbnail_header.addWidget(QLabel("Thumbnail Grid (cached previews)"))
 
         self.thumbnail_sort_combo = QComboBox()
+        self.thumbnail_sort_combo.setAccessibleName("Thumbnail Sort Order")
         self.thumbnail_sort_combo.addItems(
             [
                 "Sort: Filename",
@@ -2334,6 +2355,7 @@ class DeepSliceMainWindow(QMainWindow):
         thumbnail_header.addWidget(self.thumbnail_sort_combo)
 
         self.thumbnail_filter_edit = QLineEdit()
+        self.thumbnail_filter_edit.setAccessibleName("Thumbnail Filter")
         self.thumbnail_filter_edit.setPlaceholderText("Filter by filename...")
         self.thumbnail_filter_edit.setFixedWidth(200)
         self.thumbnail_filter_edit.textChanged.connect(self._filter_thumbnails)
@@ -2668,7 +2690,11 @@ class DeepSliceMainWindow(QMainWindow):
         species_group = QGroupBox("Species / Atlas")
         species_layout = QVBoxLayout(species_group)
         self.mouse_radio = QRadioButton("Mouse (Allen CCFv3)")
+        self.mouse_radio.setCursor(Qt.PointingHandCursor)
+        self.mouse_radio.setAccessibleName("Mouse CCFv3 Atlas")
         self.rat_radio = QRadioButton("Rat (Waxholm Rat Atlas)")
+        self.rat_radio.setCursor(Qt.PointingHandCursor)
+        self.rat_radio.setAccessibleName("Rat Waxholm Atlas")
         self.mouse_radio.setChecked(True)
         self.mouse_radio.toggled.connect(self._on_species_changed)
         self.rat_radio.toggled.connect(self._on_species_changed)
@@ -2694,9 +2720,12 @@ class DeepSliceMainWindow(QMainWindow):
         geometry_group = QGroupBox("Physical Geometry")
         geometry_layout = QFormLayout(geometry_group)
         self.auto_thickness_checkbox = QCheckBox("Auto-estimate thickness")
+        self.auto_thickness_checkbox.setCursor(Qt.PointingHandCursor)
+        self.auto_thickness_checkbox.setAccessibleName("Auto-estimate Thickness")
         self.auto_thickness_checkbox.setChecked(True)
         self.auto_thickness_checkbox.toggled.connect(self._on_auto_thickness_toggled)
         self.thickness_spin = QDoubleSpinBox()
+        self.thickness_spin.setAccessibleName("Section Thickness SpinBox")
         self.thickness_spin.setRange(0.0, 1000.0)
         self.thickness_spin.setDecimals(2)
         self.thickness_spin.setSuffix(" um")
@@ -2704,9 +2733,12 @@ class DeepSliceMainWindow(QMainWindow):
         self.thickness_hint_label = QLabel("Typical range: 20-100 um for standard histology")
         self.thickness_hint_label.setObjectName("HintText")
         self.suggest_thickness_button = QPushButton("Suggest Thickness")
+        self.suggest_thickness_button.setCursor(Qt.PointingHandCursor)
+        self.suggest_thickness_button.setAccessibleName("Suggest Thickness")
         self.suggest_thickness_button.clicked.connect(self._suggest_thickness)
         self.detected_direction_label = QLabel("Detected direction: unknown")
         self.direction_override_combo = QComboBox()
+        self.direction_override_combo.setAccessibleName("Direction Override")
         self.direction_override_combo.addItems(
             ["Auto", "rostro-caudal", "caudal-rostro"]
         )
@@ -2714,6 +2746,8 @@ class DeepSliceMainWindow(QMainWindow):
             self._on_direction_override_changed
         )
         self.direction_guide_button = QToolButton()
+        self.direction_guide_button.setCursor(Qt.PointingHandCursor)
+        self.direction_guide_button.setAccessibleName("Direction Guide")
         self.direction_guide_button.setText("Guide")
         self.direction_guide_button.clicked.connect(self._show_direction_guide)
         geometry_layout.addRow(self.auto_thickness_checkbox)
@@ -2731,9 +2765,13 @@ class DeepSliceMainWindow(QMainWindow):
         prediction_layout = QVBoxLayout(prediction_group)
         ensemble_row = QHBoxLayout()
         self.ensemble_checkbox = QCheckBox("Ensemble prediction (if available)")
+        self.ensemble_checkbox.setCursor(Qt.PointingHandCursor)
+        self.ensemble_checkbox.setAccessibleName("Ensemble Prediction")
         self.ensemble_checkbox.setChecked(True)
         self.ensemble_checkbox.toggled.connect(self._update_processing_estimate)
         self.ensemble_help_button = QToolButton()
+        self.ensemble_help_button.setCursor(Qt.PointingHandCursor)
+        self.ensemble_help_button.setAccessibleName("Ensemble Help")
         self.ensemble_help_button.setText("?")
         self.ensemble_help_button.clicked.connect(self._show_ensemble_explanation)
         ensemble_row.addWidget(self.ensemble_checkbox)
@@ -2743,6 +2781,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.secondary_model_checkbox = QCheckBox(
             "Use secondary model only (for comparison)"
         )
+        self.secondary_model_checkbox.setCursor(Qt.PointingHandCursor)
+        self.secondary_model_checkbox.setAccessibleName("Secondary Model Only")
         self.secondary_model_checkbox.setChecked(False)
         self.secondary_model_checkbox.toggled.connect(self._update_processing_estimate)
         self.secondary_model_checkbox.setToolTip(
@@ -2751,6 +2791,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.legacy_from_config_checkbox = QCheckBox(
             "Legacy section-number parser"
         )
+        self.legacy_from_config_checkbox.setCursor(Qt.PointingHandCursor)
+        self.legacy_from_config_checkbox.setAccessibleName("Legacy Section Parser")
         self.legacy_from_config_checkbox.setToolTip(
             "Uses the legacy parser that reads the trailing 3 digits in filenames (for older datasets not using _sXXX naming)."
         )
@@ -2944,16 +2986,24 @@ class DeepSliceMainWindow(QMainWindow):
         self.training_min_lr_spin.valueChanged.connect(self._on_training_controls_changed)
 
         self.training_mixed_precision_checkbox = QCheckBox("Use mixed precision")
+        self.training_mixed_precision_checkbox.setCursor(Qt.PointingHandCursor)
+        self.training_mixed_precision_checkbox.setAccessibleName("Training Mixed Precision")
         self.training_mixed_precision_checkbox.setChecked(bool(self.state.training_use_mixed_precision))
         self.training_mixed_precision_checkbox.toggled.connect(self._on_training_controls_changed)
 
         self.preview_training_split_button = QPushButton("Preview Split")
+        self.preview_training_split_button.setCursor(Qt.PointingHandCursor)
+        self.preview_training_split_button.setAccessibleName("Preview Training Split")
         self.preview_training_split_button.clicked.connect(self._preview_training_split)
 
         self.save_training_split_button = QPushButton("Save Split Manifest")
+        self.save_training_split_button.setCursor(Qt.PointingHandCursor)
+        self.save_training_split_button.setAccessibleName("Save Split Manifest")
         self.save_training_split_button.clicked.connect(self._save_training_split_manifest)
 
         self.save_training_metadata_button = QPushButton("Save Training Metadata")
+        self.save_training_metadata_button.setCursor(Qt.PointingHandCursor)
+        self.save_training_metadata_button.setAccessibleName("Save Training Metadata")
         self.save_training_metadata_button.clicked.connect(self._save_training_metadata_manifest)
 
         training_actions_row = QHBoxLayout()
@@ -2983,6 +3033,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.slice_count_reminder_label = QLabel("Will process 0 slices")
         self.processing_estimate_label = QLabel("Estimated processing time: -")
         self.validate_configuration_button = QPushButton("Validate Configuration")
+        self.validate_configuration_button.setCursor(Qt.PointingHandCursor)
+        self.validate_configuration_button.setAccessibleName("Validate Configuration")
         self.validate_configuration_button.clicked.connect(self._show_configuration_validation)
         left_layout.addWidget(self.slice_count_reminder_label)
         left_layout.addWidget(self.processing_estimate_label)
@@ -2998,6 +3050,8 @@ class DeepSliceMainWindow(QMainWindow):
         right_layout = QVBoxLayout(right)
 
         self.tech_toggle = QToolButton()
+        self.tech_toggle.setCursor(Qt.PointingHandCursor)
+        self.tech_toggle.setAccessibleName("Technical Insights Toggle")
         self.tech_toggle.setText("v Technical Insights")
         self.tech_toggle.setCheckable(True)
         self.tech_toggle.setChecked(True)
