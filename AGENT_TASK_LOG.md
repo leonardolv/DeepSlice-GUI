@@ -12,6 +12,23 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-03 00:11 UTC — Session / split-manifest saves truncate the existing file if serialisation fails
+Branch `claude/loving-brahmagupta-b5br79` · Status: **done, pushed, draft PR open**
+
+Backlog is fully struck through; found by audit. `json.dump` straight into a
+file opened with `"w"` (`main_window.py` Save Session, `state.py` split
+manifest) destroys the previous file when the payload fails to serialise.
+Plan: shared atomic temp-file + `os.replace` writer, tests.
+
+**Root cause:** `open(path, "w")` truncates before `json.dump` runs, so a
+serialisation/I/O failure mid-write destroyed the user's previous session.
+**Solution:** `write_json_atomic` (`gui/state.py`): serialise in memory, write
+a sibling temp file, `os.replace`; temp cleaned on failure. Used by Save
+Session and the training split manifest.
+**Validation:** new `tests/test_write_json_atomic.py` (3 tests); full suite
+317 passed, 10 skipped (offscreen). PR: draft, see branch
+`claude/loving-brahmagupta-b5br79`.
+
 ### 2026-09-22 UTC (cont.) — `load_session_dict()` cleared `is_dirty` before the payload it was parsing had actually been applied
 Branch `claude/tender-goldberg-v4wwey` · Status: **done, pushed, awaiting PR**
 
