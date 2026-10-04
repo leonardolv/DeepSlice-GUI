@@ -1236,6 +1236,18 @@ against `DeepSliceAppState`'s real members, found **zero real hits** — the onl
 results were inherited Qt/Keras methods. There is no AttributeError-drift in
 this repo, unlike its siblings. Do not spend another run looking for it.
 
+### 2026-10-04 - `--batch-size` larger than the training set crashed instead of clamping
+- **Problem:** `train_runner.main` clamps an oversized `--batch-size` to the
+  train-set size and logs a warning through `_logger`, but `_logger` was never
+  defined (found via `ruff` F821). The NameError was swallowed by `main()`'s
+  broad `except`, so the run printed `ERROR: name '_logger' is not defined`
+  and exited 1 on exactly the small-dataset case the clamp exists for.
+- **Fix:** define `_logger = logging.getLogger(__name__)` (the `logging`
+  import was already there, flagged unused).
+- **Validation:** new `test_train_runner_clamps_batch_size_larger_than_training_set`
+  fails on the old code and passes now; `tests/test_train_runner.py` 9 passed.
+- **Left alone:** the other ~48 ruff findings are style (E402/F401/F841), not bugs.
+
 ## Backlog
 
 Seeded by the 2026-08-19 20:10 run, ranked by user impact. Each was verified

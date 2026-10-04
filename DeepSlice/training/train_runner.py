@@ -23,6 +23,8 @@ SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 GROUP_MODES = {"parent-folder", "filename-prefix", "full-path"}
 TRAINER_MODES = {"baseline-cnn", "xception-finetune"}
 XCEPTION_INIT_MODES = {"species-primary", "imagenet"}
+_logger = logging.getLogger(__name__)
+
 TARGET_COLUMNS = ["ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz"]
 
 
