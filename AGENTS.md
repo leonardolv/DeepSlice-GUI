@@ -9,9 +9,7 @@ These rules apply to all autonomous and scheduled agent runs (Antigravity, Claud
 - Use `pytest tests/ -v` or `pytest -v` to run non-interactive automated tests.
 
 ## 2. Design & Ergonomics
-- Harmonize with existing stylesheets, layout configs, and color palettes. Avoid ad-hoc, hardcoded styling.
-- Keep click targets legible and accessible.
-- Provide clear visual feedback (loading spinners, progress indicators, status bars) for long-running operations.
+- Reuse the existing stylesheets, layout configs and color palettes instead of hardcoding styles.
 
 ## 3. Continuity Log (`GUI_UX_TASK_LOG.md`)
 - The repository root file `GUI_UX_TASK_LOG.md` is the single source of truth across runs.
