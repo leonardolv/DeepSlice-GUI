@@ -216,3 +216,49 @@ def test_validate_learning_rate_rejects_zero_negative_nan():
         _validate_learning_rate(float("nan"))
     with pytest.raises(ValueError):
         _validate_learning_rate(math.inf)
+
+
+def test_train_runner_clamps_batch_size_larger_than_training_set(tmp_path, monkeypatch, caplog):
+    """--batch-size above the train-set size must clamp with a warning, not die.
+
+    The clamp branch logged through an undefined ``_logger``; the NameError was
+    swallowed by main()'s broad except and surfaced as ``ERROR: name '_logger'
+    is not defined`` with exit code 1 instead of a clamped training run.
+    """
+    import logging
+
+    from DeepSlice.training import train_runner
+
+    images_root = tmp_path / "images"
+    output_root = tmp_path / "run"
+    _create_mock_images(images_root)
+    labels = tmp_path / "labels.csv"
+    labels.write_text("x", encoding="utf-8")
+
+    seen = {}
+
+    def fake_training(**kwargs):
+        seen.update(kwargs)
+        return {
+            "monitor": "val_loss",
+            "best_loss": 0.5,
+            "model_path": "m",
+            "history_path": "h",
+        }
+
+    monkeypatch.setattr(train_runner, "run_supervised_training", fake_training)
+
+    with caplog.at_level(logging.WARNING, logger=train_runner.__name__):
+        exit_code = main(
+            [
+                "--images", str(images_root),
+                "--output-dir", str(output_root),
+                "--labels", str(labels),
+                "--epochs", "1",
+                "--batch-size", "9999",
+            ]
+        )
+
+    assert exit_code == 0
+    assert 1 <= seen["batch_size"] < 9999
+    assert any("clamping" in r.getMessage() for r in caplog.records)
