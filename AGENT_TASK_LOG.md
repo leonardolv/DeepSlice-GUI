@@ -12,6 +12,25 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-05 UTC — Re-raised errors dropped their cause (B904) in the weight loader and training CLI
+Branch `claude/loving-brahmagupta-uorecm` · Status: **done, PR opened**
+
+Backlog items were all already struck; took a fresh `ruff` sweep instead.
+
+**Problem.** `load_xception_weights` (two sites) and the `_bounded_float` /
+`_positive_float` argparse types raised a new exception inside `except` without
+`from`, so the original lookup/conversion error was only attached implicitly
+("During handling…"), and was lost for callers that inspect `__cause__`.
+Also `main_window.py` had a `try: ...; except Exception: pass` squeezed onto
+single lines (E701).
+
+**Fix.** `raise ... from exc` at all four sites; the one-liner expanded.
+No behaviour change otherwise. Line endings preserved (CRLF file edited byte-safe).
+
+**Validation.** `ruff check DeepSlice --select B904,E701` clean. New
+`tests/test_train_runner_argparse_types.py` (3 pass); `test_weight_loader.py`
+gained a `__cause__` assertion (skipped here: TensorFlow not installed in sandbox).
+
 ### 2026-09-22 UTC (cont.) — `load_session_dict()` cleared `is_dirty` before the payload it was parsing had actually been applied
 Branch `claude/tender-goldberg-v4wwey` · Status: **done, pushed, awaiting PR**
 

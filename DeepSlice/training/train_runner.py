@@ -830,8 +830,10 @@ def _bounded_float(name: str, lo: float, hi: float):
     def _parse(value: str) -> float:
         try:
             number = float(value)
-        except (TypeError, ValueError):
-            raise argparse.ArgumentTypeError(f"{name} must be a number, got {value!r}")
+        except (TypeError, ValueError) as exc:
+            raise argparse.ArgumentTypeError(
+                f"{name} must be a number, got {value!r}"
+            ) from exc
         if not (lo <= number <= hi):
             raise argparse.ArgumentTypeError(
                 f"{name} must be in [{lo}, {hi}], got {number}"
@@ -847,8 +849,10 @@ def _positive_float(name: str):
     def _parse(value: str) -> float:
         try:
             number = float(value)
-        except (TypeError, ValueError):
-            raise argparse.ArgumentTypeError(f"{name} must be a number, got {value!r}")
+        except (TypeError, ValueError) as exc:
+            raise argparse.ArgumentTypeError(
+                f"{name} must be a number, got {value!r}"
+            ) from exc
         if number <= 0:
             raise argparse.ArgumentTypeError(
                 f"{name} must be > 0, got {number}"

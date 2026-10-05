@@ -1368,8 +1368,10 @@ class DeepSliceMainWindow(QMainWindow):
                 action.setText(f"{path} ({stamp})" if stamp else path)
                 action.setToolTip(path)
                 action.setVisible(True)
-                try: action.triggered.disconnect()
-                except Exception: pass
+                try:
+                    action.triggered.disconnect()
+                except Exception:
+                    pass
                 # Lambda with default arg to capture the current path
                 action.triggered.connect(lambda checked=False, path=path: self._load_session_file(path))
             else:
