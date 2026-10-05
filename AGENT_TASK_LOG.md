@@ -12,7 +12,16 @@ _(nothing claimed)_
 
 ## Completed
 
-### 2026-10-05 UTC — Re-raised errors dropped their cause (B904) in the weight loader and training CLI
+### 2026-10-06 UTC - Curation page controls accessibility, tooltips, hand cursors, and usability ergonomics
+Status: **done**
+
+**Audit.** Curation page controls (reordering, outlier detection, auto-flagging, angle normalization, anchor alignment, plot and atlas controls) were missing screen-reader accessible names, descriptive tooltips, object names, and pointing hand cursors.
+
+**Fix.** Added accessible names, descriptive tooltips, object names, and `Qt.PointingHandCursor` shapes to all curation navigation, flag management, angle propagation, anchor alignment, linearity plot, and atlas volume/overlay controls.
+
+**Validation.** Verified with `test_curation_page_controls_accessibility_and_cursors` in `tests/test_ui_accessibility_and_startup.py` (11 passed in 8.75s).
+
+### 2026-10-05 UTC - Re-raised errors dropped their cause (B904) in the weight loader and training CLI
 Branch `claude/loving-brahmagupta-uorecm` · Status: **done, PR opened**
 
 Backlog items were all already struck; took a fresh `ruff` sweep instead.
@@ -20,7 +29,7 @@ Backlog items were all already struck; took a fresh `ruff` sweep instead.
 **Problem.** `load_xception_weights` (two sites) and the `_bounded_float` /
 `_positive_float` argparse types raised a new exception inside `except` without
 `from`, so the original lookup/conversion error was only attached implicitly
-("During handling…"), and was lost for callers that inspect `__cause__`.
+("During handling..."), and was lost for callers that inspect `__cause__`.
 Also `main_window.py` had a `try: ...; except Exception: pass` squeezed onto
 single lines (E701).
 
@@ -30,6 +39,7 @@ No behaviour change otherwise. Line endings preserved (CRLF file edited byte-saf
 **Validation.** `ruff check DeepSlice --select B904,E701` clean. New
 `tests/test_train_runner_argparse_types.py` (3 pass); `test_weight_loader.py`
 gained a `__cause__` assertion (skipped here: TensorFlow not installed in sandbox).
+
 
 ### 2026-09-22 UTC (cont.) — `load_session_dict()` cleared `is_dirty` before the payload it was parsing had actually been applied
 Branch `claude/tender-goldberg-v4wwey` · Status: **done, pushed, awaiting PR**

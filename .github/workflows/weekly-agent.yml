@@ -1,0 +1,12 @@
+# Inactive draft for weekly agent task
+# Requires repository secret: GITHUB_TOKEN or OPENAI_API_KEY
+name: Weekly Agent Maintenance
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+jobs:
+  agent-run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Draft agent workflow"

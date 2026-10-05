@@ -2,9 +2,17 @@
 
 ## In Progress
 
-## Blocked / Needs Review
-
 ## Completed
+
+### Task: Enhance Curation Page Controls with Accessibility, Tooltips, Hand Cursors, and Usability Ergonomics
+- **Completed**: 2026-10-06
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added screen-reader accessible names, descriptive tooltips, object names, and `PointingHandCursor` across all Curation page controls: `curation_prev_button`, `curation_next_button`, `curation_select_all_btn`, `curation_deselect_all_btn`, `confidence_filter_combo`, `slice_flag_list`, `apply_bad_sections_button`, `apply_manual_order_button`, `move_slice_up_button`, `move_slice_down_button`, `detect_outliers_button`, `reset_flags_button`, `auto_flag_low_conf_button`, `interpolate_bad_depth_button`, `toggle_current_flag_button`, `slice_note_edit`, `save_slice_note_button`, `normalize_angles_button`, `enforce_order_button`, `enforce_spacing_button`, `ml_spin`, `dv_spin`, `apply_manual_angles_button`, `undo_button`, `redo_button`, `anchor_depth_spin`, `set_anchor_button`, `remove_anchor_button`, `apply_anchor_interpolation_button`, `clear_anchor_button`, `anchor_list`, `zoom_fit_button`, `zoom_in_button`, `zoom_out_button`, `enable_atlas_preview_checkbox`, `atlas_volume_combo`, `enable_blend_overlay_checkbox`, `blend_slider`, `before_after_toggle`, `loupe_toggle`, `atlas_flip_x_checkbox`, `atlas_flip_y_checkbox`, `atlas_rotate_combo`, `atlas_scale_slider`, `atlas_offset_x_slider`, `atlas_offset_y_slider`, and `confidence_panel_toggle`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added `test_curation_page_controls_accessibility_and_cursors` validating accessibility attributes, pointing hand cursors, and control metadata.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py -v` (11 passed, 0 failures in 8.75s).
+- **Status**: Completed
 
 ### Task: Enhance Ingestion and Configuration Page Controls with Accessibility, Tooltips, and Hand Cursors
 - **Completed**: 2026-10-03

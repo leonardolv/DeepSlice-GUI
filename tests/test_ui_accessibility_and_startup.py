@@ -361,6 +361,108 @@ def test_ingestion_and_configuration_pages_accessibility_and_cursors():
         win.deleteLater()
 
 
+def test_curation_page_controls_accessibility_and_cursors():
+    from PySide6.QtCore import Qt
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Curation list header & reordering controls
+        assert win.curation_prev_button.accessibleName() == "Previous Section"
+        assert win.curation_prev_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.curation_next_button.accessibleName() == "Next Section"
+        assert win.curation_next_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.curation_select_all_btn.accessibleName() == "Select All Bad Section Flags"
+        assert win.curation_select_all_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.curation_deselect_all_btn.accessibleName() == "Deselect All Bad Section Flags"
+        assert win.curation_deselect_all_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.confidence_filter_combo.accessibleName() == "Filter Slices by Confidence"
+        assert win.slice_flag_list.accessibleName() == "Curated Slices List"
+
+        # Action and propagation buttons
+        assert win.apply_bad_sections_button.accessibleName() == "Apply Bad Section Flags"
+        assert win.apply_bad_sections_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.apply_manual_order_button.accessibleName() == "Apply Manual Reordering"
+        assert win.apply_manual_order_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.move_slice_up_button.accessibleName() == "Move Selected Slice Up"
+        assert win.move_slice_up_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.move_slice_down_button.accessibleName() == "Move Selected Slice Down"
+        assert win.move_slice_down_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.detect_outliers_button.accessibleName() == "Detect Alignment Outliers"
+        assert win.detect_outliers_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.reset_flags_button.accessibleName() == "Reset All Flags"
+        assert win.reset_flags_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.auto_flag_low_conf_button.accessibleName() == "Auto-Flag Low Confidence Sections"
+        assert win.auto_flag_low_conf_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.interpolate_bad_depth_button.accessibleName() == "Interpolate Flagged Depths"
+        assert win.interpolate_bad_depth_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.toggle_current_flag_button.accessibleName() == "Toggle Current Section Flag"
+        assert win.toggle_current_flag_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.slice_note_edit.accessibleName() == "Per-Slice Atlas Note"
+        assert win.save_slice_note_button.accessibleName() == "Save Slice Note"
+        assert win.save_slice_note_button.cursor().shape() == Qt.PointingHandCursor
+
+        # Propagation controls
+        assert win.normalize_angles_button.accessibleName() == "Normalize Angles"
+        assert win.normalize_angles_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.enforce_order_button.accessibleName() == "Enforce Index Order"
+        assert win.enforce_order_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.enforce_spacing_button.accessibleName() == "Enforce Index Spacing"
+        assert win.enforce_spacing_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.ml_spin.accessibleName() == "Mediolateral (ML) Angle"
+        assert win.dv_spin.accessibleName() == "Dorsoventral (DV) Angle"
+        assert win.apply_manual_angles_button.accessibleName() == "Apply Manual Angles"
+        assert win.apply_manual_angles_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.undo_button.accessibleName() == "Undo Curation Action"
+        assert win.undo_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.redo_button.accessibleName() == "Redo Curation Action"
+        assert win.redo_button.cursor().shape() == Qt.PointingHandCursor
+
+        # Anchor controls
+        assert win.anchor_depth_spin.accessibleName() == "Target AP Depth"
+        assert win.set_anchor_button.accessibleName() == "Set or Update Anchor"
+        assert win.set_anchor_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.remove_anchor_button.accessibleName() == "Remove Anchor"
+        assert win.remove_anchor_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.apply_anchor_interpolation_button.accessibleName() == "Distribute Between Anchors"
+        assert win.apply_anchor_interpolation_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.clear_anchor_button.accessibleName() == "Clear All Anchors"
+        assert win.clear_anchor_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.anchor_list.accessibleName() == "Defined Anchors List"
+
+        # Right panel controls
+        assert win.zoom_fit_button.accessibleName() == "Fit Linearity Plot"
+        assert win.zoom_fit_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.zoom_in_button.accessibleName() == "Zoom In Plot"
+        assert win.zoom_in_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.zoom_out_button.accessibleName() == "Zoom Out Plot"
+        assert win.zoom_out_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.enable_atlas_preview_checkbox.accessibleName() == "Enable Atlas Preview"
+        assert win.enable_atlas_preview_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_volume_combo.accessibleName() == "Atlas Reference Volume"
+        assert win.enable_blend_overlay_checkbox.accessibleName() == "Blend Atlas on Histology"
+        assert win.enable_blend_overlay_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.blend_slider.accessibleName() == "Atlas Blend Opacity"
+        assert win.before_after_toggle.accessibleName() == "Before/After Overlay"
+        assert win.before_after_toggle.cursor().shape() == Qt.PointingHandCursor
+        assert win.loupe_toggle.accessibleName() == "Magnification Loupe"
+        assert win.loupe_toggle.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_flip_x_checkbox.accessibleName() == "Flip Atlas Horizontally"
+        assert win.atlas_flip_x_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_flip_y_checkbox.accessibleName() == "Flip Atlas Vertically"
+        assert win.atlas_flip_y_checkbox.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_rotate_combo.accessibleName() == "Rotate Atlas"
+        assert win.atlas_rotate_combo.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_scale_slider.accessibleName() == "Atlas Scale Slider"
+        assert win.atlas_offset_x_slider.accessibleName() == "Atlas Horizontal Offset"
+        assert win.atlas_offset_y_slider.accessibleName() == "Atlas Vertical Offset"
+        assert win.confidence_panel_toggle.accessibleName() == "Toggle Confidence Overlay Preview"
+        assert win.confidence_panel_toggle.cursor().shape() == Qt.PointingHandCursor
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+
 
 
 

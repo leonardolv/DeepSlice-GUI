@@ -20,3 +20,22 @@ These rules apply to all autonomous and scheduled agent runs (Antigravity, Claud
 - Run existing automated tests before committing.
 - Ensure all tests pass with 0 errors.
 - Sync with GitHub using conventional commits: `git add ...`, `git commit -m "fix(gui): ..."`, `git push`.
+
+## Start of every run (Addendum)
+1. Read AGENT_TASK_LOG.md (Summary first, then In Progress).
+2. Claim a task with a UTC ISO 8601 timestamp under In Progress. Other agents can override this lock if idle > 24h.
+3. Do not duplicate another agent's active work.
+
+## Agent roles
+- Claude: Hard tasks, but allowed to do easier tasks if invoked directly.
+- Gemini / Antigravity: Hard tasks, complex code, architecture, GUI polish.
+- Codex: small bug fixes, tests, typos.
+- Copilot: in-editor edits and small completions.
+- Perplexity: literature and web research.
+
+## Rules
+- Fix bugs directly in the code if you are really sure, otherwise leave a note.
+- Important work (data analysis, mathematical calculations) needs review by a different agent before merge. Verify every number twice with different methods and report it only if both agree. Never auto-merge these; require a PR/Branch.
+
+## Style
+Strictly use hyphens only (no em dashes, no en dashes). Concise.

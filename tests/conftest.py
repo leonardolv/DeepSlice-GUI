@@ -49,3 +49,15 @@ def _mock_qt_dialogs(monkeypatch):
         "question",
         staticmethod(lambda *a, **kw: QtWidgets.QMessageBox.StandardButton.No),
     )
+
+
+@pytest.fixture(autouse=True)
+def _ensure_deepslice_log_propagation():
+    """Ensure DeepSlice logger propagates to root so caplog works in all test modules."""
+    import logging
+
+    logger = logging.getLogger("DeepSlice")
+    prev = logger.propagate
+    logger.propagate = True
+    yield
+    logger.propagate = True
