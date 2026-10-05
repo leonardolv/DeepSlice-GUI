@@ -76,8 +76,10 @@ def test_load_xception_weights_missing_dense_layer_raises(tf_module, tmp_path):
         group.create_dataset("kernel:0", data=np.zeros((2048, 256), dtype=np.float32))
         group.create_dataset("bias:0", data=np.zeros((256,), dtype=np.float32))
 
-    with pytest.raises(RuntimeError, match="missing expected layer 'dense'"):
+    with pytest.raises(RuntimeError, match="missing expected layer 'dense'") as excinfo:
         load_xception_weights(bad_model, str(weights_path))
+    # The underlying lookup failure must stay attached for debugging.
+    assert excinfo.value.__cause__ is not None
 
 
 def test_xception_is_never_called_with_a_name_kwarg():

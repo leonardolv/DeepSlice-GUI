@@ -680,8 +680,8 @@ def load_xception_weights(model, weights, species="mouse"):
             if layer_name in new and layer_name in new[layer_name]:
                 try:
                     target_layer = model.get_layer(layer_name)
-                except (ValueError, KeyError, AttributeError):
-                    raise RuntimeError(f"missing expected layer '{layer_name}'")
+                except (ValueError, KeyError, AttributeError) as exc:
+                    raise RuntimeError(f"missing expected layer '{layer_name}'") from exc
 
                 group = new[layer_name][layer_name]
                 kernel_key = "kernel:0" if "kernel:0" in group else "kernel"
@@ -695,8 +695,10 @@ def load_xception_weights(model, weights, species="mouse"):
         if "xception" in new:
             try:
                 base_model = model.get_layer(XCEPTION_BASE_LAYER_NAME)
-            except (ValueError, KeyError, AttributeError):
-                raise RuntimeError(f"missing expected layer '{XCEPTION_BASE_LAYER_NAME}'")
+            except (ValueError, KeyError, AttributeError) as exc:
+                raise RuntimeError(
+                    f"missing expected layer '{XCEPTION_BASE_LAYER_NAME}'"
+                ) from exc
 
             weight_names = new["xception"].attrs["weight_names"].tolist()
             weight_names_layers = {
