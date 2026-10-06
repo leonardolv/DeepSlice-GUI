@@ -122,3 +122,31 @@ def test_build_training_callbacks_creates_checkpoint_template(tmp_path):
     assert len(callbacks) >= 4
     assert str(tmp_path) in checkpoint_template
     assert "epoch" in checkpoint_template
+
+
+def test_mixed_precision_failure_is_logged_not_silent(tmp_path, monkeypatch, caplog):
+    import logging
+    import types
+
+    def boom(_name):
+        raise ValueError("unsupported policy")
+
+    class _Cb:
+        def __init__(self, *a, **k):
+            pass
+
+    callbacks_ns = types.SimpleNamespace(
+        ModelCheckpoint=_Cb, EarlyStopping=_Cb, ReduceLROnPlateau=_Cb,
+        TerminateOnNaN=_Cb, CSVLogger=_Cb,
+    )
+    fake_tf = types.SimpleNamespace(
+        keras=types.SimpleNamespace(
+            mixed_precision=types.SimpleNamespace(set_global_policy=boom),
+            callbacks=callbacks_ns,
+        )
+    )
+    monkeypatch.setitem(sys.modules, "tensorflow", fake_tf)
+    with caplog.at_level(logging.WARNING, logger="DeepSlice.training.training_utils"):
+        callbacks, _ = build_training_callbacks(str(tmp_path), use_mixed_precision=True)
+    assert len(callbacks) == 5
+    assert "mixed precision" in caplog.text

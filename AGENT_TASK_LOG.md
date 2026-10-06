@@ -12,6 +12,24 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-06 UTC - Silent mixed-precision failure in training callbacks, plus unused imports
+Branch `claude/hopeful-rubin-yv2tmq` - Status: **done, PR opened**
+
+Backlog was fully struck; both suggested items (Normalize Angles convergence,
+drag-and-drop toast count) were verified already fixed. Took a fresh lint sweep.
+
+**Problem.** `build_training_callbacks` swallowed any failure of
+`set_global_policy("mixed_float16")` with `except: pass`, so a user who asked
+for mixed precision silently trained in float32. Also three unused imports
+(`QCloseEvent`, `warnings`).
+
+**Fix.** Failure now logs a warning via a module logger (training continues).
+Unused imports removed (CRLF preserved in neural_network.py).
+
+**Validation.** New `test_mixed_precision_failure_is_logged_not_silent` uses a
+fake `tensorflow` module (no TF needed). Full suite offscreen: 329 passed, 9
+skipped. `ruff check DeepSlice --select F401` clean.
+
 ### 2026-10-06 UTC - Curation page controls accessibility, tooltips, hand cursors, and usability ergonomics
 Status: **done**
 

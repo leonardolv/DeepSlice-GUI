@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import re
@@ -9,6 +10,8 @@ from typing import Dict, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def set_global_seed(seed: int) -> int:
@@ -200,8 +203,10 @@ def build_training_callbacks(
     if use_mixed_precision:
         try:
             tf.keras.mixed_precision.set_global_policy("mixed_float16")
-        except Exception:
-            pass
+        except Exception as exc:
+            # The caller asked for mixed precision; training continues in
+            # float32, so say so rather than silently ignoring the request.
+            logger.warning("Could not enable mixed precision, training in float32: %s", exc)
 
     checkpoint_path = os.path.join(checkpoint_dir, "ckpt_epoch-{epoch:03d}.weights.h5")
 

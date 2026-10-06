@@ -34,7 +34,6 @@ except Exception:
     color = exposure = filters = measure = morphology = restoration = transform = None
     rgb2gray = None
 
-import warnings
 try:
     import h5py
 except Exception:
