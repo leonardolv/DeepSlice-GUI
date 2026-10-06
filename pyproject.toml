@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "DeepSlice"
 dynamic = ["version"]
+readme = "README.md"
 requires-python = ">=3.9,<3.13"
 
 [tool.setuptools]
