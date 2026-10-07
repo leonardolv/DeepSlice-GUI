@@ -125,8 +125,8 @@ footer{text-align:center;color:#50657d;font-size:.82rem;padding:12px}
 <a class="nav-link" href="#ui-orientation">UI Orientation</a>
 
 <div class="nav-group">Core Workflow</div>
-<a class="nav-link" href="#lesson-ingestion">Ingestion</a>
-<a class="nav-link" href="#lesson-configuration">Configuration</a>
+<a class="nav-link" href="#lesson-ingestion">1. Add images</a>
+<a class="nav-link" href="#lesson-configuration">2. Settings</a>
 <a class="nav-link" href="#lesson-prediction">Prediction</a>
 <a class="nav-link" href="#lesson-curation">Curation</a>
 <a class="nav-link" href="#lesson-export">Export</a>
@@ -270,13 +270,14 @@ python -m pip install -e .</pre>
 <p>The application uses a left step navigator and a right content stack. Workflow order is strict and intentional.</p>
 
 <div class="grid-2">
-  <div class="card"><h4>Step Navigator</h4><p>Ingestion -> Configuration -> Prediction -> Curation -> Export. Locked steps unlock as data becomes available.</p></div>
-  <div class="card"><h4>Top Bar</h4><p>Hardware Health, Save Session, Load Session / QuickNII, Open Error Log, Copy Last Error, Try Auto-Fix Last Error.</p></div>
+  <div class="card"><h4>Step Navigator</h4><p>1. Add images -> 2. Settings -> 3. Run alignment -> 4. Review &amp; fix -> 5. Export. Locked steps unlock as data becomes available; hover a locked step to see what unlocks it.</p></div>
+  <div class="card"><h4>Guidance Banner</h4><p>The blue banner above every page says what to do on that step, reports your progress (for example how many images are loaded) and has a <em>Next</em> button that is enabled as soon as the next step is unlocked.</p></div>
+  <div class="card"><h4>Top Bar</h4><p><em>Runs on: CPU/GPU</em> (hover for what that means), Hardware Health, Save Session, Load Session / QuickNII, Shortcuts, Preferences, About, and the Errors menu (Open Error Log, Copy Last Error, Try Auto-Fix Last Error).</p></div>
   <div class="card"><h4>Status Prefixes</h4><p><code>✓</code> completed, <code>●</code> current, <code>◌</code> locked/pending.</p></div>
   <div class="card"><h4>Runtime Console</h4><p>Available in Prediction. Use when running alignment or debugging processing tasks.</p></div>
 </div>
 
-<div class="tip"><strong>Workflow rule:</strong> If <em>Run Alignment</em> is disabled, check Configuration validation text and Ingestion warnings first; they explain exactly what is blocking execution.</div>
+<div class="tip"><strong>Workflow rule:</strong> If <em>Run Alignment</em> is disabled, the orange line right under the button (and the button tooltip) names what is blocking it, for example "No images loaded".</div>
 </section>
 
 <section class="lesson" id="lesson-ingestion" data-search="ingestion add folder add files section numbers index table">
@@ -302,8 +303,8 @@ python -m pip install -e .</pre>
 <div class="step">
   <div class="step-num">3</div>
   <div class="step-body">
-    <h4>Configure pre-flight options</h4>
-    <p>Leave <em>Detect section numbers from filename (_sXXX)</em> on for indexed workflows. Enable <em>Legacy parser fallback</em> only if your naming does not use <code>_sXXX</code>.</p>
+    <h4>Check the filename and orientation options</h4>
+    <p>Leave <em>Read section numbers from filenames (e.g. _s012)</em> on for indexed workflows. Enable <em>Older naming: use the last 3 digits of the filename</em> only if your naming does not use <code>_sXXX</code>. <em>Cutting plane</em> must be Coronal for now.</p>
   </div>
 </div>
 
@@ -352,8 +353,8 @@ python -m pip install -e .</pre>
 <div class="step">
   <div class="step-num">3</div>
   <div class="step-body">
-    <h4>Choose prediction mode</h4>
-    <p>Enable <em>Ensemble prediction</em> for robust production runs. Use <em>Use secondary model only</em> for comparison diagnostics, not for normal baseline processing.</p>
+    <h4>Open Advanced options only if needed</h4>
+    <p>Prediction modes, quality thresholds, preprocessing and the training toolkit are tucked behind <em>Advanced options (optional - defaults work for most data)</em>. Click it to expand. Enable <em>Ensemble prediction</em> for robust production runs. Use <em>Use secondary model only</em> for comparison diagnostics, not for normal baseline processing.</p>
   </div>
 </div>
 
@@ -361,7 +362,7 @@ python -m pip install -e .</pre>
   <div class="step-num">4</div>
   <div class="step-body">
     <h4>Read validation banner</h4>
-    <p>The <em>Validation:</em> message in Configuration tells you if execution is ready or what exactly still blocks <em>Run Alignment</em>.</p>
+    <p>The <em>Validation:</em> message at the bottom of Settings tells you if execution is ready or what exactly still blocks <em>Run Alignment</em>.</p>
   </div>
 </div>
 
@@ -613,7 +614,7 @@ python -m pip install -e .</pre>
 <tr><td><code>ModuleNotFoundError: No module named 'tensorflow'</code></td><td>Activate project venv and run <code>python -m pip install "tensorflow&lt;3.0"</code>.</td></tr>
 <tr><td><code>ModuleNotFoundError: No module named 'skimage'</code></td><td>Run <code>python -m pip install scikit-image</code> in the same activated project venv.</td></tr>
 <tr><td>Run Alignment disabled</td><td>Read <em>Validation:</em> text in Configuration and Ingestion warnings (common causes: duplicate/missing section numbers, non-coronal selection, too few slices).</td></tr>
-<tr><td>No section numbers detected</td><td>Rename files to include <code>_sXXX</code> pattern or enable legacy parser fallback.</td></tr>
+<tr><td>No section numbers detected</td><td>Rename files to include <code>_sXXX</code> pattern or enable <em>Older naming</em>.</td></tr>
 <tr><td>Hardware Health shows CPU only</td><td>Expected on many native Windows TensorFlow setups. CPU mode is supported.</td></tr>
 <tr><td>QuickNII launch fails</td><td>Set valid QuickNII executable path in Export panel and ensure JSON export exists.</td></tr>
 <tr><td>Atlas preview unavailable</td><td>Check runtime log for atlas download/import issues and verify network/path permissions for metadata assets.</td></tr>
