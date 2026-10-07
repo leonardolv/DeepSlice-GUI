@@ -673,12 +673,47 @@ def _build_startup_splash(app_icon: QIcon) -> Tuple[QSplashScreen, QLabel, QProg
 
 class DeepSliceMainWindow(QMainWindow):
     STEP_LABELS = [
-        "Ingestion",
-        "Configuration",
-        "Prediction",
-        "Curation",
-        "Export",
+        "1. Add images",
+        "2. Settings",
+        "3. Run alignment",
+        "4. Review & fix",
+        "5. Export",
     ]
+    # (headline, what to do) shown in the guidance banner above each page.
+    STEP_GUIDE = [
+        (
+            "Add your brain-section images",
+            "Drag a folder or image files onto the drop area (or use Add Folder / Add Files). "
+            "DeepSlice reads the section number from each filename (for example _s012) - check the "
+            "'Detected Index' column before moving on.",
+        ),
+        (
+            "Choose your species and check the settings",
+            "Pick the atlas that matches your tissue. The other settings already have sensible "
+            "defaults - open 'Advanced options' only if you need to tune them.",
+        ),
+        (
+            "Run the alignment",
+            "Press Run Alignment. DeepSlice estimates where every section sits in the atlas. "
+            "This can take several minutes on a CPU; you can watch progress and cancel at any time.",
+        ),
+        (
+            "Review the results and fix anything that looks off",
+            "Step through the sections and compare each one with the atlas. Flag bad sections, "
+            "then use Normalize Angles or Detect Outliers to clean up the series.",
+        ),
+        (
+            "Export your results",
+            "Save the alignment as JSON for QuickNII / VisuAlign, or generate a PDF report. "
+            "Save the session first if you want to come back to this dataset later.",
+        ),
+    ]
+    STEP_LOCKED_REASON = {
+        1: "Add at least one image in step 1 first.",
+        2: "Add at least one image in step 1 first.",
+        3: "Run the alignment in step 3 first - there is nothing to review yet.",
+        4: "Run the alignment in step 3 first - there is nothing to export yet.",
+    }
 
     def __init__(
         self,
@@ -868,16 +903,28 @@ class DeepSliceMainWindow(QMainWindow):
 
         # Connect navigation after stack exists because setCurrentRow emits currentRowChanged.
         self.step_list.currentRowChanged.connect(self._on_step_changed)
+        self.stack.currentChanged.connect(lambda _i: self._update_step_guidance())
         self.step_list.setCurrentRow(0)
 
+        self.guide_banner = self._build_guide_banner()
+        main_column = QWidget()
+        main_column_layout = QVBoxLayout(main_column)
+        main_column_layout.setContentsMargins(0, 0, 0, 0)
+        main_column_layout.setSpacing(6)
+        main_column_layout.addWidget(self.guide_banner)
+        main_column_layout.addWidget(self.stack, stretch=1)
+
         body_split.addWidget(self.sidebar_container)
-        body_split.addWidget(self.stack)
+        body_split.addWidget(main_column)
         body_split.setStretchFactor(0, 0)
         body_split.setStretchFactor(1, 1)
 
         root.addWidget(body_split, stretch=1)
 
         self._assign_button_icons()
+        # Icon-only "i" buttons were indistinguishable; show their names.
+        for _btn in (self.shortcut_help_button, self.preferences_button, self.about_button):
+            _btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self._apply_detailed_tooltips()
         self._apply_accessibility_metadata()
 
@@ -893,6 +940,89 @@ class DeepSliceMainWindow(QMainWindow):
         self.global_progress.setVisible(False)
         self.status_bar.addPermanentWidget(self.global_progress)
         self.toast_overlay = ToastOverlay(self)
+
+    def _build_guide_banner(self) -> QFrame:
+        banner = QFrame()
+        banner.setObjectName("GuideBanner")
+        banner.setAccessibleName("Step Guidance Banner")
+        layout = QHBoxLayout(banner)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(12)
+
+        text_column = QVBoxLayout()
+        text_column.setSpacing(2)
+        self.guide_title_label = QLabel("")
+        self.guide_title_label.setObjectName("GuideTitle")
+        self.guide_text_label = QLabel("")
+        self.guide_text_label.setObjectName("GuideText")
+        self.guide_text_label.setWordWrap(True)
+        text_column.addWidget(self.guide_title_label)
+        text_column.addWidget(self.guide_text_label)
+
+        self.guide_next_button = QPushButton("Next")
+        self.guide_next_button.setObjectName("GuideNextButton")
+        self.guide_next_button.setAccessibleName("Go to Next Step")
+        self.guide_next_button.setCursor(Qt.PointingHandCursor)
+        self.guide_next_button.setMinimumHeight(34)
+        self.guide_next_button.clicked.connect(self._go_to_next_step)
+
+        layout.addLayout(text_column, stretch=1)
+        layout.addWidget(self.guide_next_button, alignment=Qt.AlignVCenter)
+        return banner
+
+    def _go_to_next_step(self):
+        target = self.stack.currentIndex() + 1
+        if target < self.step_list.count() and target <= self._max_unlocked_step():
+            self.step_list.setCurrentRow(target)
+
+    def _guide_status_line(self, index: int) -> str:
+        """Short, state-aware sentence appended to the static guidance."""
+        count = len(self.state.image_paths)
+        if index == 0:
+            if count == 0:
+                return "Nothing loaded yet - start by dropping your images here."
+            return f"{count} image{'s' if count != 1 else ''} loaded. Ready for the next step."
+        if index == 1:
+            return f"{count} image{'s' if count != 1 else ''} will be processed." if count else ""
+        if index == 2:
+            if self.state.predictions is not None:
+                return "Alignment finished. Continue to review the results."
+            return "Ready - press Run Alignment." if count else ""
+        if index == 3:
+            return ""
+        return ""
+
+    def _update_step_guidance(self):
+        if not hasattr(self, "guide_title_label"):
+            return
+        index = max(0, min(self.stack.currentIndex(), len(self.STEP_GUIDE) - 1))
+        headline, body = self.STEP_GUIDE[index]
+        self.guide_title_label.setText(f"Step {index + 1} of {len(self.STEP_GUIDE)}: {headline}")
+        status = self._guide_status_line(index)
+        self.guide_text_label.setText(f"{body}  {status}".strip() if status else body)
+
+        max_unlocked = self._max_unlocked_step()
+        next_index = index + 1
+        if next_index >= len(self.STEP_LABELS):
+            self.guide_next_button.setVisible(False)
+        else:
+            self.guide_next_button.setVisible(True)
+            next_name = self.STEP_LABELS[next_index].split(". ", 1)[-1]
+            self.guide_next_button.setText(f"Next: {next_name}  >")
+            unlocked = next_index <= max_unlocked
+            self.guide_next_button.setEnabled(unlocked)
+            self.guide_next_button.setToolTip(
+                f"Continue to {next_name}"
+                if unlocked
+                else self.STEP_LOCKED_REASON.get(next_index, "Complete this step first.")
+            )
+
+        for idx in range(self.step_list.count()):
+            item = self.step_list.item(idx)
+            if idx <= max_unlocked:
+                item.setToolTip(self.STEP_GUIDE[idx][0])
+            else:
+                item.setToolTip("Locked - " + self.STEP_LOCKED_REASON.get(idx, "complete earlier steps first."))
 
     def _set_global_busy(self, busy: bool):
         self.top_task_progress.setVisible(bool(busy))
@@ -1230,7 +1360,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.session_status_label = QLabel("Session: New")
         self.session_status_label.setObjectName("SessionLabel")
 
-        self.hardware_mode_label = QLabel("Mode: Detecting")
+        self.hardware_mode_label = QLabel("Runs on: detecting...")
         self.hardware_mode_label.setObjectName("HardwareLabel")
 
         self.hardware_button = QPushButton("Hardware Health")
@@ -1924,11 +2054,11 @@ class DeepSliceMainWindow(QMainWindow):
     def _show_onboarding_dialog(self):
         steps = "\n".join(
             [
-                "1. Ingestion: add images and check section indices.",
-                "2. Configuration: choose species and prediction options.",
-                "3. Prediction: run alignment and monitor progress/logs.",
-                "4. Curation: review confidence, adjust flags and angles.",
-                "5. Export: write JSON/XML/CSV and reports.",
+                "1. Add images: drop your section images and check the detected section numbers.",
+                "2. Settings: choose the species; the defaults suit most data.",
+                "3. Run alignment: DeepSlice places every section in the atlas.",
+                "4. Review & fix: compare with the atlas, flag bad sections, fix angles.",
+                "5. Export: write JSON for QuickNII / VisuAlign, or a PDF report.",
             ]
         )
         QMessageBox.information(
@@ -2262,12 +2392,12 @@ class DeepSliceMainWindow(QMainWindow):
         button_row.addWidget(self.clear_images_button)
         left_layout.addLayout(button_row)
 
-        options_group = QGroupBox("Pre-flight Options")
+        options_group = QGroupBox("Filename and orientation")
         options_layout = QVBoxLayout(options_group)
         
         section_number_layout = QHBoxLayout()
         self.enable_section_numbers_checkbox = QCheckBox(
-            "Detect section numbers from filename (_sXXX)"
+            "Read section numbers from filenames (e.g. _s012)"
         )
         self.enable_section_numbers_checkbox.setCursor(Qt.PointingHandCursor)
         self.enable_section_numbers_checkbox.setAccessibleName("Detect Section Numbers")
@@ -2284,7 +2414,7 @@ class DeepSliceMainWindow(QMainWindow):
         section_number_layout.addStretch(1)
 
         self.legacy_parsing_checkbox = QCheckBox(
-            "Legacy parser fallback (last 3 digits)"
+            "Older naming: use the last 3 digits of the filename"
         )
         self.legacy_parsing_checkbox.setCursor(Qt.PointingHandCursor)
         self.legacy_parsing_checkbox.setAccessibleName("Legacy Parser Fallback")
@@ -2307,7 +2437,8 @@ class DeepSliceMainWindow(QMainWindow):
         options_layout.addLayout(section_number_layout)
         options_layout.addWidget(self.legacy_parsing_checkbox)
         orientation_row = QHBoxLayout()
-        orientation_row.addWidget(self.orientation_combo)
+        orientation_row.addWidget(QLabel("Cutting plane:"))
+        orientation_row.addWidget(self.orientation_combo, stretch=1)
         orientation_row.addWidget(self.orientation_guide_button)
         options_layout.addLayout(orientation_row)
         left_layout.addWidget(options_group)
@@ -2403,7 +2534,7 @@ class DeepSliceMainWindow(QMainWindow):
             "For example:\n"
             "  - `brain1_s001.png` -> Index 1\n"
             "  - `mouse_A_s142_fluoro.tif` -> Index 142\n\n"
-            "If this fails, you can try the 'Legacy parser fallback' which looks at the last 3 digits in the filename."
+            "If this fails, you can try the 'Older naming' option which looks at the last 3 digits in the filename."
         )
         msg_box = QMessageBox(self)
         msg_box.setWindowTitle("Naming Convention")
@@ -2763,6 +2894,27 @@ class DeepSliceMainWindow(QMainWindow):
         geometry_layout.addRow("Direction Override", direction_row)
         left_layout.addWidget(geometry_group)
 
+        # Everything below is optional tuning: hidden behind one toggle so a
+        # first-time user only sees species + thickness, the two choices that matter.
+        self.advanced_options_toggle = QToolButton()
+        self.advanced_options_toggle.setObjectName("AdvancedOptionsToggle")
+        self.advanced_options_toggle.setCheckable(True)
+        self.advanced_options_toggle.setChecked(False)
+        self.advanced_options_toggle.setCursor(Qt.PointingHandCursor)
+        self.advanced_options_toggle.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.advanced_options_toggle.setAccessibleName("Advanced Options Toggle")
+        self.advanced_options_toggle.setToolTip(
+            "Optional tuning: prediction modes, quality thresholds, preprocessing and the training toolkit. "
+            "The defaults work for most datasets."
+        )
+        self.advanced_options_toggle.toggled.connect(self._toggle_advanced_options)
+        self.advanced_options_container = QWidget()
+        self.advanced_options_container.setObjectName("AdvancedOptionsContainer")
+        advanced_layout = QVBoxLayout(self.advanced_options_container)
+        advanced_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.addWidget(self.advanced_options_toggle)
+        left_layout.addWidget(self.advanced_options_container)
+
         prediction_group = QGroupBox("Prediction Modes")
         prediction_layout = QVBoxLayout(prediction_group)
         ensemble_row = QHBoxLayout()
@@ -2802,7 +2954,7 @@ class DeepSliceMainWindow(QMainWindow):
         prediction_layout.addLayout(ensemble_row)
         prediction_layout.addWidget(self.secondary_model_checkbox)
         prediction_layout.addWidget(self.legacy_from_config_checkbox)
-        left_layout.addWidget(prediction_group)
+        advanced_layout.addWidget(prediction_group)
 
         quality_group = QGroupBox("Quality and Runtime")
         quality_layout = QFormLayout(quality_group)
@@ -2838,7 +2990,7 @@ class DeepSliceMainWindow(QMainWindow):
         quality_layout.addRow("High confidence >=", self.confidence_high_spin)
         quality_layout.addRow("Medium confidence >=", self.confidence_medium_spin)
         quality_layout.addRow("Inference batch size", self.inference_batch_spin)
-        left_layout.addWidget(quality_group)
+        advanced_layout.addWidget(quality_group)
 
         preprocessing_group = QGroupBox("Preprocessing and Inference")
         preprocessing_layout = QFormLayout(preprocessing_group)
@@ -2930,7 +3082,7 @@ class DeepSliceMainWindow(QMainWindow):
         preprocessing_layout.addRow(self.fast_fp16_checkbox)
         preprocessing_layout.addRow("Section-dropout passes", self.section_dropout_spin)
         preprocessing_layout.addRow(self.conf_weighted_ensemble_checkbox)
-        left_layout.addWidget(preprocessing_group)
+        advanced_layout.addWidget(preprocessing_group)
 
         training_group = QGroupBox("Training Toolkit")
         training_layout = QFormLayout(training_group)
@@ -3030,7 +3182,7 @@ class DeepSliceMainWindow(QMainWindow):
         training_layout.addRow(training_actions_widget)
         training_layout.addRow(self.training_split_summary_label)
 
-        left_layout.addWidget(training_group)
+        advanced_layout.addWidget(training_group)
 
         self.slice_count_reminder_label = QLabel("Will process 0 slices")
         self.processing_estimate_label = QLabel("Estimated processing time: -")
@@ -3047,6 +3199,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.config_validation_label.setWordWrap(True)
         left_layout.addWidget(self.config_validation_label)
         left_layout.addStretch(1)
+        self._toggle_advanced_options(False)
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
@@ -3054,9 +3207,9 @@ class DeepSliceMainWindow(QMainWindow):
         self.tech_toggle = QToolButton()
         self.tech_toggle.setCursor(Qt.PointingHandCursor)
         self.tech_toggle.setAccessibleName("Technical Insights Toggle")
-        self.tech_toggle.setText("v Technical Insights")
+        self.tech_toggle.setText("> Technical Insights (how angles and thickness are estimated)")
         self.tech_toggle.setCheckable(True)
-        self.tech_toggle.setChecked(True)
+        self.tech_toggle.setChecked(False)
         self.tech_toggle.toggled.connect(self._toggle_tech_insights)
 
         self.tech_insights = QPlainTextEdit()
@@ -3071,8 +3224,10 @@ class DeepSliceMainWindow(QMainWindow):
             "predicted depth spacing, then weighted by center-proximal Gaussian scores."
         )
 
+        self.tech_insights.setVisible(False)
         right_layout.addWidget(self.tech_toggle)
         right_layout.addWidget(self.tech_insights, stretch=1)
+        right_layout.addStretch(1)
 
         split.addWidget(left)
         split.addWidget(right)
@@ -3181,7 +3336,14 @@ class DeepSliceMainWindow(QMainWindow):
         self.console_output.setReadOnly(True)
         self.console_output.setVisible(False)
 
+        self.run_blocker_label = QLabel("")
+        self.run_blocker_label.setObjectName("WarningText")
+        self.run_blocker_label.setWordWrap(True)
+        self.run_blocker_label.setAccessibleName("Why Run Alignment Is Unavailable")
+        self.run_blocker_label.setVisible(False)
+
         left_layout.addLayout(run_layout)
+        left_layout.addWidget(self.run_blocker_label)
         left_layout.addWidget(self.prediction_phase_label)
         left_layout.addWidget(self.prediction_progress_label)
         left_layout.addWidget(self.prediction_elapsed_label)
@@ -3192,6 +3354,11 @@ class DeepSliceMainWindow(QMainWindow):
         left_layout.addWidget(self.prediction_direction_label)
         left_layout.addLayout(console_tools)
         left_layout.addWidget(self.console_output, stretch=1)
+        # Absorbs spare height while the console is hidden so the progress labels
+        # stay grouped at the top instead of being spread down the page.
+        self.prediction_filler = QWidget()
+        left_layout.addWidget(self.prediction_filler, stretch=1)
+        self.console_toggle.toggled.connect(lambda v: self.prediction_filler.setVisible(not v))
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
@@ -4010,6 +4177,32 @@ class DeepSliceMainWindow(QMainWindow):
                 font-family: 'Segoe UI', 'Noto Sans', sans-serif;
                 font-size: 10pt;
             }
+            #GuideBanner {
+                background: #12202F;
+                border: 1px solid #1F6CB8;
+                border-radius: 8px;
+            }
+            #GuideTitle {
+                background: transparent;
+                color: #9CC4FF;
+                font-weight: 700;
+                font-size: 11pt;
+            }
+            #GuideText {
+                background: transparent;
+                color: #DEE6EF;
+            }
+            #AdvancedOptionsToggle {
+                background: transparent;
+                border: none;
+                color: #9CC4FF;
+                font-weight: 600;
+                padding: 6px 2px;
+                text-align: left;
+            }
+            #AdvancedOptionsContainer {
+                background: transparent;
+            }
             #TopBar {
                 background: #1A1F26;
                 border-radius: 10px;
@@ -4140,6 +4333,32 @@ class DeepSliceMainWindow(QMainWindow):
                 color: #1A2733;
                 font-family: 'Segoe UI', 'Noto Sans', sans-serif;
                 font-size: 10pt;
+            }
+            #GuideBanner {
+                background: #EAF2FF;
+                border: 1px solid #1F6CB8;
+                border-radius: 8px;
+            }
+            #GuideTitle {
+                background: transparent;
+                color: #1F5FA8;
+                font-weight: 700;
+                font-size: 11pt;
+            }
+            #GuideText {
+                background: transparent;
+                color: #1B2430;
+            }
+            #AdvancedOptionsToggle {
+                background: transparent;
+                border: none;
+                color: #1F5FA8;
+                font-weight: 600;
+                padding: 6px 2px;
+                text-align: left;
+            }
+            #AdvancedOptionsContainer {
+                background: transparent;
             }
             #TopBar {
                 background: #E7EEF7;
@@ -4344,6 +4563,8 @@ class DeepSliceMainWindow(QMainWindow):
                         else None
                     ),
                 )
+
+        self._update_step_guidance()
 
         completed_count = max(0, max_unlocked)
         percent = int((completed_count / len(self.STEP_LABELS)) * 100)
@@ -4617,9 +4838,21 @@ class DeepSliceMainWindow(QMainWindow):
         self.legacy_parsing_checkbox.setChecked(checked)
         self._refresh_ingestion_views()
 
+    def _toggle_advanced_options(self, visible: bool):
+        self.advanced_options_container.setVisible(visible)
+        self.advanced_options_toggle.setText(
+            "v Advanced options (optional - defaults work for most data)"
+            if visible
+            else "> Advanced options (optional - defaults work for most data)"
+        )
+
     def _toggle_tech_insights(self, visible: bool):
         self.tech_insights.setVisible(visible)
-        self.tech_toggle.setText("v Technical Insights" if visible else "> Technical Insights")
+        self.tech_toggle.setText(
+            "v Technical Insights (how angles and thickness are estimated)"
+            if visible
+            else "> Technical Insights (how angles and thickness are estimated)"
+        )
 
     def _toggle_console(self, visible: bool):
         self.console_output.setVisible(visible)
@@ -4909,6 +5142,14 @@ class DeepSliceMainWindow(QMainWindow):
     def _update_run_button_state(self):
         errors, _ = self._validate_before_prediction()
         self.run_alignment_button.setEnabled(len(errors) == 0)
+        if hasattr(self, "run_blocker_label"):
+            if errors:
+                blocker = "Run Alignment is unavailable: " + "; ".join(errors[:3])
+                self.run_blocker_label.setText(blocker)
+                self.run_alignment_button.setToolTip(blocker)
+            else:
+                self.run_alignment_button.setToolTip("Estimate where each section sits in the atlas")
+            self.run_blocker_label.setVisible(bool(errors))
         if len(errors) == 0:
             self.config_validation_label.setText("Validation: ready")
         else:
@@ -7831,7 +8072,7 @@ class DeepSliceMainWindow(QMainWindow):
             cudnn_version = build_info.get("cudnn_version", "unknown")
 
             mode = "GPU" if len(gpus) > 0 else "CPU"
-            self.hardware_mode_label.setText(f"Mode: {mode}")
+            self.hardware_mode_label.setText(f"Runs on: {mode}")
 
             lines = [
                 f"Mode: {mode}",
@@ -7855,7 +8096,7 @@ class DeepSliceMainWindow(QMainWindow):
         except (ImportError, ModuleNotFoundError):
             import platform
             mode = "CPU (Lightweight)"
-            self.hardware_mode_label.setText(f"Mode: {mode}")
+            self.hardware_mode_label.setText(f"Runs on: {mode}")
             lines = [
                 f"Mode: {mode}",
                 "TensorFlow: Not loaded (running in lightweight CPU fallback mode)",
@@ -7881,6 +8122,7 @@ class DeepSliceMainWindow(QMainWindow):
             cuda_version = build_info.get("cuda_version", "unknown")
             cudnn_version = build_info.get("cudnn_version", "unknown")
             self.hardware_mode_label.setToolTip(
+                "GPU runs alignment much faster; CPU works but is slower.\n"
                 f"Mode: {mode}\n"
                 f"TensorFlow: {tf.__version__}\n"
                 f"CUDA: {cuda_version}\n"
@@ -7888,8 +8130,10 @@ class DeepSliceMainWindow(QMainWindow):
             )
         except Exception:
             mode = "CPU"
-            self.hardware_mode_label.setToolTip("Hardware info not available")
-        self.hardware_mode_label.setText(f"Mode: {mode}")
+            self.hardware_mode_label.setToolTip(
+                "Hardware info not available. CPU mode works but alignment is slower than on a GPU."
+            )
+        self.hardware_mode_label.setText(f"Runs on: {mode}")
         self._update_processing_estimate()
 
     def _refresh_all_views(self):

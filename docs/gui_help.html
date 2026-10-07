@@ -71,11 +71,11 @@
 
     <nav>
       <a href="#global">Global</a>
-      <a href="#ingestion">Ingestion</a>
-      <a href="#configuration">Configuration</a>
-      <a href="#prediction">Prediction</a>
-      <a href="#curation">Curation</a>
-      <a href="#export">Export</a>
+      <a href="#ingestion">1. Add images</a>
+      <a href="#configuration">2. Settings</a>
+      <a href="#prediction">3. Run alignment</a>
+      <a href="#curation">4. Review &amp; fix</a>
+      <a href="#export">5. Export</a>
     </nav>
 
     <section>
@@ -91,8 +91,9 @@
     </section>
 
     <section id="ingestion">
-      <h2>Step 1: Ingestion</h2>
+      <h2>Step 1: Add images</h2>
       <ul>
+        <li>Follow the blue guidance banner at the top of each step; its Next button unlocks the next step.</li>
         <li>Add files/folders or drag and drop.</li>
         <li>Use naming helper for _sXXX index parsing.</li>
         <li>Use sorting/filter to inspect large sets quickly.</li>
@@ -101,17 +102,18 @@
     </section>
 
     <section id="configuration">
-      <h2>Step 2: Configuration</h2>
+      <h2>Step 2: Settings</h2>
       <ul>
         <li>Select species and review atlas preview card.</li>
         <li>Set thickness manually or auto-estimate.</li>
+        <li>Advanced options (prediction modes, quality, preprocessing, training) are collapsed by default; the defaults suit most data.</li>
         <li>Use Validate Configuration before prediction.</li>
         <li>Read ensemble help for speed vs stability tradeoff.</li>
       </ul>
     </section>
 
     <section id="prediction">
-      <h2>Step 3: Prediction</h2>
+      <h2>Step 3: Run alignment</h2>
       <ul>
         <li>Run Alignment to start inference.</li>
         <li>Use Cancel Alignment to stop at a safe batch boundary.</li>
@@ -121,7 +123,7 @@
     </section>
 
     <section id="curation">
-      <h2>Step 4: Curation</h2>
+      <h2>Step 4: Review &amp; fix</h2>
       <ul>
         <li>Review confidence colors and linearity plot.</li>
         <li>Use context menu or space key to toggle bad flags.</li>

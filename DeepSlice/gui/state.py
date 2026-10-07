@@ -54,6 +54,20 @@ class PartialPredictionAvailable(RuntimeError):
         self.reason = str(reason)
 
 
+def _finite_float(value, fallback: float) -> float:
+    """Return ``value`` as a finite float, else ``fallback``.
+
+    Session files are hand-editable JSON, and Python's parser accepts ``NaN``
+    and ``Infinity``; ``np.clip`` passes NaN straight through, so a bad value
+    would otherwise reach settings that are then used unvalidated.
+    """
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return float(fallback)
+    return result if np.isfinite(result) else float(fallback)
+
+
 @dataclass
 class DeepSliceAppState:
     is_dirty: bool = False
@@ -1508,25 +1522,22 @@ class DeepSliceAppState:
         ).strip().lower()
         self.quality_gate_enabled = bool(payload.get("quality_gate_enabled", self.quality_gate_enabled))
         self.min_resolution_px = int(max(64, int(payload.get("min_resolution_px", self.min_resolution_px))))
-        self.blur_variance_threshold = float(
-            payload.get("blur_variance_threshold", self.blur_variance_threshold)
+        self.blur_variance_threshold = _finite_float(
+            payload.get("blur_variance_threshold"), self.blur_variance_threshold
         )
-        self.dark_intensity_threshold = float(
-            payload.get("dark_intensity_threshold", self.dark_intensity_threshold)
+        self.dark_intensity_threshold = _finite_float(
+            payload.get("dark_intensity_threshold"), self.dark_intensity_threshold
         )
-        self.bright_intensity_threshold = float(
-            payload.get("bright_intensity_threshold", self.bright_intensity_threshold)
+        self.bright_intensity_threshold = _finite_float(
+            payload.get("bright_intensity_threshold"), self.bright_intensity_threshold
         )
-        self.saturated_fraction_threshold = float(
-            payload.get("saturated_fraction_threshold", self.saturated_fraction_threshold)
+        self.saturated_fraction_threshold = _finite_float(
+            payload.get("saturated_fraction_threshold"), self.saturated_fraction_threshold
         )
-        self.artifact_blank_fraction_threshold = float(
-            payload.get("artifact_blank_fraction_threshold", self.artifact_blank_fraction_threshold)
+        self.artifact_blank_fraction_threshold = _finite_float(
+            payload.get("artifact_blank_fraction_threshold"), self.artifact_blank_fraction_threshold
         )
-        try:
-            gamma_value = float(payload.get("gamma_correction", self.gamma_correction))
-        except Exception:
-            gamma_value = float(self.gamma_correction)
+        gamma_value = _finite_float(payload.get("gamma_correction"), self.gamma_correction)
         self.gamma_correction = float(np.clip(gamma_value, 0.5, 2.0))
         self.bilateral_denoise_enabled = bool(
             payload.get("bilateral_denoise_enabled", self.bilateral_denoise_enabled)
@@ -1550,36 +1561,24 @@ class DeepSliceAppState:
         self.training_group_mode = self._normalize_training_group_mode(
             payload.get("training_group_mode", self.training_group_mode)
         )
-        try:
-            self.training_train_fraction = float(
-                np.clip(float(payload.get("training_train_fraction", self.training_train_fraction)), 0.50, 0.90)
-            )
-        except Exception:
-            pass
-        try:
-            self.training_val_fraction = float(
-                np.clip(float(payload.get("training_val_fraction", self.training_val_fraction)), 0.05, 0.40)
-            )
-        except Exception:
-            pass
+        self.training_train_fraction = float(
+            np.clip(_finite_float(payload.get("training_train_fraction"), self.training_train_fraction), 0.50, 0.90)
+        )
+        self.training_val_fraction = float(
+            np.clip(_finite_float(payload.get("training_val_fraction"), self.training_val_fraction), 0.05, 0.40)
+        )
         if self.training_train_fraction + self.training_val_fraction >= 0.99:
             self.training_val_fraction = max(0.05, 0.98 - self.training_train_fraction)
         try:
             self.training_patience = int(max(1, int(payload.get("training_patience", self.training_patience))))
         except Exception:
             pass
-        try:
-            self.training_lr_factor = float(
-                np.clip(float(payload.get("training_lr_factor", self.training_lr_factor)), 0.05, 0.95)
-            )
-        except Exception:
-            pass
-        try:
-            self.training_min_lr = float(
-                np.clip(float(payload.get("training_min_lr", self.training_min_lr)), 1e-8, 1e-3)
-            )
-        except Exception:
-            pass
+        self.training_lr_factor = float(
+            np.clip(_finite_float(payload.get("training_lr_factor"), self.training_lr_factor), 0.05, 0.95)
+        )
+        self.training_min_lr = float(
+            np.clip(_finite_float(payload.get("training_min_lr"), self.training_min_lr), 1e-8, 1e-3)
+        )
         self.training_use_mixed_precision = bool(
             payload.get("training_use_mixed_precision", self.training_use_mixed_precision)
         )

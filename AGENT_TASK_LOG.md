@@ -12,6 +12,24 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-07 UTC - First-run intuitiveness pass (guided steps, plain labels, collapsed advanced settings)
+Status: **done, added to draft PR #33 (not merged)**
+
+**Problems found (screenshots of every page, offscreen).** No hint of what to do on each page or what comes next; step names were jargon (Ingestion/Curation); Settings page showed ~40 tuning controls at once (and was taller than a normal screen); three top-bar buttons were identical icon-only "i" glyphs; "Run Alignment" was disabled with no explanation; Prediction labels were spread down the page; "Legacy parser fallback"/"Pre-flight Options" were unclear.
+
+**Changes.** (1) Blue guidance banner above every step with headline, what to do, live status (images loaded) and an enabled-when-unlocked "Next" button; locked steps explain why in a tooltip. (2) Steps renamed "1. Add images / 2. Settings / 3. Run alignment / 4. Review & fix / 5. Export". (3) Prediction modes, quality, preprocessing and training toolkit moved behind a collapsed "Advanced options" toggle; Technical Insights collapsed by default. (4) Orange "Run Alignment is unavailable: ..." line plus tooltip; progress labels grouped at top. (5) Top-bar Shortcuts/Preferences/About show text; "Mode: CPU" became "Runs on: CPU" with a plain tooltip; ingestion options relabelled. Tutorial and gui_help HTML updated. Separate commit: removed the conflicting `[project]` table from pyproject.toml so `pip install -e .` works.
+
+**Validation.** New `tests/test_guided_workflow_ux.py` (7 tests); 18 + 47 + 35 + 33 existing GUI/session tests pass offscreen. Note: on Python 3.12 `pip install -e .[dev]` still cannot resolve `tensorflow<2.16` (no cp312 wheels); 3.11 resolves.
+
+### 2026-10-07 UTC - Session load: non-finite and malformed numeric settings no longer corrupt state
+Status: **done, draft PR opened (not merged, per coordinator)**
+
+**Problem.** `load_session_dict` clipped training fractions / LR / gamma with `np.clip`, which passes NaN through (Python's JSON parser accepts `NaN`/`Infinity`), and the five quality thresholds used bare `float(...)`, so one malformed value raised mid-load and left state half-applied.
+
+**Fix.** One `_finite_float(value, fallback)` helper in `gui/state.py`; gamma, the four training floats and the five thresholds now keep their current value on NaN/inf/garbage and the load continues.
+
+**Validation.** New `test_load_session_ignores_non_finite_and_malformed_numeric_settings` fails on the old code, passes now; 94 session/state tests pass (`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`, since libEGL is absent here so pytest-qt cannot import). Qt GUI tests not runnable in this sandbox.
+
 ### 2026-10-06 UTC - Curation page controls accessibility, tooltips, hand cursors, and usability ergonomics
 Status: **done**
 

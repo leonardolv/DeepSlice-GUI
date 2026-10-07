@@ -2,13 +2,8 @@
 requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "DeepSlice"
-dynamic = ["version"]
-requires-python = ">=3.9,<3.13"
-
-[tool.setuptools]
-include-package-data = true
+# Project metadata lives in setup.py (single source of truth); a [project]
+# table here conflicts with it (setup.py already sets include_package_data) and breaks `pip install -e .[dev]`.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

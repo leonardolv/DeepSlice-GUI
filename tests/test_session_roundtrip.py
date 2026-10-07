@@ -99,3 +99,39 @@ def test_invalid_species_falls_back_to_mouse():
     restored = DeepSliceAppState()
     restored.load_session_dict(payload)
     assert restored.species == "mouse"
+
+
+def test_load_session_ignores_non_finite_and_malformed_numeric_settings():
+    """NaN/inf/garbage numeric settings keep the current value and never abort the load."""
+    state = DeepSliceAppState()
+    names = (
+        "gamma_correction",
+        "training_train_fraction",
+        "training_val_fraction",
+        "training_lr_factor",
+        "training_min_lr",
+        "blur_variance_threshold",
+        "dark_intensity_threshold",
+        "bright_intensity_threshold",
+        "saturated_fraction_threshold",
+        "artifact_blank_fraction_threshold",
+    )
+    before = {name: getattr(state, name) for name in names}
+    state.load_session_dict(
+        {
+            "gamma_correction": float("nan"),
+            "training_train_fraction": float("inf"),
+            "training_val_fraction": float("nan"),
+            "training_lr_factor": "oops",
+            "training_min_lr": None,
+            "blur_variance_threshold": "not-a-number",
+            "dark_intensity_threshold": float("nan"),
+            "bright_intensity_threshold": float("-inf"),
+            "saturated_fraction_threshold": None,
+            "artifact_blank_fraction_threshold": [1],
+            "training_patience": 7,
+        }
+    )
+    for name, value in before.items():
+        assert getattr(state, name) == value, name
+    assert state.training_patience == 7  # later keys are still applied

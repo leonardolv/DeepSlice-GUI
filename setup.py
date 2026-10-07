@@ -45,7 +45,9 @@ setup(
         "scikit-image>=0.22",
         "scipy>=1.10",
         # Keras 3 (TF 2.16+) changed callback APIs we depend on; pin until tested.
-        "tensorflow>=2.13,<2.16",
+        "tensorflow>=2.13,<2.16; python_version < '3.12'",
+        # TF 2.15 has no cp312 wheels; 2.16 is the first release that does.
+        "tensorflow>=2.16,<2.17; python_version >= '3.12'",
         "h5py>=3.9",
         "requests>=2.31",
         "protobuf>=4.21",
