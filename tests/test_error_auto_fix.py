@@ -34,7 +34,10 @@ def _setup_py_tensorflow_pin() -> str:
     text = setup_path.read_text(encoding="utf-8")
     match = re.search(r'"(tensorflow[^"]*)"', text)
     assert match, "setup.py no longer declares a quoted tensorflow dependency spec"
-    return match.group(1)
+    # setup.py may append an environment marker ("; python_version < '3.12'")
+    # so Python 3.12 can use a TensorFlow release that has cp312 wheels; the
+    # first (marker-bearing) entry is the pin for the Python 3.9-3.11 path.
+    return match.group(1).split(";", 1)[0].strip()
 
 
 def test_tensorflow_install_spec_matches_setup_py_pin():
