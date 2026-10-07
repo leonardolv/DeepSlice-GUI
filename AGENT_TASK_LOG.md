@@ -12,6 +12,15 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-07 UTC - Session load: non-finite and malformed numeric settings no longer corrupt state
+Status: **done, draft PR opened (not merged, per coordinator)**
+
+**Problem.** `load_session_dict` clipped training fractions / LR / gamma with `np.clip`, which passes NaN through (Python's JSON parser accepts `NaN`/`Infinity`), and the five quality thresholds used bare `float(...)`, so one malformed value raised mid-load and left state half-applied.
+
+**Fix.** One `_finite_float(value, fallback)` helper in `gui/state.py`; gamma, the four training floats and the five thresholds now keep their current value on NaN/inf/garbage and the load continues.
+
+**Validation.** New `test_load_session_ignores_non_finite_and_malformed_numeric_settings` fails on the old code, passes now; 94 session/state tests pass (`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`, since libEGL is absent here so pytest-qt cannot import). Qt GUI tests not runnable in this sandbox.
+
 ### 2026-10-06 UTC - Curation page controls accessibility, tooltips, hand cursors, and usability ergonomics
 Status: **done**
 
