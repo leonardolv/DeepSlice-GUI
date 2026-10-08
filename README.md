@@ -96,6 +96,8 @@ Additional GUI capabilities:
 * Optional atlas-on-histology blend view with adjustable opacity for fast visual fit checks.
 * Composite per-slice confidence score that combines residual, angular consistency, spacing consistency, and Gaussian center weighting.
 * Drag-and-drop manual section reordering with undo/redo snapshots.
+* Small-screen friendly: pages scroll, the window can shrink to about 960 x 600, and the top bar switches to icon-only buttons when narrow.
+* Plain-language progress and error messages (what happened, what to try, where the log is), keyboard step navigation (Alt+Left / Alt+Right) and shortcut hints on the Review buttons.
 
 Run tests:
 

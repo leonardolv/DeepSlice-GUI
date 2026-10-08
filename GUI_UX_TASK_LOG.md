@@ -4,6 +4,12 @@
 
 ## Completed
 
+### Task: Usability pass round 2 - hierarchy, small-screen sizing, plain-language progress/errors, export clarity
+- **Completed**: 2026-10-07
+- **Changes**: see AGENT_TASK_LOG.md (same date). `DeepSlice/gui/main_window.py` (per-page scroll areas, staged top bar, grouped Review page with button roles, shared theme rules, plain-language progress and errors, QuickNII/export status, Alt+arrow step navigation, table sort fix), `tests/test_usability_round2.py`, docs.
+- **Verification**: `pytest tests/test_usability_round2.py` (18 passed) plus the existing GUI suites, offscreen.
+- **Status**: Completed
+
 ### Task: Enhance Curation Page Controls with Accessibility, Tooltips, Hand Cursors, and Usability Ergonomics
 - **Completed**: 2026-10-06
 - **Changes**:

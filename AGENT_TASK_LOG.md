@@ -12,6 +12,15 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-07 UTC - Usability pass round 2 (hierarchy, window sizing, plain-language errors, export clarity)
+Status: **done, draft PR opened (not merged)** - branch `claude/sleepy-heisenberg-41pb7g`
+
+**Found by rendering every page offscreen (1600x980 and 1366x768).** (1) Window minimum size was 1762x1203 px, i.e. unusable on any laptop and taller than a 1080p screen; (2) Review page was ~15 identical blue buttons, some icon-only; (3) unchecked check boxes were invisible and labels painted dark patches inside group boxes; (4) the "Detected Index"/"Status" table cells were scrambled/blank (sorting left on while populating); (5) banner button read "Review _fix" (the & was eaten as a mnemonic) and long guidance was clipped; (6) the sidebar highlight did not follow a programmatic page change, and New Session left the user on a now-locked page and kept the previous export for "Open in QuickNII"; (7) progress used "Phase 1/2" jargon and the console toggle was an unlabeled glyph; (8) errors showed "No automatic pattern match found" instead of the reason; (9) QuickNII path field had no explanation/validation and the open button was enabled before any export; (10) atlas control labels were clipped; (11) light theme summary banner was unreadable.
+
+**Fixes.** Per-page scroll areas + staged top bar (labels -> short title -> icons) + min 960x600 + initial size clamped to screen; Review page regrouped into four numbered boxes with primary/secondary/danger button roles, text on tool buttons and shortcut hints; shared theme rules (visible indicators, transparent labels); table populated with sorting off; plain-language progress headline, error dialog (reason + what to try + log path) and "Cannot Run Alignment Yet" bullet list; Export: persistent "Saved ..." list, grouped optional QuickNII section with found/not-found status and gated Open button; clickable drop area; Alt+Left/Right step navigation; theme-aware summary banner. Docs (tutorial, gui_help, README) updated.
+
+**Validation.** New `tests/test_usability_round2.py` (18 tests, headless, file dialogs patched). 64+96+74+40+77 existing tests pass; 3 pre-existing failures in `tests/test_neural_network_utils.py` are identical on origin/main (not caused by this change).
+
 ### 2026-10-07 UTC - First-run intuitiveness pass (guided steps, plain labels, collapsed advanced settings)
 Status: **done, added to draft PR #33 (not merged)**
 
