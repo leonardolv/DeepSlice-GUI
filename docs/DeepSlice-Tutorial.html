@@ -270,9 +270,9 @@ python -m pip install -e .</pre>
 <p>The application uses a left step navigator and a right content stack. Workflow order is strict and intentional.</p>
 
 <div class="grid-2">
-  <div class="card"><h4>Step Navigator</h4><p>1. Add images -> 2. Settings -> 3. Run alignment -> 4. Review &amp; fix -> 5. Export. Locked steps unlock as data becomes available; hover a locked step to see what unlocks it.</p></div>
+  <div class="card"><h4>Step Navigator</h4><p>1. Add images -> 2. Settings -> 3. Run alignment -> 4. Review &amp; fix -> 5. Export. Locked steps unlock as data becomes available; hover a locked step to see what unlocks it. The highlight always follows the page you are on, and <kbd>Alt</kbd>+<kbd>Right</kbd> / <kbd>Alt</kbd>+<kbd>Left</kbd> move to the next / previous step.</p></div>
   <div class="card"><h4>Guidance Banner</h4><p>The blue banner above every page says what to do on that step, reports your progress (for example how many images are loaded) and has a <em>Next</em> button that is enabled as soon as the next step is unlocked.</p></div>
-  <div class="card"><h4>Top Bar</h4><p><em>Runs on: CPU/GPU</em> (hover for what that means), Hardware Health, Save Session, Load Session / QuickNII, Shortcuts, Preferences, About, and the Errors menu (Open Error Log, Copy Last Error, Try Auto-Fix Last Error).</p></div>
+  <div class="card"><h4>Top Bar</h4><p><em>Runs on: CPU/GPU</em> (hover for what that means), Hardware Health, Save Session, Load Session / QuickNII, Shortcuts, Preferences, About, and the Errors menu (Open Error Log, Copy Last Error, Try Auto-Fix Last Error). On narrow windows (the window can shrink to about 960 x 600) the buttons become icons; hover for their names.</p></div>
   <div class="card"><h4>Status Prefixes</h4><p><code>✓</code> completed, <code>●</code> current, <code>◌</code> locked/pending.</p></div>
   <div class="card"><h4>Runtime Console</h4><p>Available in Prediction. Use when running alignment or debugging processing tasks.</p></div>
 </div>
@@ -432,7 +432,7 @@ python -m pip install -e .</pre>
   <div class="step-num">1</div>
   <div class="step-body">
     <h4>Flag problematic slices</h4>
-    <p>In the left slice list, check suspicious rows and click <em>Apply Bad Section Flags</em>.</p>
+    <p>In the left slice list, tick suspicious rows (or press <kbd>F</kbd> on the current one) and click <em>Apply flags</em> (<kbd>Ctrl</kbd>+<kbd>Enter</kbd>). The left column is grouped into numbered boxes; the filled blue button is the main action of each box, outlined buttons are secondary and the red-outlined <em>Reset All Flags</em> is destructive.</p>
   </div>
 </div>
 
@@ -533,7 +533,7 @@ python -m pip install -e .</pre>
   <div class="step-num">5</div>
   <div class="step-body">
     <h4>Open directly in QuickNII</h4>
-    <p>Set QuickNII path once in this panel, then click <em>Open in QuickNII</em> after a JSON export.</p>
+    <p>This part is optional: QuickNII is a separate program for hand-adjusting an alignment. Pick the QuickNII program once under <em>Fine-tune in QuickNII</em> (a status line tells you whether it was found), export a JSON file, then click <em>Open in QuickNII</em>. The button stays disabled, with the reason shown, until a JSON export exists. After every export the files that were written are listed under the Export button.</p>
   </div>
 </div>
 

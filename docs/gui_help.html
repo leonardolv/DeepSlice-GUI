@@ -81,7 +81,7 @@
     <section>
       <h2>Global Shortcuts</h2>
       <ul>
-        <li>Ctrl+1..Ctrl+5: jump to workflow steps</li>
+        <li>Ctrl+1..Ctrl+5: jump to workflow steps; Alt+Right / Alt+Left: next / previous step</li>
         <li>Ctrl+N: start a new session</li>
         <li>Ctrl+S: save session</li>
         <li>Ctrl+O: load session or QuickNII file</li>
@@ -94,10 +94,11 @@
       <h2>Step 1: Add images</h2>
       <ul>
         <li>Follow the blue guidance banner at the top of each step; its Next button unlocks the next step.</li>
-        <li>Add files/folders or drag and drop.</li>
+        <li>Add files/folders, drag and drop, or click the drop area to browse (Enter/Space also work when it is focused).</li>
         <li>Use naming helper for _sXXX index parsing.</li>
         <li>Use sorting/filter to inspect large sets quickly.</li>
-        <li>Check the index table for duplicates and parse warnings.</li>
+        <li>Check the index table for duplicates and parse warnings. The summary bar turns amber when there are warnings.</li>
+        <li>On a small screen the window can be shrunk to about 960 x 600; pages scroll and the top bar switches to icon-only buttons (hover for names).</li>
       </ul>
     </section>
 
@@ -117,18 +118,22 @@
       <ul>
         <li>Run Alignment to start inference.</li>
         <li>Use Cancel Alignment to stop at a safe batch boundary.</li>
-        <li>Monitor phase progress, elapsed time, and ETA.</li>
-        <li>Use console copy/clear for troubleshooting.</li>
+        <li>The bold sentence under the buttons says in plain words what is happening (for example "Predicting: section 2 of 5").</li>
+        <li>Monitor stage, sections done, elapsed time, and ETA.</li>
+        <li>Use "Show detailed log" (with Copy/Clear) for troubleshooting.</li>
+        <li>If a run fails the message gives the reason in one line plus what to try; the full traceback is under Show Details.</li>
       </ul>
     </section>
 
     <section id="curation">
       <h2>Step 4: Review &amp; fix</h2>
       <ul>
+        <li>The left column is split into numbered groups: 1. Mark sections that look wrong, 2. Order and notes, 3. Fix angles and spacing, 4. Anchor known sections (optional). The filled blue button is the main action of each group; outlined buttons are secondary; the red-outlined one (Reset All Flags) is destructive.</li>
+        <li>Shortcuts shown on the buttons: K / J previous / next section, F flag or unflag, A / D set / remove anchor, Ctrl+Enter apply flags.</li>
         <li>Review confidence colors and linearity plot.</li>
         <li>Use context menu or space key to toggle bad flags.</li>
-        <li>Apply outlier detection and angle/spacing tools.</li>
-        <li>Use Undo/Redo and confidence filtering for targeted edits.</li>
+        <li>Atlas overlay controls are in the "Atlas overlay" box; flip / rotate / scale / offset are behind "Adjust atlas position and size".</li>
+        <li>Use Undo/Redo and the Show filter for targeted edits.</li>
       </ul>
     </section>
 
@@ -137,7 +142,8 @@
       <ul>
         <li>Choose output format and base filename.</li>
         <li>Export writes primary format plus CSV sidecar.</li>
-        <li>Open folder / copy path for downstream workflows.</li>
+        <li>After exporting, the files that were written are listed under the buttons; use Open folder / Copy path for downstream workflows.</li>
+        <li>"Fine-tune in QuickNII" is optional: pick the QuickNII program once (a status line says whether it was found); "Open in QuickNII" unlocks after a JSON export and opens that file.</li>
         <li>Generate or preview PDF report with selectable sections.</li>
       </ul>
     </section>

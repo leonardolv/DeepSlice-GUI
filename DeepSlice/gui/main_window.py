@@ -17,6 +17,7 @@ from PySide6.QtCore import (
     QElapsedTimer,
     QPropertyAnimation,
     QSettings,
+    QSignalBlocker,
     QSize,
     Qt,
     QThreadPool,
@@ -66,6 +67,8 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPlainTextEdit,
     QRadioButton,
+    QScrollArea,
+    QSizePolicy,
     QSplashScreen,
     QSlider,
     QSplitter,
@@ -112,24 +115,27 @@ from .workers import FunctionWorker
 
 class DropArea(QFrame):
     pathsDropped = Signal(list)
+    clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.setObjectName("DropArea")
         self.setAccessibleName("Image and Folder Ingestion Drop Area")
-        self.setToolTip("Drag and drop images (JPG, PNG, TIFF) or folders here to ingest them")
+        self.setToolTip("Drag and drop images (JPG, PNG, TIFF) or folders here - or click to browse for files")
         self.setMinimumHeight(80)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setFocusPolicy(Qt.StrongFocus)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(4)
 
-        icon = QLabel("[ ]")
+        icon = QLabel("+")
         icon.setObjectName("DropIcon")
         icon.setAlignment(Qt.AlignCenter)
 
-        title = QLabel("Drag and Drop Images or Folders")
+        title = QLabel("Drop images or a folder here, or click to browse")
         title.setObjectName("DropTitle")
         subtitle = QLabel("Supports JPG, PNG, TIFF. Folder drops recurse into subfolders.")
         subtitle.setWordWrap(True)
@@ -138,6 +144,18 @@ class DropArea(QFrame):
         layout.addWidget(icon)
         layout.addWidget(title)
         layout.addWidget(subtitle)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and self.rect().contains(event.position().toPoint()):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
+            self.clicked.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -773,7 +791,13 @@ class DeepSliceMainWindow(QMainWindow):
         self._theme_name = self._load_theme_preference()
 
         self.setWindowTitle(self._window_title_base)
-        self.resize(1600, 980)
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            self.resize(min(1600, max(900, avail.width() - 40)), min(980, max(600, avail.height() - 60)))
+        else:
+            self.resize(1600, 980)
+        self.setMinimumSize(960, 600)
         self.setWindowIcon(app_icon or _build_deepslice_icon())
 
         self._notify_startup_progress("Preparing user interface", 12)
@@ -878,7 +902,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.completion_label = QLabel("0% Complete")
         self.completion_label.setObjectName("CompletionLabel")
         self.collapse_sidebar_button = QPushButton("<<")
-        self.collapse_sidebar_button.setFixedWidth(30)
+        self.collapse_sidebar_button.setFixedWidth(34)
+        self.collapse_sidebar_button.setStyleSheet("padding: 6px 0px;")
+        self.collapse_sidebar_button.setAccessibleName("Hide or Show Step List")
+        self.collapse_sidebar_button.setToolTip("Hide or show the step list")
+        self.collapse_sidebar_button.setCursor(Qt.PointingHandCursor)
         self.collapse_sidebar_button.clicked.connect(self._toggle_sidebar)
         self.sidebar_header.addWidget(self.completion_label)
         self.sidebar_header.addStretch()
@@ -895,15 +923,25 @@ class DeepSliceMainWindow(QMainWindow):
         sidebar_layout.addWidget(self.step_list, stretch=1)
 
         self.stack = QStackedWidget()
-        self.stack.addWidget(self._build_ingestion_page())
-        self.stack.addWidget(self._build_configuration_page())
-        self.stack.addWidget(self._build_prediction_page())
-        self.stack.addWidget(self._build_curation_page())
-        self.stack.addWidget(self._build_export_page())
+        # Each page lives in its own scroll area so a page's natural size no longer
+        # sets the window's minimum size (the Review page alone needed 1430x1044
+        # px, which made the whole window unusable on a laptop screen).
+        self.page_scroll_areas = []
+        for builder in (
+            self._build_ingestion_page,
+            self._build_configuration_page,
+            self._build_prediction_page,
+            self._build_curation_page,
+            self._build_export_page,
+        ):
+            self.page_scroll_areas.append(self._wrap_page_in_scroll_area(builder()))
+            self.stack.addWidget(self.page_scroll_areas[-1])
 
         # Connect navigation after stack exists because setCurrentRow emits currentRowChanged.
         self.step_list.currentRowChanged.connect(self._on_step_changed)
-        self.stack.currentChanged.connect(lambda _i: self._update_step_guidance())
+        # Any page change (sidebar, Next button, shortcut or code) refreshes the
+        # banner and keeps the sidebar highlight on the page actually shown.
+        self.stack.currentChanged.connect(self._on_stack_page_changed)
         self.step_list.setCurrentRow(0)
 
         self.guide_banner = self._build_guide_banner()
@@ -941,6 +979,23 @@ class DeepSliceMainWindow(QMainWindow):
         self.status_bar.addPermanentWidget(self.global_progress)
         self.toast_overlay = ToastOverlay(self)
 
+    @staticmethod
+    def _wrap_page_in_scroll_area(page: QWidget) -> QScrollArea:
+        area = QScrollArea()
+        area.setWidgetResizable(True)
+        area.setFrameShape(QFrame.NoFrame)
+        area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        area.setWidget(page)
+        return area
+
+    def _on_stack_page_changed(self, index: int):
+        if 0 <= index < self.step_list.count() and self.step_list.currentRow() != index:
+            blocker = QSignalBlocker(self.step_list)
+            self.step_list.setCurrentRow(index)
+            del blocker
+        self._refresh_step_states()
+
     def _build_guide_banner(self) -> QFrame:
         banner = QFrame()
         banner.setObjectName("GuideBanner")
@@ -956,6 +1011,9 @@ class DeepSliceMainWindow(QMainWindow):
         self.guide_text_label = QLabel("")
         self.guide_text_label.setObjectName("GuideText")
         self.guide_text_label.setWordWrap(True)
+        # Reserve two lines: a label that re-wraps after its text changes was
+        # being clipped by the banner (long guidance + status sentence).
+        self.guide_text_label.setMinimumHeight(self.guide_text_label.fontMetrics().lineSpacing() * 2 + 4)
         text_column.addWidget(self.guide_title_label)
         text_column.addWidget(self.guide_text_label)
 
@@ -973,6 +1031,11 @@ class DeepSliceMainWindow(QMainWindow):
     def _go_to_next_step(self):
         target = self.stack.currentIndex() + 1
         if target < self.step_list.count() and target <= self._max_unlocked_step():
+            self.step_list.setCurrentRow(target)
+
+    def _go_to_previous_step(self):
+        target = self.stack.currentIndex() - 1
+        if target >= 0:
             self.step_list.setCurrentRow(target)
 
     def _guide_status_line(self, index: int) -> str:
@@ -1008,11 +1071,12 @@ class DeepSliceMainWindow(QMainWindow):
         else:
             self.guide_next_button.setVisible(True)
             next_name = self.STEP_LABELS[next_index].split(". ", 1)[-1]
-            self.guide_next_button.setText(f"Next: {next_name}  >")
+            # "&" would be eaten as a keyboard-mnemonic marker ("Review & fix" -> "Review _fix").
+            self.guide_next_button.setText(f"Next: {next_name}  >".replace("&", "&&"))
             unlocked = next_index <= max_unlocked
             self.guide_next_button.setEnabled(unlocked)
             self.guide_next_button.setToolTip(
-                f"Continue to {next_name}"
+                f"Continue to {next_name} (Alt+Right)"
                 if unlocked
                 else self.STEP_LOCKED_REASON.get(next_index, "Complete this step first.")
             )
@@ -1023,6 +1087,10 @@ class DeepSliceMainWindow(QMainWindow):
                 item.setToolTip(self.STEP_GUIDE[idx][0])
             else:
                 item.setToolTip("Locked - " + self.STEP_LOCKED_REASON.get(idx, "complete earlier steps first."))
+
+        # Re-wrapped guidance can need more height than the banner last had.
+        self.guide_banner.layout().invalidate()
+        self.guide_banner.updateGeometry()
 
     def _set_global_busy(self, busy: bool):
         self.top_task_progress.setVisible(bool(busy))
@@ -1330,6 +1398,22 @@ class DeepSliceMainWindow(QMainWindow):
                         f"Interactive {widget.__class__.__name__}"
                     )
 
+    def _set_summary_banner_kind(self, kind: str):
+        self._summary_banner_kind = kind
+        self.ingestion_summary_banner.setStyleSheet(self._summary_banner_style(kind))
+
+    def _summary_banner_style(self, kind: str) -> str:
+        """Inline banner colours that follow the active theme (the old dark-only ones were unreadable in light)."""
+        dark = self._theme_name == "dark"
+        palette = {
+            "neutral": ("#1A1F26", "#2A313B", "#DEE6EF") if dark else ("#E7EEF7", "#C4D2E1", "#1B2B3D"),
+            "ok": ("#234033", "#2F6E52", "#DDF7EA") if dark else ("#DDF3E8", "#5FAF8A", "#145236"),
+            "warn": ("#4A3A12", "#A26B1D", "#FFE9B8") if dark else ("#FFF1D1", "#D39A3A", "#6B4300"),
+            "error": ("#5A1F2A", "#A43344", "#F9DDE3") if dark else ("#FFE0E5", "#C46A78", "#7A1526"),
+        }
+        bg, border, fg = palette[kind]
+        return f"QLabel {{ background: {bg}; border: 1px solid {border}; border-radius: 8px; padding: 6px; color: {fg}; }}"
+
     def _toggle_sidebar(self):
         is_visible = self.step_list.isVisible()
         self.step_list.setVisible(not is_visible)
@@ -1479,7 +1563,57 @@ class DeepSliceMainWindow(QMainWindow):
         layout.addWidget(self.preferences_button)
         layout.addWidget(self.about_button)
         layout.addWidget(self.error_menu_button)
+        self.top_bar_frame = frame
+        self._top_bar_compact = False
+        self._top_bar_stage = 0
+        # Ignored horizontally: the bar may be narrower than its labels (it then
+        # switches to icon-only buttons) instead of forcing a ~1750 px window.
+        frame.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         return frame
+
+    def _top_bar_text_buttons(self):
+        return [
+            self.hardware_button,
+            self.new_session_button,
+            self.save_session_button,
+            self.load_session_button,
+            self.error_menu_button,
+        ]
+
+    def _apply_top_bar_stage(self, stage: int):
+        """0 = full labels, 1 = shorter title (hardware text hidden), 2 = icon-only buttons."""
+        icon_only = stage >= 2
+        for button in self._top_bar_text_buttons():
+            if icon_only and button.text():
+                button.setProperty("_full_text", button.text())
+                button.setText("")
+            elif not icon_only and not button.text():
+                button.setText(str(button.property("_full_text") or ""))
+        for button in (self.shortcut_help_button, self.preferences_button, self.about_button):
+            button.setToolButtonStyle(
+                Qt.ToolButtonIconOnly if icon_only else Qt.ToolButtonTextBesideIcon
+            )
+        self.hardware_mode_label.setVisible(stage < 1)
+        self.project_label.setText(
+            f"DeepSlice Desktop v{self.app_version}" if stage < 1 else "DeepSlice"
+        )
+
+    def _update_top_bar_compact(self):
+        """Shrink the top bar in steps until it fits, instead of forcing a ~1750 px window."""
+        frame = getattr(self, "top_bar_frame", None)
+        if frame is None or frame.width() <= 0:
+            return
+        layout = frame.layout()
+        chosen = 2
+        for stage in (0, 1, 2):
+            self._apply_top_bar_stage(stage)
+            layout.invalidate()
+            layout.activate()
+            if layout.sizeHint().width() <= frame.width():
+                chosen = stage
+                break
+        self._top_bar_stage = chosen
+        self._top_bar_compact = chosen >= 2
 
     def _update_recent_sessions_menu(self):
         settings = self._settings
@@ -1905,6 +2039,14 @@ class DeepSliceMainWindow(QMainWindow):
             shortcut.activated.connect(lambda index=i: self.step_list.setCurrentRow(index))
             self._shortcuts.append(shortcut)
 
+        next_step_shortcut = QShortcut(QKeySequence("Alt+Right"), self)
+        next_step_shortcut.activated.connect(self._go_to_next_step)
+        self._shortcuts.append(next_step_shortcut)
+
+        prev_step_shortcut = QShortcut(QKeySequence("Alt+Left"), self)
+        prev_step_shortcut.activated.connect(self._go_to_previous_step)
+        self._shortcuts.append(prev_step_shortcut)
+
         help_shortcut = QShortcut(QKeySequence("Ctrl+/"), self)
         help_shortcut.activated.connect(self._show_shortcuts_help)
         self._shortcuts.append(help_shortcut)
@@ -1969,6 +2111,7 @@ class DeepSliceMainWindow(QMainWindow):
         text = (
             "Keyboard Shortcuts:\n\n"
             "Ctrl+1 to Ctrl+5 : Navigate between pages\n"
+            "Alt+Right / Alt+Left : Next / previous step\n"
             "Ctrl+N : New session\n"
             "Ctrl+S : Save session\n"
             "Ctrl+O : Load session\n"
@@ -2091,7 +2234,9 @@ class DeepSliceMainWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, "toast_overlay"):
             self.toast_overlay._reposition()
-        
+        # Child geometry is not final yet inside resizeEvent; measure on the next turn.
+        QTimer.singleShot(0, self._update_top_bar_compact)
+
     def _reset_session(self):
         if getattr(self.state, "is_dirty", False):
             reply = QMessageBox.question(
@@ -2106,6 +2251,9 @@ class DeepSliceMainWindow(QMainWindow):
         self._baseline_predictions = None
         self._curation_modified = False
         self._anchor_depth_targets = {}
+        self.last_export_basepath = None
+        if hasattr(self, "export_result_label"):
+            self.export_result_label.setVisible(False)
         self._session_base_text = "Session: New"
         self._apply_state_to_widgets()
         self._update_session_status()
@@ -2278,6 +2426,33 @@ class DeepSliceMainWindow(QMainWindow):
                 icon=QMessageBox.Warning,
             )
 
+    @staticmethod
+    def _plain_error_message(context: str, error_text: str, analysis: dict, log_path: str) -> str:
+        """Plain-language error text: what failed, why (last line), what to try, where the log is.
+
+        The raw traceback stays under "Show Details"; people read the first lines only.
+        """
+        lines = [ln.strip() for ln in str(error_text or "").splitlines() if ln.strip()]
+        reason = lines[-1] if lines else "No further details were reported."
+        if len(reason) > 240:
+            reason = reason[:237] + "..."
+        lower = str(error_text or "").lower()
+        tips: List[str] = []
+        if "out of memory" in lower or "oom" in lower.split() or "resource exhausted" in lower:
+            tips.append("The computer ran out of memory: close other programs, or lower the batch size under Settings > Advanced options.")
+        if "no such file" in lower or "filenotfounderror" in lower:
+            tips.append("A file was moved or deleted: re-add the images in step 1 and try again.")
+        tips.extend(str(r) for r in (analysis.get("recommendations") or [])[:2])
+        if not tips:
+            tips.append("Try again. If it keeps failing, use Errors > Copy Last Error and send the report to whoever supports your setup.")
+        tips_text = "\n".join(f"- {t}" for t in tips[:3])
+        return (
+            f"{context}.\n\n"
+            f"What went wrong: {reason}\n\n"
+            f"What you can try:\n{tips_text}\n\n"
+            f"Your images and settings are unchanged. Full details are saved in:\n{log_path}"
+        )
+
     def _show_logged_error(
         self,
         title: str,
@@ -2294,11 +2469,7 @@ class DeepSliceMainWindow(QMainWindow):
         message_box.setWindowTitle(title)
         message_box.setIcon(icon)
         message_box.setText(
-            (
-                f"{context}\n\n"
-                f"Details have been written to:\n{self.error_log_path}\n\n"
-                f"Analysis: {analysis.get('summary', 'No automatic pattern match found.')}"
-            )
+            self._plain_error_message(context, error_text, analysis, self.error_log_path)
         )
         detail_blocks = [str(error_text)]
         if analysis_text:
@@ -2372,6 +2543,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.drop_area = DropArea()
         self.drop_area.pathsDropped.connect(self._handle_dropped_paths)
+        self.drop_area.clicked.connect(self._add_files)
         left_layout.addWidget(self.drop_area)
 
         button_row = QHBoxLayout()
@@ -2466,6 +2638,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.index_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.index_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.index_table.setSortingEnabled(True)
+        self.index_table.horizontalHeader().setSortIndicator(0, Qt.AscendingOrder)
         left_layout.addWidget(self.index_table, stretch=1)
 
         right = QWidget()
@@ -3258,8 +3431,12 @@ class DeepSliceMainWindow(QMainWindow):
         run_layout.addWidget(self.run_alignment_button, stretch=3)
         run_layout.addWidget(self.cancel_alignment_button, stretch=1)
 
-        self.prediction_phase_label = QLabel("Phase 0/1: idle")
-        self.prediction_progress_label = QLabel("Progress: 0 / 0")
+        self.prediction_status_headline = QLabel("")
+        self.prediction_status_headline.setObjectName("StatusLine")
+        self.prediction_status_headline.setAccessibleName("Alignment Status Summary")
+        self.prediction_status_headline.setWordWrap(True)
+        self.prediction_phase_label = QLabel("Stage: not started")
+        self.prediction_progress_label = QLabel("Sections done: 0 of 0")
         self.prediction_elapsed_label = QLabel("Elapsed: 00:00")
         self.prediction_eta_label = QLabel("Remaining: --:--")
         self.prediction_progress_bar = QProgressBar()
@@ -3288,7 +3465,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.console_toggle.setToolTip("Show or hide the runtime logging console")
         self.console_toggle.setCursor(Qt.PointingHandCursor)
         self.console_toggle.setCheckable(True)
-        self.console_toggle.setText("Show Runtime Console")
+        self.console_toggle.setText("Show detailed log")
+        self.console_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.console_toggle.toggled.connect(self._toggle_console)
 
         self.console_autoscroll_toggle = QToolButton()
@@ -3344,6 +3522,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         left_layout.addLayout(run_layout)
         left_layout.addWidget(self.run_blocker_label)
+        left_layout.addWidget(self.prediction_status_headline)
         left_layout.addWidget(self.prediction_phase_label)
         left_layout.addWidget(self.prediction_progress_label)
         left_layout.addWidget(self.prediction_elapsed_label)
@@ -3367,18 +3546,27 @@ class DeepSliceMainWindow(QMainWindow):
         self.prediction_slice_selector.currentIndexChanged.connect(
             self._refresh_prediction_preview
         )
-        right_layout.addWidget(self.prediction_slice_selector)
+        self.prediction_slice_selector.setAccessibleName("Section to Preview")
+        self.prediction_slice_selector.setToolTip("Choose which aligned section to show below")
+        selector_row = QHBoxLayout()
+        selector_label = QLabel("Section to preview:")
+        selector_label.setBuddy(self.prediction_slice_selector)
+        selector_row.addWidget(selector_label)
+        selector_row.addWidget(self.prediction_slice_selector, stretch=1)
+        right_layout.addLayout(selector_row)
 
         self.prediction_compare_checkbox = QCheckBox("Show Atlas Comparison")
         self.prediction_compare_checkbox.setChecked(True)
         self.prediction_compare_checkbox.setEnabled(False)
         self.prediction_compare_checkbox.setText("Atlas Comparison (always on)")
         self.prediction_compare_checkbox.toggled.connect(self._refresh_prediction_preview)
-        self.prediction_atlas_info_label = QLabel("Atlas comparison: waiting for prediction")
+        self.prediction_atlas_info_label = QLabel("The matching atlas section appears here after alignment.")
+        # Permanently on and disabled: it only looked like an option, so hide it.
+        self.prediction_compare_checkbox.setVisible(False)
         right_layout.addWidget(self.prediction_compare_checkbox)
         right_layout.addWidget(self.prediction_atlas_info_label)
 
-        self.preprocessing_preview_info_label = QLabel("Model input preview: waiting for selection")
+        self.preprocessing_preview_info_label = QLabel("The image as the model sees it appears here once alignment starts.")
         self.preprocessing_preview_info_label.setWordWrap(True)
         self.preprocessing_preview_label = QLabel()
         self.preprocessing_preview_label.setMinimumHeight(180)
@@ -3460,10 +3648,15 @@ class DeepSliceMainWindow(QMainWindow):
         list_header_layout.addWidget(self.curation_select_all_btn)
         list_header_layout.addWidget(self.curation_deselect_all_btn)
         list_header_layout.addStretch()
-        list_header_layout.addWidget(QLabel("Filter:"))
-        list_header_layout.addWidget(self.confidence_filter_combo)
-        
+
+        filter_row = QHBoxLayout()
+        filter_label = QLabel("Show:")
+        filter_label.setBuddy(self.confidence_filter_combo)
+        filter_row.addWidget(filter_label)
+        filter_row.addWidget(self.confidence_filter_combo, stretch=1)
+
         left_layout.addLayout(list_header_layout)
+        left_layout.addLayout(filter_row)
 
         self.slice_flag_list = FlagListWidget()
         self.slice_flag_list.setObjectName("slice_flag_list")
@@ -3703,25 +3896,50 @@ class DeepSliceMainWindow(QMainWindow):
         anchor_layout.addWidget(self.anchor_list)
         anchor_layout.addWidget(self.apply_anchor_interpolation_button)
 
+        self.slice_flag_list.setMinimumHeight(150)
         left_layout.addWidget(self.slice_flag_list, stretch=2)
+
+        flag_group = QGroupBox("1. Mark sections that look wrong")
+        flag_group.setObjectName("curation_flag_group")
+        flag_layout = QVBoxLayout(flag_group)
+        flag_hint = QLabel(
+            "Tick a section in the list (or press F) to mark it as bad, then apply the flags."
+        )
+        flag_hint.setObjectName("HintText")
+        flag_hint.setWordWrap(True)
+        flag_layout.addWidget(flag_hint)
+        find_row = QHBoxLayout()
+        find_row.addWidget(self.auto_flag_low_conf_button)
+        find_row.addWidget(self.detect_outliers_button)
+        flag_layout.addLayout(find_row)
+        mark_row = QHBoxLayout()
+        mark_row.addWidget(self.toggle_current_flag_button)
+        mark_row.addWidget(self.reset_flags_button)
+        flag_layout.addLayout(mark_row)
+        flag_layout.addWidget(self.apply_bad_sections_button)
+        flag_layout.addWidget(self.interpolate_bad_depth_button)
+        flag_layout.addWidget(self.curation_queue_label)
+
+        order_group = QGroupBox("2. Order and notes")
+        order_group.setObjectName("curation_order_group")
+        order_layout = QVBoxLayout(order_group)
         reorder_row = QHBoxLayout()
         reorder_row.addWidget(self.move_slice_up_button)
         reorder_row.addWidget(self.move_slice_down_button)
-        left_layout.addLayout(reorder_row)
-        left_layout.addWidget(self.apply_manual_order_button)
-        left_layout.addWidget(self.slice_note_edit)
-        left_layout.addWidget(self.save_slice_note_button)
-        left_layout.addWidget(self.apply_bad_sections_button)
-        left_layout.addWidget(self.detect_outliers_button)
-        left_layout.addWidget(self.reset_flags_button)
-        quick_action_row = QHBoxLayout()
-        quick_action_row.addWidget(self.auto_flag_low_conf_button)
-        quick_action_row.addWidget(self.interpolate_bad_depth_button)
-        quick_action_row.addWidget(self.toggle_current_flag_button)
-        left_layout.addLayout(quick_action_row)
-        left_layout.addWidget(self.curation_queue_label)
+        reorder_row.addWidget(self.apply_manual_order_button, stretch=1)
+        order_layout.addLayout(reorder_row)
+        note_row = QHBoxLayout()
+        note_row.addWidget(self.slice_note_edit, stretch=1)
+        note_row.addWidget(self.save_slice_note_button)
+        order_layout.addLayout(note_row)
+
+        controls_group.setTitle("3. Fix angles and spacing")
+        anchor_group.setTitle("4. Anchor known sections (optional)")
+        left_layout.addWidget(flag_group)
+        left_layout.addWidget(order_group)
         left_layout.addWidget(controls_group, stretch=1)
         left_layout.addWidget(anchor_group)
+        self._polish_curation_controls()
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
@@ -3768,7 +3986,6 @@ class DeepSliceMainWindow(QMainWindow):
         self.hist_axis = self.hist_figure.add_subplot(111)
         self.hist_canvas.setMinimumHeight(80)
 
-        atlas_controls = QHBoxLayout()
         self.enable_atlas_preview_checkbox = QCheckBox("Atlas volume preview")
         self.enable_atlas_preview_checkbox.setObjectName("enable_atlas_preview_checkbox")
         self.enable_atlas_preview_checkbox.setAccessibleName("Enable Atlas Preview")
@@ -3820,16 +4037,9 @@ class DeepSliceMainWindow(QMainWindow):
         self.atlas_coords_label = QLabel("Atlas coords: -")
         self.atlas_coords_label.setObjectName("atlas_coords_label")
 
-        atlas_controls.addWidget(self.enable_atlas_preview_checkbox)
-        atlas_controls.addWidget(QLabel("Volume"))
-        atlas_controls.addWidget(self.atlas_volume_combo)
-        atlas_controls.addWidget(self.enable_blend_overlay_checkbox)
-        atlas_controls.addWidget(self.blend_slider)
-        atlas_controls.addWidget(self.blend_percent_label)
-        atlas_controls.addWidget(self.before_after_toggle)
-        atlas_controls.addWidget(self.loupe_toggle)
-        atlas_controls.addWidget(self.atlas_coords_label)
-        atlas_controls.addWidget(self.atlas_slice_info_label, stretch=1)
+        self.enable_atlas_preview_checkbox.setText("Show atlas section")
+        atlas_volume_label = QLabel("Atlas volume:")
+        atlas_volume_label.setBuddy(self.atlas_volume_combo)
 
         atlas_transform_row = QHBoxLayout()
         self.atlas_flip_x_checkbox = QCheckBox("Flip X")
@@ -3961,9 +4171,52 @@ class DeepSliceMainWindow(QMainWindow):
         self.curation_vertical_split.setStretchFactor(1, 1)
         self.curation_vertical_split.setSizes([680, 230])
 
-        right_layout.addLayout(atlas_controls)
-        right_layout.addLayout(atlas_transform_row)
-        right_layout.addLayout(atlas_offset_row)
+        # Atlas controls: two always-visible rows (they used to be three crowded
+        # rows whose labels were clipped); position/scale tweaks sit behind a toggle.
+        atlas_group = QGroupBox("Atlas overlay")
+        atlas_group.setObjectName("atlas_overlay_group")
+        atlas_grid = QGridLayout(atlas_group)
+        atlas_grid.setHorizontalSpacing(10)
+        atlas_grid.setVerticalSpacing(4)
+        atlas_grid.addWidget(self.enable_atlas_preview_checkbox, 0, 0)
+        atlas_grid.addWidget(atlas_volume_label, 0, 1)
+        atlas_grid.addWidget(self.atlas_volume_combo, 0, 2)
+        atlas_grid.addWidget(self.enable_blend_overlay_checkbox, 1, 0)
+        atlas_grid.addWidget(self.blend_slider, 1, 1, 1, 2)
+        atlas_grid.addWidget(self.blend_percent_label, 1, 3)
+        atlas_grid.addWidget(self.before_after_toggle, 2, 0)
+        atlas_grid.addWidget(self.loupe_toggle, 2, 1)
+        atlas_grid.addWidget(self.atlas_coords_label, 2, 2, 1, 2)
+        atlas_grid.addWidget(self.atlas_slice_info_label, 3, 0, 1, 4)
+        atlas_grid.setColumnStretch(2, 1)
+
+        self.atlas_adjust_toggle = QToolButton()
+        self.atlas_adjust_toggle.setObjectName("atlas_adjust_toggle")
+        self.atlas_adjust_toggle.setAccessibleName("Show Atlas Position and Scale Adjustments")
+        self.atlas_adjust_toggle.setToolTip(
+            "Only needed when the atlas picture does not line up with the section: flip, rotate, scale or shift it."
+        )
+        self.atlas_adjust_toggle.setCursor(Qt.PointingHandCursor)
+        self.atlas_adjust_toggle.setCheckable(True)
+        self.atlas_adjust_toggle.setText("Adjust atlas position and size")
+        self.atlas_adjust_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.atlas_adjust_toggle.setArrowType(Qt.RightArrow)
+        self.atlas_adjust_container = QWidget()
+        adjust_layout = QVBoxLayout(self.atlas_adjust_container)
+        adjust_layout.setContentsMargins(0, 0, 0, 0)
+        adjust_layout.addLayout(atlas_transform_row)
+        adjust_layout.addLayout(atlas_offset_row)
+        self.atlas_adjust_container.setVisible(False)
+
+        def _toggle_atlas_adjust(expanded: bool):
+            self.atlas_adjust_container.setVisible(expanded)
+            self.atlas_adjust_toggle.setArrowType(Qt.DownArrow if expanded else Qt.RightArrow)
+
+        self.atlas_adjust_toggle.toggled.connect(_toggle_atlas_adjust)
+
+        right_layout.addWidget(atlas_group)
+        right_layout.addWidget(self.atlas_adjust_toggle)
+        right_layout.addWidget(self.atlas_adjust_container)
         right_layout.addWidget(self.confidence_panel_toggle)
         right_layout.addWidget(self.confidence_panel)
         right_layout.addWidget(self.curation_vertical_split, stretch=1)
@@ -3979,6 +4232,48 @@ class DeepSliceMainWindow(QMainWindow):
         self._update_anchor_depth_range()
         return page
 
+    def _polish_curation_controls(self):
+        """Give the Review page a visual hierarchy and discoverable shortcuts.
+
+        One primary (blue) action per group, secondary (outlined) for the rest and
+        a danger style for the destructive reset. Tool buttons show their text
+        next to the icon instead of an unlabeled glyph, and the keyboard shortcut
+        for each frequent action is shown on the button itself.
+        """
+        secondary = (
+            "apply_manual_order_button", "save_slice_note_button", "detect_outliers_button",
+            "auto_flag_low_conf_button", "interpolate_bad_depth_button",
+            "enforce_order_button", "enforce_spacing_button", "apply_manual_angles_button",
+            "undo_button", "redo_button",
+        )
+        for name in secondary:
+            getattr(self, name).setProperty("role", "secondary")
+        self.reset_flags_button.setProperty("role", "danger")
+
+        hints = {
+            "curation_prev_button": ("Prev (K)", "Go to the previous section (shortcut: K)"),
+            "curation_next_button": ("Next (J)", "Go to the next section (shortcut: J)"),
+            "curation_select_all_btn": ("Flag all", "Mark every visible section as bad (they stay in the list until you apply the flags)"),
+            "curation_deselect_all_btn": ("Unflag all", "Clear the bad mark from every visible section"),
+            "toggle_current_flag_button": ("Flag / unflag (F)", "Mark or unmark the section you are looking at (shortcut: F)"),
+            "set_anchor_button": ("Set anchor (A)", "Pin the selected section to the AP depth below (shortcut: A)"),
+            "remove_anchor_button": ("Remove anchor (D)", "Remove the pin from the selected section (shortcut: D)"),
+            "clear_anchor_button": ("Clear all", "Remove every anchor"),
+            "move_slice_up_button": ("Move up", "Move the selected section earlier in the series"),
+            "move_slice_down_button": ("Move down", "Move the selected section later in the series"),
+        }
+        for name, (text, tip) in hints.items():
+            button = getattr(self, name)
+            button.setText(text)
+            button.setToolTip(tip)
+            if isinstance(button, QToolButton):
+                button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.apply_bad_sections_button.setText("Apply flags (Ctrl+Enter)")
+        self.apply_bad_sections_button.setToolTip(
+            "Exclude the sections you marked from the alignment calculations (shortcut: Ctrl+Enter)"
+        )
+        self.reset_flags_button.setToolTip("Remove the bad mark from every section (this cannot be undone with Ctrl+Z)")
+
     def _build_export_page(self) -> QWidget:
         page = QWidget()
         split = QSplitter(Qt.Horizontal)
@@ -3993,6 +4288,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.output_dir_edit = QLineEdit()
         self.output_dir_edit.setAccessibleName("Export Output Directory")
         self.output_dir_edit.setToolTip("Directory where exported files and reports will be saved")
+        self.output_dir_edit.setPlaceholderText("Folder where the files will be saved")
         self.output_dir_edit.setText(self._get_persisted_export_path())
         self.output_dir_edit.textChanged.connect(self._persist_export_path)
         self.browse_output_dir_button = QPushButton("Browse")
@@ -4031,7 +4327,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         output_layout.addRow("Output Directory", output_dir_row)
         output_layout.addRow("Base Filename", self.output_basename_edit)
-        output_layout.addRow("Primary Export", output_format_row)
+        output_layout.addRow("File format", output_format_row)
         output_layout.addRow("Estimated Size", self.export_size_estimate_label)
 
         export_actions_layout = QHBoxLayout()
@@ -4123,6 +4419,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.open_quicknii_button.setToolTip("Launch exported series in QuickNII")
         self.open_quicknii_button.setCursor(Qt.PointingHandCursor)
         self.open_quicknii_button.clicked.connect(self._open_in_quicknii)
+        self.open_quicknii_button.setProperty("role", "secondary")
 
         self.summary_label = QLabel("Processed: 0 | Excluded: 0")
         self.summary_label.setAccessibleName("Export Processed Section Count Summary")
@@ -4133,12 +4430,44 @@ class DeepSliceMainWindow(QMainWindow):
         self.markers_label.setWordWrap(True)
         self.markers_label.setObjectName("WarningText")
 
+        self.export_result_label = QLabel("")
+        self.export_result_label.setObjectName("ExportStatusOk")
+        self.export_result_label.setAccessibleName("Last Export Result")
+        self.export_result_label.setWordWrap(True)
+        self.export_result_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.export_result_label.setVisible(False)
+
         left_layout.addWidget(output_group)
         left_layout.addLayout(export_actions_layout)
+        left_layout.addWidget(self.export_result_label)
         left_layout.addWidget(self.pdf_content_group)
         left_layout.addLayout(report_layout)
-        left_layout.addLayout(quicknii_row)
-        left_layout.addWidget(self.open_quicknii_button)
+        quicknii_group = QGroupBox("Fine-tune in QuickNII (optional)")
+        quicknii_group.setObjectName("quicknii_group")
+        quicknii_layout = QVBoxLayout(quicknii_group)
+        quicknii_intro = QLabel(
+            "QuickNII is a separate program for adjusting an alignment by hand. "
+            "DeepSlice saves a .json file (above) that QuickNII can open. "
+            "Skip this section if you do not use QuickNII."
+        )
+        quicknii_intro.setObjectName("HintText")
+        quicknii_intro.setWordWrap(True)
+        quicknii_intro.setMinimumHeight(quicknii_intro.fontMetrics().lineSpacing() * 3 + 4)
+        quicknii_path_label = QLabel("QuickNII program:")
+        quicknii_path_label.setBuddy(self.quicknii_path_edit)
+        self.quicknii_status_label = QLabel("")
+        self.quicknii_status_label.setObjectName("StatusLine")
+        self.quicknii_status_label.setAccessibleName("QuickNII Path Status")
+        self.quicknii_status_label.setWordWrap(True)
+        self.quicknii_status_label.setMinimumHeight(self.quicknii_status_label.fontMetrics().lineSpacing() * 2 + 4)
+        self.quicknii_path_edit.setPlaceholderText("Path to the QuickNII program (leave empty to auto-detect)")
+        self.quicknii_path_edit.textChanged.connect(lambda _t: self._update_quicknii_controls())
+        quicknii_layout.addWidget(quicknii_intro)
+        quicknii_layout.addWidget(quicknii_path_label)
+        quicknii_layout.addLayout(quicknii_row)
+        quicknii_layout.addWidget(self.quicknii_status_label)
+        quicknii_layout.addWidget(self.open_quicknii_button)
+        left_layout.addWidget(quicknii_group)
         left_layout.addWidget(self.summary_label)
         left_layout.addWidget(self.deviation_label)
         left_layout.addWidget(self.markers_label)
@@ -4155,7 +4484,9 @@ class DeepSliceMainWindow(QMainWindow):
             "1) CSV is always exported alongside JSON/XML.\n"
             "2) JSON is QuickNII/VisuAlign-compatible and preserves markers.\n"
             "3) Legacy XML is provided for older workflows.\n"
-            "4) Load Session can re-open previous QuickNII JSON/XML for re-curation."
+            "4) Load Session can re-open previous QuickNII JSON/XML for re-curation.\n\n"
+            "Next: open the JSON file in QuickNII or VisuAlign to refine the alignment, "
+            "or use Generate Report (PDF) to document this run."
         )
 
         right_layout.addWidget(self.export_notes)
@@ -4168,6 +4499,84 @@ class DeepSliceMainWindow(QMainWindow):
         root = QVBoxLayout(page)
         root.addWidget(split)
         return page
+
+    @staticmethod
+    def _shared_theme_rules(dark: bool) -> str:
+        """Rules that must hold in both themes.
+
+        * Labels/check boxes are transparent so they no longer paint a dark
+          rectangle over the lighter group-box background.
+        * Check boxes and radio buttons get a visible outlined indicator;
+          before, an unchecked box was invisible so options looked like plain text.
+        * ``role="secondary"`` / ``role="danger"`` buttons let a page show one
+          clear primary action instead of a wall of identical blue buttons.
+        """
+        if dark:
+            border, fill, checked, hover = "#6B7C93", "#11161D", "#1E6FFF", "#9CC4FF"
+            sec_bg, sec_border, sec_text, sec_hover = "#1A1F26", "#3A4656", "#CFE0FF", "#243041"
+            danger_bg, danger_border, danger_text, danger_hover = "#2A1A1F", "#8A3B48", "#F4B8C2", "#3A2028"
+        else:
+            border, fill, checked, hover = "#6F86A0", "#FFFFFF", "#2F7BCE", "#1F6CB8"
+            sec_bg, sec_border, sec_text, sec_hover = "#FFFFFF", "#9FB6CF", "#1F5FA8", "#E7EEF7"
+            danger_bg, danger_border, danger_text, danger_hover = "#FFF1F3", "#C46A78", "#8A1F31", "#FFE0E5"
+        return f"""
+            QLabel, QCheckBox, QRadioButton {{
+                background: transparent;
+            }}
+            QCheckBox::indicator, QRadioButton::indicator {{
+                width: 14px;
+                height: 14px;
+                border: 2px solid {border};
+                background: {fill};
+            }}
+            QCheckBox::indicator {{
+                border-radius: 4px;
+            }}
+            QRadioButton::indicator {{
+                border-radius: 9px;
+            }}
+            QCheckBox::indicator:hover, QRadioButton::indicator:hover {{
+                border-color: {hover};
+            }}
+            QCheckBox::indicator:checked, QRadioButton::indicator:checked {{
+                background: {checked};
+                border-color: {checked};
+            }}
+            QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {{
+                border-color: {sec_border};
+            }}
+            QPushButton[role="secondary"] {{
+                background: {sec_bg};
+                border: 1px solid {sec_border};
+                color: {sec_text};
+            }}
+            QPushButton[role="secondary"]:hover {{
+                background: {sec_hover};
+            }}
+            QPushButton[role="secondary"]:disabled {{
+                background: transparent;
+                border-color: {sec_border};
+                color: #7A8492;
+            }}
+            QPushButton[role="danger"] {{
+                background: {danger_bg};
+                border: 1px solid {danger_border};
+                color: {danger_text};
+            }}
+            QPushButton[role="danger"]:hover {{
+                background: {danger_hover};
+            }}
+            #StatusLine {{
+                background: transparent;
+                font-weight: 600;
+            }}
+            #ExportStatusOk {{
+                color: {"#7FD9A6" if dark else "#1E6B45"};
+            }}
+            #ExportStatusWarn {{
+                color: {"#F2B544" if dark else "#9D5F00"};
+            }}
+        """
 
     def _apply_theme(self):
         dark_theme = """
@@ -4485,7 +4894,12 @@ class DeepSliceMainWindow(QMainWindow):
         """
 
         stylesheet = dark_theme if self._theme_name == "dark" else light_theme
+        stylesheet += self._shared_theme_rules(self._theme_name == "dark")
         self.setStyleSheet(stylesheet)
+        if hasattr(self, "ingestion_summary_banner") and getattr(self, "_summary_banner_kind", None):
+            self.ingestion_summary_banner.setStyleSheet(
+                self._summary_banner_style(self._summary_banner_kind)
+            )
 
         if hasattr(self, "theme_toggle_button"):
             self.theme_toggle_button.setText(
@@ -4679,6 +5093,13 @@ class DeepSliceMainWindow(QMainWindow):
         self.ingestion_warning_label.setText("\n".join(warnings))
 
         valid_index_count = 0
+        # With sorting on, QTableWidget re-sorts after *every* setItem, so a row's
+        # later cells land in other rows (most "Detected Index"/"Status" cells came
+        # out blank). Populate with sorting off and restore the user's sort after.
+        index_header = self.index_table.horizontalHeader()
+        sort_column = index_header.sortIndicatorSection()
+        sort_order = index_header.sortIndicatorOrder()
+        self.index_table.setSortingEnabled(False)
         self.index_table.setRowCount(len(index_report["rows"]))
         warning_icon = self.style().standardIcon(QStyle.SP_MessageBoxWarning)
         for row_idx, row in enumerate(index_report["rows"]):
@@ -4687,7 +5108,12 @@ class DeepSliceMainWindow(QMainWindow):
                 valid_index_count += 1
 
             filename_item = QTableWidgetItem(row["filename"])
-            index_item = QTableWidgetItem(str(row["detected_index"]))
+            index_item = QTableWidgetItem()
+            detected_text = str(row["detected_index"])
+            if detected_text.isdigit():
+                index_item.setData(Qt.DisplayRole, int(detected_text))  # sorts 2 before 10
+            else:
+                index_item.setText(detected_text)
             status_item = QTableWidgetItem(status)
 
             if status == "Duplicate":
@@ -4705,20 +5131,31 @@ class DeepSliceMainWindow(QMainWindow):
             self.index_table.setItem(row_idx, 0, filename_item)
             self.index_table.setItem(row_idx, 1, index_item)
             self.index_table.setItem(row_idx, 2, status_item)
+        self.index_table.setSortingEnabled(True)
+        self.index_table.sortByColumn(sort_column if sort_column >= 0 else 0, sort_order)
 
         if total_files == 0:
             self.ingestion_summary_banner.setText("No files loaded")
-            self.ingestion_summary_banner.setStyleSheet("QLabel { background: #1A1F26; border: 1px solid #2A313B; border-radius: 8px; padding: 6px; }")
+            self._set_summary_banner_kind("neutral")
         elif duplicate_count > 0:
             self.ingestion_summary_banner.setText(
                 f"{total_files} files - {valid_index_count} valid indices - {duplicate_count} duplicates detected"
             )
-            self.ingestion_summary_banner.setStyleSheet("QLabel { background: #5A1F2A; border: 1px solid #A43344; border-radius: 8px; padding: 6px; color: #F9DDE3; }")
+            self._set_summary_banner_kind("error")
         else:
+            file_word = "file" if total_files == 1 else "files"
+            warn_count = len(warnings)
+            if warn_count == 0:
+                tail = "no warnings"
+            else:
+                tail = f"{warn_count} warning{'s' if warn_count != 1 else ''}"
             self.ingestion_summary_banner.setText(
-                f"{total_files} files - {valid_index_count} valid indices - {len(warnings)} warnings"
+                f"{total_files} {file_word} - {valid_index_count} numbered - {tail}"
             )
-            self.ingestion_summary_banner.setStyleSheet("QLabel { background: #234033; border: 1px solid #2F6E52; border-radius: 8px; padding: 6px; color: #DDF7EA; }")
+            if warn_count == 0:
+                self._set_summary_banner_kind("ok")
+            else:
+                self._set_summary_banner_kind("warn")
 
         entries = []
         for idx, image_path in enumerate(self.state.image_paths):
@@ -4856,6 +5293,26 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _toggle_console(self, visible: bool):
         self.console_output.setVisible(visible)
+        self.console_toggle.setText("Hide detailed log" if visible else "Show detailed log")
+
+    def _set_prediction_headline(self, text: str):
+        """One plain-language sentence describing where the alignment run is."""
+        if hasattr(self, "prediction_status_headline"):
+            self.prediction_status_headline.setText(text)
+
+    def _idle_prediction_headline(self) -> str:
+        count = len(self.state.image_paths)
+        if self.state.predictions is not None:
+            return (
+                f"Done - {len(self.state.predictions)} sections aligned. "
+                "Continue to Review & fix, or run again after changing settings."
+            )
+        if count == 0:
+            return "Nothing to align yet - add images in step 1."
+        return (
+            f"Ready to align {count} image{'s' if count != 1 else ''}. "
+            "Press Run Alignment; the first run also loads the model, so it can take a minute to start."
+        )
 
     def _on_direction_override_changed(self, value: str):
         if value == "Auto":
@@ -5155,11 +5612,18 @@ class DeepSliceMainWindow(QMainWindow):
         else:
             self.config_validation_label.setText("Validation: " + " | ".join(errors[:3]))
         self._update_processing_estimate()
+        if not self._prediction_clock_timer.isActive():
+            self._set_prediction_headline(self._idle_prediction_headline())
 
     def _run_alignment(self):
         errors, warnings = self._validate_before_prediction()
         if len(errors) > 0:
-            QMessageBox.warning(self, "Cannot Run Alignment", "\n".join(errors))
+            QMessageBox.warning(
+                self,
+                "Cannot Run Alignment Yet",
+                "Fix the following, then press Run Alignment again:\n\n"
+                + "\n".join(f"- {e}" for e in errors),
+            )
             return
 
         # Warn before clobbering existing curation work.
@@ -5294,8 +5758,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.prediction_progress_bar.setRange(0, max(self._prediction_total * self._phase_total, 1))
         self.prediction_progress_bar.setValue(0)
         self.console_output.clear()
-        self.prediction_phase_label.setText(f"Phase 0/{self._phase_total}: initializing")
-        self.prediction_progress_label.setText("Progress: 0 / 0")
+        self._set_prediction_headline(
+            "Starting - loading the model (the first run can take a minute). You can cancel at any time."
+        )
+        self.prediction_phase_label.setText(f"Stage 0 of {self._phase_total}: getting ready")
+        self.prediction_progress_label.setText("Sections done: 0 of 0")
         self.prediction_elapsed_label.setText("Elapsed: 00:00")
         self.prediction_eta_label.setText("Remaining: --:--")
         self._prediction_elapsed_timer.start()
@@ -5394,9 +5861,13 @@ class DeepSliceMainWindow(QMainWindow):
         percent = int(round((self._prediction_completed / self._prediction_total) * 100.0))
 
         self.prediction_phase_label.setText(
-            f"Phase {phase_index}/{self._phase_total} ({phase_name}): {percent}%"
+            f"Stage {phase_index} of {self._phase_total} ({phase_name}): {percent}%"
         )
-        self.prediction_progress_label.setText(f"Progress: {completed} / {total}")
+        self.prediction_progress_label.setText(f"Sections done: {completed} of {total}")
+        self._set_prediction_headline(
+            f"{phase_name}: section {min(int(completed), int(total))} of {int(total)} "
+            f"(stage {phase_index} of {self._phase_total}). You can cancel at any time."
+        )
         overall_total = self._prediction_total * self._phase_total
         overall_completed = min(
             (phase_index - 1) * self._prediction_total + self._prediction_completed,
@@ -5547,6 +6018,7 @@ class DeepSliceMainWindow(QMainWindow):
             self.accept_predicted_thickness_button.setEnabled(False)
 
         elapsed_seconds = max(0, int(self._prediction_elapsed_timer.elapsed() / 1000))
+        self._set_prediction_headline(self._idle_prediction_headline())
         self._refresh_prediction_selector()
         self._refresh_curation_views()
         self._refresh_export_views()
@@ -5604,7 +6076,10 @@ class DeepSliceMainWindow(QMainWindow):
         if "cancelled" in str(error_text).lower():
             self._show_toast("Alignment cancelled", timeout_ms=3500)
             self._append_console_log("[SYSTEM] Alignment cancelled by user")
-            self.prediction_phase_label.setText("Phase: cancelled")
+            self.prediction_phase_label.setText("Stage: cancelled")
+            self._set_prediction_headline(
+                "Cancelled - nothing was changed. Press Run Alignment to start again."
+            )
             self.prediction_eta_label.setText("Remaining: --:--")
             return
 
@@ -5644,6 +6119,10 @@ class DeepSliceMainWindow(QMainWindow):
 
             error_text = str(error_text).replace("PartialPredictionAvailable:", "").strip()
 
+        self._set_prediction_headline(
+            "Alignment stopped because of an error. Your images and settings are unchanged - "
+            "read the message, fix the cause, and press Run Alignment again."
+        )
         self._show_logged_error(
             title="Prediction Failed",
             context="Alignment prediction task failed",
@@ -5694,10 +6173,10 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _refresh_prediction_preview(self):
         if self.state.predictions is None or len(self.state.predictions) == 0:
-            self.prediction_viewer.clear_with_text("No predictions to preview")
-            self.prediction_atlas_viewer.clear_with_text("No atlas comparison available")
-            self.prediction_atlas_info_label.setText("Atlas comparison: waiting for prediction")
-            self.preprocessing_preview_info_label.setText("Model input preview: waiting for selection")
+            self.prediction_viewer.clear_with_text("No results yet\nPress Run Alignment to see each section here")
+            self.prediction_atlas_viewer.clear_with_text("The matching atlas section\nwill appear here")
+            self.prediction_atlas_info_label.setText("The matching atlas section appears here after alignment.")
+            self.preprocessing_preview_info_label.setText("The image as the model sees it appears here once alignment starts.")
             self.preprocessing_preview_label.clear()
             return
 
@@ -7307,10 +7786,58 @@ class DeepSliceMainWindow(QMainWindow):
             self,
             "Locate QuickNII Executable",
             "",
-            "Executables (*.exe);;All Files (*)",
+            "Programs (*.exe);;All Files (*)" if os.name == "nt" else "All Files (*)",
         )
         if path:
             self.quicknii_path_edit.setText(path)
+
+    def _find_quicknii_executable(self) -> str:
+        """Path typed by the user, else a default Windows install, else ''."""
+        quicknii_path = self.quicknii_path_edit.text().strip()
+        if quicknii_path or os.name != "nt":
+            # Default install locations only exist on Windows; skip probing
+            # bogus empty paths on Linux/macOS where ProgramFiles is unset.
+            return quicknii_path
+        candidates = [
+            os.path.join(os.environ.get("ProgramFiles", ""), "QuickNII", "QuickNII.exe"),
+            os.path.join(os.environ.get("ProgramFiles(x86)", ""), "QuickNII", "QuickNII.exe"),
+        ]
+        for candidate in candidates:
+            if candidate and os.path.exists(candidate):
+                return candidate
+        return ""
+
+    def _quicknii_export_ready(self) -> bool:
+        base = self.last_export_basepath
+        return bool(base) and os.path.exists(str(base) + ".json")
+
+    def _update_quicknii_controls(self):
+        """Explain the QuickNII path and why "Open in QuickNII" may be unavailable."""
+        if not hasattr(self, "quicknii_status_label"):
+            return
+        typed = self.quicknii_path_edit.text().strip()
+        resolved = self._find_quicknii_executable()
+        if typed and not os.path.isfile(typed):
+            text, name = "File not found - use Browse to pick the QuickNII program.", "ExportStatusWarn"
+        elif resolved and os.path.isfile(resolved):
+            text, name = "QuickNII found.", "ExportStatusOk"
+        elif os.name == "nt":
+            text, name = "Not set - DeepSlice will check the default install folders; use Browse if that fails.", "ExportStatusWarn"
+        else:
+            text, name = "Not set - use Browse to pick the QuickNII program.", "ExportStatusWarn"
+        if not self._quicknii_export_ready():
+            text += " Export a JSON file first (button above) to enable Open in QuickNII."
+        self.quicknii_status_label.setText(text)
+        if self.quicknii_status_label.objectName() != name:
+            self.quicknii_status_label.setObjectName(name)
+            self.quicknii_status_label.style().unpolish(self.quicknii_status_label)
+            self.quicknii_status_label.style().polish(self.quicknii_status_label)
+        self.open_quicknii_button.setEnabled(self._quicknii_export_ready())
+        self.open_quicknii_button.setToolTip(
+            "Open the exported .json in QuickNII"
+            if self._quicknii_export_ready()
+            else "Export a JSON file first - QuickNII opens that file."
+        )
 
     def _get_persisted_export_path(self) -> str:
         settings = self._settings
@@ -7422,7 +7949,11 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _export_predictions(self):
         if self.state.predictions is None:
-            QMessageBox.warning(self, "Export", "No predictions available")
+            QMessageBox.warning(
+                self,
+                "Export",
+                "There is nothing to export yet.\n\nRun the alignment first (step 3), then come back here.",
+            )
             return
 
         output_dir = self.output_dir_edit.text().strip()
@@ -7505,11 +8036,21 @@ class DeepSliceMainWindow(QMainWindow):
         produced = sum(1 for path in written if os.path.exists(path))
         self._session_base_text = "Session: Export complete"
         self._update_session_status()
+        self._show_export_result(base_path, output_format, produced)
+        self._update_quicknii_controls()
         self._show_toast(
             f"Export complete - {produced} file(s) saved",
             timeout_ms=4500,
             level="success",
         )
+
+    def _show_export_result(self, base_path: str, output_format: str, produced: int):
+        """Persistent record of what was written and where (a toast vanishes in seconds)."""
+        files = [f"{os.path.basename(base_path)}.{output_format}", f"{os.path.basename(base_path)}.csv"]
+        self.export_result_label.setText(
+            f"Saved {produced} file(s) in {os.path.dirname(base_path)}:\n" + "\n".join(files)
+        )
+        self.export_result_label.setVisible(True)
 
     def _generate_report(self):
         if self.state.predictions is None:
@@ -7650,22 +8191,7 @@ class DeepSliceMainWindow(QMainWindow):
             )
             return
 
-        quicknii_path = self.quicknii_path_edit.text().strip()
-        if not quicknii_path and os.name == "nt":
-            # Default install locations only exist on Windows; skip probing
-            # bogus empty paths on Linux/macOS where ProgramFiles is unset.
-            candidates = [
-                os.path.join(os.environ.get("ProgramFiles", ""), "QuickNII", "QuickNII.exe"),
-                os.path.join(
-                    os.environ.get("ProgramFiles(x86)", ""),
-                    "QuickNII",
-                    "QuickNII.exe",
-                ),
-            ]
-            for candidate in candidates:
-                if candidate and os.path.exists(candidate):
-                    quicknii_path = candidate
-                    break
+        quicknii_path = self._find_quicknii_executable()
 
         if not quicknii_path or not os.path.exists(quicknii_path):
             self._actionable_warning(
@@ -7693,6 +8219,7 @@ class DeepSliceMainWindow(QMainWindow):
             return
 
     def _refresh_export_views(self):
+        self._update_quicknii_controls()
         summary = self.state.summary_metrics()
         self.summary_label.setText(
             f"Processed: {summary['processed']} | Excluded: {summary['excluded']} | Total: {summary['slice_count']}"
@@ -8155,6 +8682,10 @@ class DeepSliceMainWindow(QMainWindow):
                 f"Detected indexing direction: {self.state.detected_indexing_direction}"
             )
 
+        # A reset or "Clear All" can lock the page the user is looking at; step back
+        # to the furthest page that is still available.
+        if self.stack.currentIndex() > self._max_unlocked_step():
+            self.step_list.setCurrentRow(self._max_unlocked_step())
         self._refresh_step_states()
         self._update_run_button_state()
 
