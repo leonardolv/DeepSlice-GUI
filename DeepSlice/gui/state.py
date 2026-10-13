@@ -41,6 +41,10 @@ def _coerce_bool(value, default: bool = False) -> bool:
         return default
 
 
+# Upper bound on enumerated gap indices in build_index_report.
+MAX_REPORTED_MISSING_INDICES = 10_000
+
+
 class PartialPredictionAvailable(RuntimeError):
     """Raised when ensemble secondary inference fails but primary predictions
     were captured and can be adopted as a partial recovery result.
@@ -636,6 +640,7 @@ class DeepSliceAppState:
     def build_index_report(self, legacy_section_numbers: bool = False) -> Dict[str, object]:
         rows = []
         missing_indices: List[int] = []
+        missing_total = 0
         duplicate_indices: List[int] = []
         parse_error = None
 
@@ -644,6 +649,7 @@ class DeepSliceAppState:
             return {
                 "rows": rows,
                 "missing_indices": missing_indices,
+                "missing_total": 0,
                 "duplicate_indices": duplicate_indices,
                 "parse_error": parse_error,
             }
@@ -657,8 +663,18 @@ class DeepSliceAppState:
             duplicate_indices = sorted(counts[counts > 1].index.tolist())
             unique_values = sorted(set(detected_indices))
             if len(unique_values) > 1:
-                full_range = set(range(unique_values[0], unique_values[-1] + 1))
-                missing_indices = sorted(full_range - set(unique_values))
+                # Walk the gaps between consecutive unique values instead of
+                # materialising range(min, max + 1): a filename carrying a
+                # large number (a timestamp, say) would otherwise allocate
+                # billions of ints. Enumeration is capped for the same reason.
+                for low, high in zip(unique_values, unique_values[1:]):
+                    room = MAX_REPORTED_MISSING_INDICES - len(missing_indices)
+                    if room <= 0:
+                        break
+                    missing_indices.extend(range(low + 1, min(high, low + 1 + room)))
+                missing_total = (
+                    unique_values[-1] - unique_values[0] + 1 - len(unique_values)
+                )
 
             for filename, index in zip(filenames, detected_indices):
                 status = "OK"
@@ -685,6 +701,7 @@ class DeepSliceAppState:
         return {
             "rows": rows,
             "missing_indices": missing_indices,
+            "missing_total": missing_total,
             "duplicate_indices": duplicate_indices,
             "parse_error": parse_error,
         }

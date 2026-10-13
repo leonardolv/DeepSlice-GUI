@@ -12,6 +12,19 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-13 UTC - Index report ran out of memory on filenames with large numbers
+- **Problem:** `DeepSliceAppState.build_index_report` built `set(range(min, max + 1))`
+  of the parsed section numbers. A filename carrying a big number (timestamp,
+  e.g. `s900000000`) allocated hundreds of millions of ints; the process was
+  OOM-killed on the GUI thread on every ingestion refresh and validation.
+- **Fix:** walk gaps between consecutive unique values, cap enumeration at
+  `MAX_REPORTED_MISSING_INDICES` (10000), and return an exact arithmetic
+  `missing_total`; `main_window` uses it for the warning decision (only the
+  first 20 are displayed).
+- **Validation:** new `tests/test_index_report_large_numbers.py` (3 tests; fails
+  on old code, the huge case OOM-kills it); `test_spacing_and_indexing.py` passes.
+  PySide6 absent in this sandbox, so GUI tests not run.
+
 ### 2026-10-07 UTC - First-run intuitiveness pass (guided steps, plain labels, collapsed advanced settings)
 Status: **done, added to draft PR #33 (not merged)**
 

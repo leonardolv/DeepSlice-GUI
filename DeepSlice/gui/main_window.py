@@ -4660,7 +4660,7 @@ class DeepSliceMainWindow(QMainWindow):
             legacy_section_numbers=self.legacy_parsing_checkbox.isChecked()
         )
         duplicate_count = len(index_report["duplicate_indices"])
-        missing_count = len(index_report["missing_indices"])
+        missing_count = index_report.get("missing_total", len(index_report["missing_indices"]))
 
         if self.enable_section_numbers_checkbox.isChecked():
             if index_report["parse_error"]:
