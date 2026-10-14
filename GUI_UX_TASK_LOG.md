@@ -4,6 +4,18 @@
 
 ## Completed
 
+### Task: Standardize Helper Dialogs Accessibility, Object Names, Button Cursors, and Headless Execution Safety
+- **Completed**: 2026-10-14
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized helper dialogs (`_show_onboarding_dialog`, `_show_whats_new_dialog`, `_show_hardware_health`, `_show_about_dialog`, `_show_shortcuts_help`, `_show_naming_helper`, `_show_orientation_guide`, `_show_direction_guide`, `_show_ensemble_explanation`, `_show_configuration_validation`, and `_show_export_format_help`) to construct `QMessageBox` with explicit `objectName`, `accessibleName`, `PointingHandCursor` across all buttons, and non-blocking headless execution guards (`QT_QPA_PLATFORM != "offscreen"` and `"PYTEST_CURRENT_TEST" not in os.environ`).
+    - Added headless safety guard to `_open_context_help()` preventing unintentional browser launches during automated runs.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Expanded `test_helper_dialogs_accessibility_and_headless_safety` to validate all helper dialogs, object names, accessible names, button cursors, and context help headless safety.
+    - Updated `test_hardware_health_cpu_fallback` to assert directly on the accessible dialog instance and diagnostic fallback content.
+- **Verification**: Verified headlessly with Python 3.12: `pytest tests/test_ui_accessibility_and_startup.py -v` (12 passed in 9.23s) and full test suite `pytest tests/ -q` (349 passed in 30.50s, 0 errors).
+- **Status**: Completed
+
 ### Task: Enhance Linearity Plot Zoom and Preferences Keyboard Shortcuts, Shortcut Tooltips, and Shortcuts Cheat Sheet Dialog
 - **Completed**: 2026-10-14
 - **Changes**:

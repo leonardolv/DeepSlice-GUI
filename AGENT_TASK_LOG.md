@@ -7,10 +7,17 @@ This file is the coordination point for the recurring maintenance task only.
 here.
 
 ## In Progress
-
-_(nothing claimed)_
-
+ 
 ## Completed
+
+### 2026-10-14 UTC - Standardize helper dialogs accessibility, object names, button cursors, and headless execution safety
+Status: **done**
+
+**Audit.** Helper and guide dialogs (`_show_onboarding_dialog`, `_show_whats_new_dialog`, `_show_hardware_health`, `_show_about_dialog`, `_show_shortcuts_help`, `_show_naming_helper`, `_show_orientation_guide`, `_show_direction_guide`, `_show_ensemble_explanation`, `_show_configuration_validation`, and `_show_export_format_help`) lacked explicit widget object names, accessible descriptions, pointing hand cursors on buttons, or uniform non-blocking execution guards for headless tests. `_open_context_help()` also lacked guards against spawning web browsers during test runs.
+
+**Fix.** Standardized all helper dialogs to instantiate accessible `QMessageBox` components with explicit `objectName`, `accessibleName`, `PointingHandCursor` applied to all child dialog buttons, and non-blocking headless execution guards (`os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ`). Guarded `_open_context_help()` against external browser launches when running headless.
+
+**Validation.** Expanded `test_helper_dialogs_accessibility_and_headless_safety` and updated `test_hardware_health_cpu_fallback` in `tests/test_ui_accessibility_and_startup.py`. Verified all 12 accessibility tests pass (9.23s) and full test suite passes (349 passed, 0 errors in 30.50s).
 
 ### 2026-10-14 UTC - Linearity plot zoom and preferences keyboard shortcuts, shortcut tooltips, and shortcuts cheat sheet dialog
 Status: **done**

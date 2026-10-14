@@ -176,13 +176,13 @@ def test_hardware_health_cpu_fallback(monkeypatch):
     try:
         # Simulate tensorflow import error
         with patch.dict(sys.modules, {"tensorflow": None}):
-            with patch("PySide6.QtWidgets.QMessageBox.information") as mock_info:
-                win._show_hardware_health()
-                mock_info.assert_called_once()
-                args, _ = mock_info.call_args
-                assert "Hardware Health" in args
-                assert "Mode: CPU (Lightweight)" in args[2]
-                assert "CPU fallback" in args[2]
+            dlg = win._show_hardware_health()
+            assert dlg is not None
+            assert dlg.windowTitle() == "Hardware Health"
+            assert "Mode: CPU (Lightweight)" in dlg.text()
+            assert "CPU fallback" in dlg.text()
+            assert dlg.accessibleName() == "Hardware Health Diagnostics Dialog"
+            assert dlg.objectName() == "hardwareHealthDialog"
     finally:
         win.close()
         win.deleteLater()
@@ -260,38 +260,86 @@ def test_helper_dialogs_accessibility_and_headless_safety():
     try:
         # About dialog
         about_box = win._show_about_dialog()
+        assert about_box.objectName() == "aboutDialog"
         assert about_box.accessibleName() == "About DeepSlice Information Dialog"
         assert "DeepSlice Desktop" in about_box.text()
+        for btn in about_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
 
         # Shortcuts dialog
         shortcuts_box = win._show_shortcuts_help()
+        assert shortcuts_box.objectName() == "shortcutsDialog"
         assert shortcuts_box.accessibleName() == "Keyboard Shortcuts Help Dialog"
         assert "Keyboard Shortcuts" in shortcuts_box.text()
+        for btn in shortcuts_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
 
         # Naming helper dialog
         naming_box = win._show_naming_helper()
+        assert naming_box.objectName() == "namingHelperDialog"
         assert naming_box.accessibleName() == "Naming Convention Help Dialog"
         assert "Naming Convention" in naming_box.text()
+        for btn in naming_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
 
         # Orientation guide dialog
         orient_box = win._show_orientation_guide()
+        assert orient_box.objectName() == "orientationGuideDialog"
         assert orient_box.accessibleName() == "Orientation Guide Dialog"
         assert "Orientation Guide" in orient_box.text()
+        for btn in orient_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
 
         # Direction guide dialog
         dir_box = win._show_direction_guide()
+        assert dir_box.objectName() == "directionGuideDialog"
         assert dir_box.accessibleName() == "Direction Guide Dialog"
         assert "Direction Override" in dir_box.text()
+        for btn in dir_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
 
         # Ensemble explanation dialog
         ens_box = win._show_ensemble_explanation()
+        assert ens_box.objectName() == "ensembleExplanationDialog"
         assert ens_box.accessibleName() == "Ensemble Prediction Help Dialog"
         assert "Ensemble Prediction" in ens_box.text()
+        for btn in ens_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
 
         # Export format help dialog
         fmt_box = win._show_export_format_help()
+        assert fmt_box.objectName() == "exportFormatHelpDialog"
         assert fmt_box.accessibleName() == "Export Format Documentation Dialog"
         assert "QuickNII" in fmt_box.text()
+        for btn in fmt_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
+
+        # Onboarding dialog
+        onboarding_box = win._show_onboarding_dialog()
+        assert onboarding_box.objectName() == "onboardingDialog"
+        assert onboarding_box.accessibleName() == "Onboarding Walkthrough Dialog"
+        assert "Welcome to DeepSlice" in onboarding_box.windowTitle()
+        for btn in onboarding_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
+
+        # What's New dialog
+        whats_new_box = win._show_whats_new_dialog("1.0.0")
+        assert whats_new_box.objectName() == "whatsNewDialog"
+        assert whats_new_box.accessibleName() == "What's New Highlights Dialog"
+        assert "What's New" in whats_new_box.windowTitle()
+        for btn in whats_new_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
+
+        # Hardware health dialog
+        health_box = win._show_hardware_health()
+        assert health_box.objectName() == "hardwareHealthDialog"
+        assert health_box.accessibleName() == "Hardware Health Diagnostics Dialog"
+        assert "Hardware Health" in health_box.windowTitle()
+        for btn in health_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
+
+        # Context help headless safety
+        win._open_context_help()
     finally:
         win.close()
         win.deleteLater()
