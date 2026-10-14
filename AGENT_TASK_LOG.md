@@ -10,6 +10,15 @@ here.
  
 ## Completed
 
+### 2026-10-14 UTC - Session load turned string booleans like "false" into True
+Status: **done**
+
+**Root cause.** `DeepSliceAppState.load_session_dict` coerced seven flags (`tissue_crop_enabled`, `clahe_enabled`, `quality_gate_enabled`, `preserve_color_enabled`, `tta_enabled`, `multiscale_enabled`, `fast_fp16_enabled`) with bare `bool(...)`, so a hand-edited or foreign session carrying `"false"`/`"0"` silently enabled them. Neighbouring flags already used `_coerce_bool`.
+
+**Fix.** Use `_coerce_bool(value, current)` for all seven; a missing key still keeps the current value.
+
+**Validation.** New `tests/test_session_bool_coercion.py` (49 cases): 21 fail before the fix, all pass after; with `test_session_roundtrip.py` and `test_load_session_file.py` 58 passed headless.
+
 ### 2026-10-14 UTC - Standardize helper dialogs accessibility, object names, button cursors, and headless execution safety
 Status: **done**
 

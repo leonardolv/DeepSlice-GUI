@@ -1532,12 +1532,12 @@ class DeepSliceAppState:
         except Exception:
             self.inference_batch_size = int(max(1, self.inference_batch_size))
 
-        self.tissue_crop_enabled = bool(payload.get("tissue_crop_enabled", self.tissue_crop_enabled))
-        self.clahe_enabled = bool(payload.get("clahe_enabled", self.clahe_enabled))
+        self.tissue_crop_enabled = _coerce_bool(payload.get("tissue_crop_enabled"), self.tissue_crop_enabled)
+        self.clahe_enabled = _coerce_bool(payload.get("clahe_enabled"), self.clahe_enabled)
         self.stain_normalization_mode = str(
             payload.get("stain_normalization_mode", self.stain_normalization_mode)
         ).strip().lower()
-        self.quality_gate_enabled = bool(payload.get("quality_gate_enabled", self.quality_gate_enabled))
+        self.quality_gate_enabled = _coerce_bool(payload.get("quality_gate_enabled"), self.quality_gate_enabled)
         self.min_resolution_px = int(max(64, int(payload.get("min_resolution_px", self.min_resolution_px))))
         self.blur_variance_threshold = _finite_float(
             payload.get("blur_variance_threshold"), self.blur_variance_threshold
@@ -1562,10 +1562,10 @@ class DeepSliceAppState:
         self.percentile_normalization_enabled = bool(
             payload.get("percentile_normalization_enabled", self.percentile_normalization_enabled)
         )
-        self.preserve_color_enabled = bool(payload.get("preserve_color_enabled", self.preserve_color_enabled))
-        self.tta_enabled = bool(payload.get("tta_enabled", self.tta_enabled))
-        self.multiscale_enabled = bool(payload.get("multiscale_enabled", self.multiscale_enabled))
-        self.fast_fp16_enabled = bool(payload.get("fast_fp16_enabled", self.fast_fp16_enabled))
+        self.preserve_color_enabled = _coerce_bool(payload.get("preserve_color_enabled"), self.preserve_color_enabled)
+        self.tta_enabled = _coerce_bool(payload.get("tta_enabled"), self.tta_enabled)
+        self.multiscale_enabled = _coerce_bool(payload.get("multiscale_enabled"), self.multiscale_enabled)
+        self.fast_fp16_enabled = _coerce_bool(payload.get("fast_fp16_enabled"), self.fast_fp16_enabled)
         self.section_dropout_passes = int(max(0, int(payload.get("section_dropout_passes", self.section_dropout_passes))))
         self.confidence_weighted_ensemble = bool(
             payload.get("confidence_weighted_ensemble", self.confidence_weighted_ensemble)
