@@ -1120,7 +1120,7 @@ class DeepSliceMainWindow(QMainWindow):
             "hardware_button": "Show TensorFlow runtime details, GPU detection, CUDA/cuDNN versions, and available VRAM diagnostics.",
             "theme_toggle_button": "Switch between dark and light interface themes. Preference is saved for future launches.",
             "shortcut_help_button": "Open the keyboard shortcut cheat sheet for navigation, session actions, and curation editing.",
-            "preferences_button": "Open persistent user preferences (defaults, paths, theme, and console visibility).",
+            "preferences_button": "Open persistent user preferences (defaults, paths, theme, and console visibility) (Ctrl+,).",
             "about_button": "Show application version, citation information, and documentation pointers.",
             "error_menu_button": "Open error tools: view log file, copy latest error report, and run auto-fix suggestions.",
 
@@ -1214,9 +1214,9 @@ class DeepSliceMainWindow(QMainWindow):
             "apply_manual_angles_button": "Apply manual ML/DV angles to all predicted sections.",
             "undo_button": "Undo the most recent curation operation.",
             "redo_button": "Redo the latest undone curation operation.",
-            "zoom_fit_button": "Reset plot zoom to include the full predicted-position range.",
-            "zoom_in_button": "Zoom in on the predicted-position scatter plot.",
-            "zoom_out_button": "Zoom out on the predicted-position scatter plot.",
+            "zoom_fit_button": "Reset plot zoom to include the full predicted-position range (Ctrl+0).",
+            "zoom_in_button": "Zoom in on the predicted-position scatter plot (Ctrl++).",
+            "zoom_out_button": "Zoom out on the predicted-position scatter plot (Ctrl+-).",
             "enable_atlas_preview_checkbox": "Load and display atlas volume slices for visual comparison in curation.",
             "atlas_volume_combo": "Select atlas volume variant for preview (e.g., MRI/STPT/Nissl depending on species).",
             "enable_blend_overlay_checkbox": "Blend atlas intensity map directly over histology image for visual fit assessment.",
@@ -1429,7 +1429,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.preferences_button = QToolButton()
         self.preferences_button.setText("Preferences")
         self.preferences_button.setAccessibleName("Application Preferences")
-        self.preferences_button.setToolTip("Open preferences and global application settings")
+        self.preferences_button.setToolTip("Open preferences and global application settings (Ctrl+,)")
         self.preferences_button.setCursor(Qt.PointingHandCursor)
         self.preferences_button.clicked.connect(self._open_preferences_dialog)
 
@@ -1965,6 +1965,26 @@ class DeepSliceMainWindow(QMainWindow):
         apply_flags_shortcut.activated.connect(self._apply_bad_section_flags)
         self._shortcuts.append(apply_flags_shortcut)
 
+        preferences_shortcut = QShortcut(QKeySequence("Ctrl+,"), self)
+        preferences_shortcut.activated.connect(self._open_preferences_dialog)
+        self._shortcuts.append(preferences_shortcut)
+
+        zoom_in_shortcut = QShortcut(QKeySequence("Ctrl++"), self)
+        zoom_in_shortcut.activated.connect(lambda: self._linearity_zoom(0.8))
+        self._shortcuts.append(zoom_in_shortcut)
+
+        zoom_in_alt = QShortcut(QKeySequence("Ctrl+="), self)
+        zoom_in_alt.activated.connect(lambda: self._linearity_zoom(0.8))
+        self._shortcuts.append(zoom_in_alt)
+
+        zoom_out_shortcut = QShortcut(QKeySequence("Ctrl+-"), self)
+        zoom_out_shortcut.activated.connect(lambda: self._linearity_zoom(1.25))
+        self._shortcuts.append(zoom_out_shortcut)
+
+        zoom_fit_shortcut = QShortcut(QKeySequence("Ctrl+0"), self)
+        zoom_fit_shortcut.activated.connect(self._linearity_zoom_fit)
+        self._shortcuts.append(zoom_fit_shortcut)
+
     def _show_shortcuts_help(self):
         text = (
             "Keyboard Shortcuts:\n\n"
@@ -1973,11 +1993,14 @@ class DeepSliceMainWindow(QMainWindow):
             "Ctrl+S : Save session\n"
             "Ctrl+O : Load session\n"
             "Ctrl+E : Jump to Export page\n"
+            "Ctrl+, : Open Preferences\n"
             "Ctrl+Z : Undo curation changes\n"
             "Ctrl+Y : Redo curation changes\n"
             "J / K : Next / previous slice in curation\n"
             "F : Toggle bad-section flag for current slice\n"
             "A / D : Set or remove anchor for current slice\n"
+            "Ctrl++ / Ctrl+- : Zoom in / out linearity plot\n"
+            "Ctrl+0 : Fit linearity plot view\n"
             "Ctrl+Enter : Apply bad-section flags\n"
             "Ctrl+/ or Ctrl+? : Show shortcuts\n"
             "F1 : Open page-specific help"
@@ -3737,7 +3760,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.zoom_fit_button.setText("Fit")
         self.zoom_fit_button.setObjectName("zoom_fit_button")
         self.zoom_fit_button.setAccessibleName("Fit Linearity Plot")
-        self.zoom_fit_button.setToolTip("Fit linearity plot view to dataset extents")
+        self.zoom_fit_button.setToolTip("Fit linearity plot view to dataset extents (Ctrl+0)")
         self.zoom_fit_button.setCursor(Qt.PointingHandCursor)
         self.zoom_fit_button.clicked.connect(self._linearity_zoom_fit)
 
@@ -3745,7 +3768,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.zoom_in_button.setText("+")
         self.zoom_in_button.setObjectName("zoom_in_button")
         self.zoom_in_button.setAccessibleName("Zoom In Plot")
-        self.zoom_in_button.setToolTip("Zoom in on linearity plot")
+        self.zoom_in_button.setToolTip("Zoom in on linearity plot (Ctrl++)")
         self.zoom_in_button.setCursor(Qt.PointingHandCursor)
         self.zoom_in_button.clicked.connect(lambda: self._linearity_zoom(0.8))
 
@@ -3753,7 +3776,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.zoom_out_button.setText("-")
         self.zoom_out_button.setObjectName("zoom_out_button")
         self.zoom_out_button.setAccessibleName("Zoom Out Plot")
-        self.zoom_out_button.setToolTip("Zoom out on linearity plot")
+        self.zoom_out_button.setToolTip("Zoom out on linearity plot (Ctrl+-)")
         self.zoom_out_button.setCursor(Qt.PointingHandCursor)
         self.zoom_out_button.clicked.connect(lambda: self._linearity_zoom(1.25))
 

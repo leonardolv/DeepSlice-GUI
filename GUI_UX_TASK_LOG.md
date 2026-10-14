@@ -4,6 +4,18 @@
 
 ## Completed
 
+### Task: Enhance Linearity Plot Zoom and Preferences Keyboard Shortcuts, Shortcut Tooltips, and Shortcuts Cheat Sheet Dialog
+- **Completed**: 2026-10-14
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added `QShortcut` bindings for `Ctrl+,` (Open Preferences), `Ctrl++` / `Ctrl+=` (Zoom In Plot), `Ctrl+-` (Zoom Out Plot), and `Ctrl+0` (Fit Linearity Plot View).
+    - Updated tooltips across `preferences_button`, `zoom_fit_button`, `zoom_in_button`, and `zoom_out_button` to explicitly display shortcut keys (`Ctrl+,`, `Ctrl+0`, `Ctrl++`, `Ctrl+-`).
+    - Updated `_show_shortcuts_help()` cheat sheet text to document the new navigation and linearity plot zoom shortcuts.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_shortcuts_and_linearity_zoom_tooltips` validating shortcut key registration, button tooltip hints, and shortcuts help dialog documentation.
+- **Verification**: Verified headlessly with Python 3.12: `pytest tests/test_ui_accessibility_and_startup.py -v` (12 passed, 0 failures in 8.47s).
+- **Status**: Completed
+
 ### Task: Enhance Curation Page Controls with Accessibility, Tooltips, Hand Cursors, and Usability Ergonomics
 - **Completed**: 2026-10-06
 - **Changes**:

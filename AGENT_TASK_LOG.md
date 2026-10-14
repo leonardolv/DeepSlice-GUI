@@ -12,6 +12,15 @@ _(nothing claimed)_
 
 ## Completed
 
+### 2026-10-14 UTC - Linearity plot zoom and preferences keyboard shortcuts, shortcut tooltips, and shortcuts cheat sheet dialog
+Status: **done**
+
+**Audit.** Key navigation and plot zoom actions (opening Preferences with standard Ctrl+, and zooming/fitting the linearity plot with Ctrl+0, Ctrl++, Ctrl+-) lacked keyboard shortcut bindings, shortcut tooltips, and cheat sheet documentation.
+
+**Fix.** Added `QShortcut` bindings for `Ctrl+,` (Preferences), `Ctrl++` / `Ctrl+=` (Zoom In Plot), `Ctrl+-` (Zoom Out Plot), and `Ctrl+0` (Fit Linearity Plot). Updated tooltips on `preferences_button`, `zoom_fit_button`, `zoom_in_button`, and `zoom_out_button` to communicate shortcut keys. Updated `_show_shortcuts_help()` dialog text to document all new shortcuts.
+
+**Validation.** Added `test_shortcuts_and_linearity_zoom_tooltips` in `tests/test_ui_accessibility_and_startup.py`. Verified all 12 headless tests pass (8.47s, 0 errors).
+
 ### 2026-10-13 UTC - Index report ran out of memory on filenames with large numbers
 - **Problem:** `DeepSliceAppState.build_index_report` built `set(range(min, max + 1))`
   of the parsed section numbers. A filename carrying a big number (timestamp,

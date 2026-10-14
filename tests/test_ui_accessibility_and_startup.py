@@ -462,6 +462,35 @@ def test_curation_page_controls_accessibility_and_cursors():
         win.deleteLater()
 
 
+def test_shortcuts_and_linearity_zoom_tooltips():
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Check tooltips reflect shortcut hints
+        assert "Ctrl+," in win.preferences_button.toolTip()
+        assert "Ctrl+0" in win.zoom_fit_button.toolTip()
+        assert "Ctrl++" in win.zoom_in_button.toolTip()
+        assert "Ctrl+-" in win.zoom_out_button.toolTip()
+
+        # Check shortcut bindings exist
+        seq_strings = [s.key().toString() for s in win._shortcuts]
+        assert "Ctrl+," in seq_strings
+        assert "Ctrl+0" in seq_strings
+        assert "Ctrl++" in seq_strings
+        assert "Ctrl+-" in seq_strings
+
+        # Check shortcuts help dialog text
+        dialog = win._show_shortcuts_help()
+        dialog_text = dialog.text()
+        assert "Ctrl+," in dialog_text
+        assert "Ctrl+0" in dialog_text
+        assert "Ctrl++ / Ctrl+-" in dialog_text
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+
 
 
 
