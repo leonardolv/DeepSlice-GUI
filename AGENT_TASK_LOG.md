@@ -7,8 +7,17 @@ This file is the coordination point for the recurring maintenance task only.
 here.
 
 ## In Progress
- 
+
 ## Completed
+
+### 2026-10-15 UTC - Session load still turned string booleans into True for four more flags
+Status: **done**
+
+**Root cause.** The 2026-10-14 fix covered seven flags but `load_session_dict` still used bare `bool(...)` for `bilateral_denoise_enabled`, `percentile_normalization_enabled`, `confidence_weighted_ensemble` and `training_use_mixed_precision`, so `"false"`/`"0"` enabled them.
+
+**Fix.** Use `_coerce_bool(value, current)` for all four; missing keys keep the current value.
+
+**Validation.** Extended `tests/test_session_bool_coercion.py` (77 cases; 12 fail before, all pass after); with session roundtrip and load-file tests 86 passed headless. Ruff finding count on state.py unchanged.
 
 ### 2026-10-14 UTC - Session load turned string booleans like "false" into True
 Status: **done**

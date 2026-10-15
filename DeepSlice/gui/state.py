@@ -1556,20 +1556,14 @@ class DeepSliceAppState:
         )
         gamma_value = _finite_float(payload.get("gamma_correction"), self.gamma_correction)
         self.gamma_correction = float(np.clip(gamma_value, 0.5, 2.0))
-        self.bilateral_denoise_enabled = bool(
-            payload.get("bilateral_denoise_enabled", self.bilateral_denoise_enabled)
-        )
-        self.percentile_normalization_enabled = bool(
-            payload.get("percentile_normalization_enabled", self.percentile_normalization_enabled)
-        )
+        self.bilateral_denoise_enabled = _coerce_bool(payload.get("bilateral_denoise_enabled"), self.bilateral_denoise_enabled)
+        self.percentile_normalization_enabled = _coerce_bool(payload.get("percentile_normalization_enabled"), self.percentile_normalization_enabled)
         self.preserve_color_enabled = _coerce_bool(payload.get("preserve_color_enabled"), self.preserve_color_enabled)
         self.tta_enabled = _coerce_bool(payload.get("tta_enabled"), self.tta_enabled)
         self.multiscale_enabled = _coerce_bool(payload.get("multiscale_enabled"), self.multiscale_enabled)
         self.fast_fp16_enabled = _coerce_bool(payload.get("fast_fp16_enabled"), self.fast_fp16_enabled)
         self.section_dropout_passes = int(max(0, int(payload.get("section_dropout_passes", self.section_dropout_passes))))
-        self.confidence_weighted_ensemble = bool(
-            payload.get("confidence_weighted_ensemble", self.confidence_weighted_ensemble)
-        )
+        self.confidence_weighted_ensemble = _coerce_bool(payload.get("confidence_weighted_ensemble"), self.confidence_weighted_ensemble)
 
         try:
             self.training_seed = int(max(0, int(payload.get("training_seed", self.training_seed))))
@@ -1596,9 +1590,7 @@ class DeepSliceAppState:
         self.training_min_lr = float(
             np.clip(_finite_float(payload.get("training_min_lr"), self.training_min_lr), 1e-8, 1e-3)
         )
-        self.training_use_mixed_precision = bool(
-            payload.get("training_use_mixed_precision", self.training_use_mixed_precision)
-        )
+        self.training_use_mixed_precision = _coerce_bool(payload.get("training_use_mixed_precision"), self.training_use_mixed_precision)
 
         outlier_sigma = payload.get("outlier_sigma_threshold", self.outlier_sigma_threshold)
         confidence_high = payload.get("confidence_high_threshold", self.confidence_high_threshold)
