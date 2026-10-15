@@ -13,6 +13,10 @@ FLAGS = [
     "tta_enabled",
     "multiscale_enabled",
     "fast_fp16_enabled",
+    "bilateral_denoise_enabled",
+    "percentile_normalization_enabled",
+    "confidence_weighted_ensemble",
+    "training_use_mixed_precision",
 ]
 
 
