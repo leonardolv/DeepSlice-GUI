@@ -18,6 +18,10 @@ Status: **done**
 **Fix.** Use `_coerce_bool(value, current)` for all four; missing keys keep the current value.
 
 **Validation.** Extended `tests/test_session_bool_coercion.py` (77 cases; 12 fail before, all pass after); with session roundtrip and load-file tests 86 passed headless. Ruff finding count on state.py unchanged.
+### 2026-10-16 Claude: GUI polish pass (screenshots of all 5 pages, dark+light)
+- Fixed: opaque black bars behind every QLabel/checkbox/radio inside panels (now transparent); invisible check/radio indicators (visible indicators with check mark); every button was bright primary blue (added `variant=secondary` look for non-primary actions, top bar and Review page); window minimum size 1747x1203 from the Review page (pages now in scroll areas) and 1635px top bar (actions drop to a second row when narrow); "vUnknown" title; clipped "<<" collapse button; white empty matplotlib plots; unthemed tooltips.
+- Verified: headless screenshots before/after; `pytest tests` 387 passed, 3 failed in tests/test_neural_network_utils.py (pre-existing, same 3 fail on clean main, missing optional deps).
+- Backlog plan: see GUI_UX_TASK_LOG.md Backlog.
 
 ### 2026-10-14 UTC - Session load turned string booleans like "false" into True
 Status: **done**

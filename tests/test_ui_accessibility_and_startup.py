@@ -543,3 +543,33 @@ def test_shortcuts_and_linearity_zoom_tooltips():
 
 
 
+
+
+def test_polish_pass_layout_and_theme_rules():
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Pages are scrollable so the Review page cannot force a huge minimum window size.
+        for i in range(win.stack.count()):
+            assert win.stack.widget(i).objectName() == "PageScroll"
+            assert win.stack.widget(i).minimumSizeHint().width() < 400
+        # Secondary buttons are marked; primary actions are left alone.
+        assert win.hardware_button.property("variant") == "secondary"
+        assert win.detect_outliers_button.property("variant") == "secondary"
+        assert win.export_button.property("variant") != "secondary"
+        assert win.run_alignment_button.property("variant") != "secondary"
+        # Labels no longer paint opaque bars over panels; tooltips are themed.
+        sheet = win.styleSheet()
+        assert "QLabel, QCheckBox, QRadioButton" in sheet and "background: transparent" in sheet
+        assert 'QPushButton[variant="secondary"]' in sheet and "QToolTip" in sheet
+        # An unknown version is not shown as "vUnknown".
+        assert "vUnknown" not in win.project_label.text()
+        assert win.collapse_sidebar_button.accessibleName()
+        # Narrow windows move actions to their own row.
+        win._place_top_bar_actions(wide=False)
+        assert win._top_row_actions.count() > 0
+        win._place_top_bar_actions(wide=True)
+        assert win._top_row_actions.count() == 0
+    finally:
+        win.close()
+        win.deleteLater()
