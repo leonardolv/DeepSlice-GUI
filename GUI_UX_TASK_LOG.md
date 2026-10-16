@@ -181,3 +181,8 @@
 - **Status**: Completed
 
 ## Backlog
+- Review page atlas control rows (volume/blend/flip/rotate/scale/offset/loupe) overflow at <1400px: wrap into a flow layout or group in a collapsible box (priority 1).
+- Review page left column: 9 stacked full-width buttons; group under collapsible sections (priority 2).
+- Screenshot and fix populated states (images loaded, predictions present) and all dialogs (Preferences, About, Shortcuts, Hardware Health, Training) at 2 sizes (priority 3).
+- Locked sidebar steps: add a tooltip explaining what unlocks them (priority 4).
+- Plot colors are hardcoded dark; theme them for the light theme (priority 5).

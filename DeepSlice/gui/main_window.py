@@ -16,6 +16,7 @@ from PySide6.QtCore import (
     QEasingCurve,
     QElapsedTimer,
     QPropertyAnimation,
+    QPoint,
     QSettings,
     QSize,
     Qt,
@@ -70,6 +71,7 @@ from PySide6.QtWidgets import (
     QSlider,
     QSplitter,
     QStyle,
+    QScrollArea,
     QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
@@ -878,7 +880,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.completion_label = QLabel("0% Complete")
         self.completion_label.setObjectName("CompletionLabel")
         self.collapse_sidebar_button = QPushButton("<<")
-        self.collapse_sidebar_button.setFixedWidth(30)
+        self.collapse_sidebar_button.setObjectName("CollapseButton")
+        self.collapse_sidebar_button.setFixedWidth(34)
+        self.collapse_sidebar_button.setToolTip("Collapse or expand the step list")
+        self.collapse_sidebar_button.setAccessibleName("Collapse or Expand Step List")
+        self.collapse_sidebar_button.setCursor(Qt.PointingHandCursor)
         self.collapse_sidebar_button.clicked.connect(self._toggle_sidebar)
         self.sidebar_header.addWidget(self.completion_label)
         self.sidebar_header.addStretch()
@@ -895,11 +901,16 @@ class DeepSliceMainWindow(QMainWindow):
         sidebar_layout.addWidget(self.step_list, stretch=1)
 
         self.stack = QStackedWidget()
-        self.stack.addWidget(self._build_ingestion_page())
-        self.stack.addWidget(self._build_configuration_page())
-        self.stack.addWidget(self._build_prediction_page())
-        self.stack.addWidget(self._build_curation_page())
-        self.stack.addWidget(self._build_export_page())
+        # Each page lives in a scroll area so the dense Review page cannot force
+        # the whole window to a minimum size larger than a laptop screen.
+        for build_page in (
+            self._build_ingestion_page,
+            self._build_configuration_page,
+            self._build_prediction_page,
+            self._build_curation_page,
+            self._build_export_page,
+        ):
+            self.stack.addWidget(self._wrap_page_in_scroll_area(build_page()))
 
         # Connect navigation after stack exists because setCurrentRow emits currentRowChanged.
         self.step_list.currentRowChanged.connect(self._on_step_changed)
@@ -921,6 +932,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         root.addWidget(body_split, stretch=1)
 
+        self._mark_secondary_buttons()
         self._assign_button_icons()
         # Icon-only "i" buttons were indistinguishable; show their names.
         for _btn in (self.shortcut_help_button, self.preferences_button, self.about_button):
@@ -940,6 +952,36 @@ class DeepSliceMainWindow(QMainWindow):
         self.global_progress.setVisible(False)
         self.status_bar.addPermanentWidget(self.global_progress)
         self.toast_overlay = ToastOverlay(self)
+
+    @staticmethod
+    def _wrap_page_in_scroll_area(page: QWidget) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setObjectName("PageScroll")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setWidget(page)
+        return scroll
+
+    # Buttons that are not the main action of their page get the quieter
+    # "secondary" look, so each page shows one or two obvious primary actions.
+    SECONDARY_BUTTON_NAMES = (
+        "hardware_button", "new_session_button", "save_session_button",
+        "load_session_button", "clear_images_button", "suggest_thickness_button",
+        "preview_training_split_button", "save_training_split_button",
+        "save_training_metadata_button", "cancel_alignment_button",
+        "accept_predicted_thickness_button", "apply_manual_order_button",
+        "save_slice_note_button", "detect_outliers_button", "reset_flags_button",
+        "auto_flag_low_conf_button", "interpolate_bad_depth_button",
+        "normalize_angles_button", "enforce_order_button", "enforce_spacing_button",
+        "undo_button", "redo_button", "apply_anchor_interpolation_button",
+        "browse_output_dir_button", "quicknii_browse_button", "open_quicknii_button",
+    )
+
+    def _mark_secondary_buttons(self):
+        for name in self.SECONDARY_BUTTON_NAMES:
+            button = getattr(self, name, None)
+            if button is not None:
+                button.setProperty("variant", "secondary")
 
     def _build_guide_banner(self) -> QFrame:
         banner = QFrame()
@@ -1354,7 +1396,8 @@ class DeepSliceMainWindow(QMainWindow):
         except Exception:
             self.app_version = "Unknown"
 
-        self.project_label = QLabel(f"DeepSlice Desktop v{self.app_version}")
+        version_suffix = "" if self.app_version == "Unknown" else f" v{self.app_version}"
+        self.project_label = QLabel(f"DeepSlice Desktop{version_suffix}")
         self.project_label.setObjectName("ProjectLabel")
 
         self.session_status_label = QLabel("Session: New")
@@ -1465,21 +1508,62 @@ class DeepSliceMainWindow(QMainWindow):
         self.copy_error_button = self.copy_error_action
         self.auto_fix_button = self.auto_fix_action
 
-        layout.addWidget(self.project_label)
-        layout.addWidget(self.session_status_label)
-        layout.addStretch(1)
-        layout.addWidget(self.hardware_mode_label)
-        layout.addWidget(self.theme_toggle_button)
-        layout.addWidget(self.hardware_button)
-        layout.addWidget(self.new_session_button)
-        layout.addWidget(self.save_session_button)
-        layout.addWidget(self.load_session_button)
-        layout.addWidget(self.session_io_spinner)
-        layout.addWidget(self.shortcut_help_button)
-        layout.addWidget(self.preferences_button)
-        layout.addWidget(self.about_button)
-        layout.addWidget(self.error_menu_button)
+        # Two rows: identity/status on top, actions below. On wide windows the
+        # actions join the top row; on narrow ones they drop to their own row so
+        # the top bar never dictates the window's minimum width.
+        outer = layout
+        outer_widget_layout = QVBoxLayout()
+        outer_widget_layout.setContentsMargins(0, 0, 0, 0)
+        outer_widget_layout.setSpacing(8)
+        outer.addLayout(outer_widget_layout)
+        self._top_row_primary = QHBoxLayout()
+        self._top_row_primary.setSpacing(12)
+        self._top_row_actions = QHBoxLayout()
+        self._top_row_actions.setSpacing(10)
+        outer_widget_layout.addLayout(self._top_row_primary)
+        outer_widget_layout.addLayout(self._top_row_actions)
+        self._top_action_widgets = [
+            self.theme_toggle_button,
+            self.hardware_button,
+            self.new_session_button,
+            self.save_session_button,
+            self.load_session_button,
+            self.session_io_spinner,
+            self.shortcut_help_button,
+            self.preferences_button,
+            self.about_button,
+            self.error_menu_button,
+        ]
+        self._top_bar_wide = None
+        self._place_top_bar_actions(wide=True)
         return frame
+
+    def _place_top_bar_actions(self, wide: bool):
+        """(Re)build the two top-bar rows for the given width class."""
+        if self._top_bar_wide is wide:
+            return
+        self._top_bar_wide = wide
+        for row in (self._top_row_primary, self._top_row_actions):
+            while row.count():
+                row.takeAt(0)
+        self._top_row_primary.addWidget(self.project_label)
+        self._top_row_primary.addWidget(self.session_status_label)
+        self._top_row_primary.addStretch(1)
+        self._top_row_primary.addWidget(self.hardware_mode_label)
+        target = self._top_row_primary if wide else self._top_row_actions
+        if not wide:
+            target.addStretch(1)
+        for widget in self._top_action_widgets:
+            target.addWidget(widget)
+
+    def _update_top_bar_layout(self):
+        if not hasattr(self, "_top_action_widgets"):
+            return
+        needed = 80 + sum(w.sizeHint().width() + 12 for w in self._top_action_widgets)
+        needed += self.project_label.sizeHint().width() + self.session_status_label.sizeHint().width()
+        needed += self.hardware_mode_label.sizeHint().width() + 24
+        self._place_top_bar_actions(wide=self.width() >= needed)
+
 
     def _update_recent_sessions_menu(self):
         settings = self._settings
@@ -2139,6 +2223,7 @@ class DeepSliceMainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self._update_top_bar_layout()
         if hasattr(self, "toast_overlay"):
             self.toast_overlay._reposition()
         
@@ -3797,6 +3882,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.linearity_figure = Figure(figsize=(5.2, 2.2), facecolor="#1A1F26")
         self.linearity_canvas = FigureCanvas(self.linearity_figure)
         self.linearity_axis = self.linearity_figure.add_subplot(111)
+        self._style_empty_plot_axis(self.linearity_axis)
         self.linearity_canvas.mpl_connect("button_press_event", self._on_linearity_click)
         self.linearity_canvas.setMinimumHeight(130)
 
@@ -3834,6 +3920,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.hist_figure = Figure(figsize=(5.2, 1.0), facecolor="#1A1F26")
         self.hist_canvas = FigureCanvas(self.hist_figure)
         self.hist_axis = self.hist_figure.add_subplot(111)
+        self._style_empty_plot_axis(self.hist_axis)
         self.hist_canvas.setMinimumHeight(80)
 
         atlas_controls = QHBoxLayout()
@@ -4237,6 +4324,101 @@ class DeepSliceMainWindow(QMainWindow):
         root.addWidget(split)
         return page
 
+    @staticmethod
+    def _check_icon_url() -> str:
+        """Write (once) a white check-mark PNG for checked indicators and return its path."""
+        try:
+            import tempfile
+            from PySide6.QtGui import QImage, QPainter, QPen
+
+            icon_dir = os.path.join(tempfile.gettempdir(), "deepslice_gui_icons")
+            os.makedirs(icon_dir, exist_ok=True)
+            path = os.path.join(icon_dir, "check_white.png")
+            if not os.path.exists(path):
+                image = QImage(28, 28, QImage.Format_ARGB32)
+                image.fill(Qt.transparent)
+                painter = QPainter(image)
+                painter.setRenderHint(QPainter.Antialiasing)
+                pen = QPen(QColor("#FFFFFF"))
+                pen.setWidthF(3.6)
+                pen.setCapStyle(Qt.RoundCap)
+                pen.setJoinStyle(Qt.RoundJoin)
+                painter.setPen(pen)
+                painter.drawPolyline([QPoint(6, 14), QPoint(12, 20), QPoint(22, 8)])
+                painter.end()
+                image.save(path)
+            return path.replace("\\", "/")
+        except Exception:
+            return ""
+
+    @staticmethod
+    def _theme_extras(theme_name: str) -> str:
+        """Rules shared by both themes: transparent labels, visible check
+        indicators, secondary buttons and tooltips."""
+        if theme_name == "dark":
+            c = dict(input="#11161D", border="#5B6B80", accent="#4C9AFF", sec="#232B36",
+                     sec_hover="#2E3846", sec_border="#3B4655", text="#DEE6EF",
+                     tip_bg="#1A1F26", muted="#6F7B8A")
+        else:
+            c = dict(input="#FFFFFF", border="#6F86A0", accent="#2F7BCE", sec="#E7EEF7",
+                     sec_hover="#D6E3F2", sec_border="#B4C6DA", text="#1A2733",
+                     tip_bg="#FFFFFF", muted="#7B8898")
+        check_url = DeepSliceMainWindow._check_icon_url()
+        check_rule = f"image: url({check_url});" if check_url else ""
+        return f"""
+            QLabel, QCheckBox, QRadioButton {{
+                background: transparent;
+            }}
+            QCheckBox::indicator, QRadioButton::indicator {{
+                width: 14px;
+                height: 14px;
+                border: 1px solid {c['border']};
+                background: {c['input']};
+            }}
+            QCheckBox::indicator {{
+                border-radius: 4px;
+            }}
+            QRadioButton::indicator {{
+                border-radius: 8px;
+            }}
+            QCheckBox::indicator:checked {{
+                background: {c['accent']};
+                border-color: {c['accent']};
+                {check_rule}
+            }}
+            QRadioButton::indicator:checked {{
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+                    stop:0 {c['accent']}, stop:0.5 {c['accent']},
+                    stop:0.6 {c['input']}, stop:1 {c['input']});
+                border-color: {c['accent']};
+            }}
+            QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {{
+                border-color: {c['muted']};
+            }}
+            QPushButton[variant="secondary"] {{
+                background: {c['sec']};
+                border: 1px solid {c['sec_border']};
+                color: {c['text']};
+            }}
+            QPushButton[variant="secondary"]:hover {{
+                background: {c['sec_hover']};
+            }}
+            QPushButton[variant="secondary"]:disabled {{
+                background: transparent;
+                border-color: {c['sec_border']};
+                color: {c['muted']};
+            }}
+            QPushButton#CollapseButton {{
+                padding: 4px 0px;
+            }}
+            QToolTip {{
+                background: {c['tip_bg']};
+                color: {c['text']};
+                border: 1px solid {c['sec_border']};
+                padding: 4px;
+            }}
+        """
+
     def _apply_theme(self):
         dark_theme = """
             QWidget {
@@ -4552,7 +4734,9 @@ class DeepSliceMainWindow(QMainWindow):
             }
         """
 
-        stylesheet = dark_theme if self._theme_name == "dark" else light_theme
+        stylesheet = (dark_theme if self._theme_name == "dark" else light_theme) + self._theme_extras(
+            self._theme_name
+        )
         self.setStyleSheet(stylesheet)
 
         if hasattr(self, "theme_toggle_button"):
@@ -6719,6 +6903,14 @@ class DeepSliceMainWindow(QMainWindow):
         ]
         self.atlas_viewer.set_array_image(display_image, overlay_lines=overlay)
 
+    @staticmethod
+    def _style_empty_plot_axis(axis):
+        """Dark axis with readable ticks so an empty plot is not a white box."""
+        axis.set_facecolor("#11161D")
+        axis.tick_params(colors="#B9C7D8")
+        for spine in axis.spines.values():
+            spine.set_color("#3B4655")
+
     def _refresh_curation_views(self):
         self.slice_flag_list.clear()
         self.linearity_axis.clear()
@@ -6736,6 +6928,8 @@ class DeepSliceMainWindow(QMainWindow):
                 self.confidence_overlay_viewer.clear_with_text("No predictions available")
             if hasattr(self, "slice_note_edit"):
                 self.slice_note_edit.clear()
+            self._style_empty_plot_axis(self.linearity_axis)
+            self._style_empty_plot_axis(self.hist_axis)
             self.linearity_canvas.draw_idle()
             self.hist_canvas.draw_idle()
             self._update_undo_redo_labels()
