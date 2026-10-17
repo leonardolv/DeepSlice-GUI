@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-17 UTC - Curation plots stayed dark in the light theme
+Status: **done**
+
+**Root cause.** The linearity and confidence-histogram figures hardcoded dark colours (figure/axis/spine/tick/legend) at construction and on every redraw, and `_apply_theme` never touched them, so the light theme showed black plot boxes with near-white text, and toggling the theme did nothing to them.
+
+**Fix.** `DeepSliceMainWindow.PLOT_PALETTES` (dark/light) plus `_plot_palette()`, an instance `_style_empty_plot_axis`, and `_apply_plot_theme()` called from `_apply_theme` (restyles figures, axes, labels, legend; no data refresh, so curation selection is untouched). `_refresh_curation_views` uses the palette. Backlog item "locked sidebar tooltips" was already implemented (`_update_step_guidance`) and is stale.
+
+**Validation.** New `tests/test_plot_theme.py`; full suite headless 388 passed (test_neural_network_utils deselected, pre-existing missing deps).
+
 ### 2026-10-15 UTC - Session load still turned string booleans into True for four more flags
 Status: **done**
 

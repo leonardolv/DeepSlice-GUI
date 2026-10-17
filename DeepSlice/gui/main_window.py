@@ -3879,7 +3879,7 @@ class DeepSliceMainWindow(QMainWindow):
         right = QWidget()
         right_layout = QVBoxLayout(right)
 
-        self.linearity_figure = Figure(figsize=(5.2, 2.2), facecolor="#1A1F26")
+        self.linearity_figure = Figure(figsize=(5.2, 2.2), facecolor=self._plot_palette()["figure"])
         self.linearity_canvas = FigureCanvas(self.linearity_figure)
         self.linearity_axis = self.linearity_figure.add_subplot(111)
         self._style_empty_plot_axis(self.linearity_axis)
@@ -3917,7 +3917,7 @@ class DeepSliceMainWindow(QMainWindow):
         plot_toolbar.addWidget(self.zoom_out_button)
         plot_toolbar.addStretch(1)
 
-        self.hist_figure = Figure(figsize=(5.2, 1.0), facecolor="#1A1F26")
+        self.hist_figure = Figure(figsize=(5.2, 1.0), facecolor=self._plot_palette()["figure"])
         self.hist_canvas = FigureCanvas(self.hist_figure)
         self.hist_axis = self.hist_figure.add_subplot(111)
         self._style_empty_plot_axis(self.hist_axis)
@@ -4738,6 +4738,7 @@ class DeepSliceMainWindow(QMainWindow):
             self._theme_name
         )
         self.setStyleSheet(stylesheet)
+        self._apply_plot_theme()
 
         if hasattr(self, "theme_toggle_button"):
             self.theme_toggle_button.setText(
@@ -6903,13 +6904,62 @@ class DeepSliceMainWindow(QMainWindow):
         ]
         self.atlas_viewer.set_array_image(display_image, overlay_lines=overlay)
 
-    @staticmethod
-    def _style_empty_plot_axis(axis):
-        """Dark axis with readable ticks so an empty plot is not a white box."""
-        axis.set_facecolor("#11161D")
-        axis.tick_params(colors="#B9C7D8")
+    PLOT_PALETTES = {
+        "dark": {
+            "figure": "#1A1F26",
+            "axis": "#11161D",
+            "text": "#B9C7D8",
+            "spine": "#3B4655",
+            "legend_edge": "#2A313B",
+            "legend_text": "#EAF2FF",
+            "scatter_edge": "white",
+            "hist_edge": "#CFE0FF",
+            "weights": "#52E5FF",
+        },
+        "light": {
+            "figure": "#F2F6FB",
+            "axis": "#FFFFFF",
+            "text": "#1A2733",
+            "spine": "#9AA9BA",
+            "legend_edge": "#C5D0DC",
+            "legend_text": "#1A2733",
+            "scatter_edge": "#44505E",
+            "hist_edge": "#1F5FA8",
+            "weights": "#0B8FB0",
+        },
+    }
+
+    def _plot_palette(self) -> dict:
+        return self.PLOT_PALETTES.get(getattr(self, "_theme_name", "dark"), self.PLOT_PALETTES["dark"])
+
+    def _style_empty_plot_axis(self, axis):
+        """Themed axis with readable ticks so an empty plot is not a white/black box."""
+        palette = self._plot_palette()
+        axis.set_facecolor(palette["axis"])
+        axis.tick_params(colors=palette["text"])
         for spine in axis.spines.values():
-            spine.set_color("#3B4655")
+            spine.set_color(palette["spine"])
+
+    def _apply_plot_theme(self):
+        """Re-skin the curation plots for the active theme (cheap; redraws only)."""
+        if not hasattr(self, "linearity_figure") or not hasattr(self, "hist_figure"):
+            return
+        palette = self._plot_palette()
+        for figure, axis, canvas in (
+            (self.linearity_figure, self.linearity_axis, self.linearity_canvas),
+            (self.hist_figure, self.hist_axis, self.hist_canvas),
+        ):
+            figure.set_facecolor(palette["figure"])
+            self._style_empty_plot_axis(axis)
+            axis.xaxis.label.set_color(palette["text"])
+            axis.yaxis.label.set_color(palette["text"])
+            legend = axis.get_legend()
+            if legend is not None:
+                legend.get_frame().set_facecolor(palette["figure"])
+                legend.get_frame().set_edgecolor(palette["legend_edge"])
+                for text in legend.get_texts():
+                    text.set_color(palette["legend_text"])
+            canvas.draw_idle()
 
     def _refresh_curation_views(self):
         self.slice_flag_list.clear()
@@ -7023,13 +7073,14 @@ class DeepSliceMainWindow(QMainWindow):
         weights = payload["weights"]
         outliers = payload["outliers"]
 
-        self.linearity_axis.set_facecolor("#11161D")
+        palette = self._plot_palette()
+        self._style_empty_plot_axis(self.linearity_axis)
         self.linearity_axis.scatter(
             x,
             y,
             c=payload["confidence"],
             cmap="RdYlGn",
-            edgecolors="white",
+            edgecolors=palette["scatter_edge"],
             linewidths=0.5,
             s=36,
             label="Sections",
@@ -7044,7 +7095,7 @@ class DeepSliceMainWindow(QMainWindow):
             self.linearity_axis.plot(
                 x,
                 scaled_weights,
-                color="#52E5FF",
+                color=palette["weights"],
                 linestyle="--",
                 linewidth=1.6,
                 label="Gaussian weighting (scaled)",
@@ -7063,31 +7114,23 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.linearity_axis.set_xlabel("Section Index")
         self.linearity_axis.set_ylabel("Predicted AP Position")
-        self.linearity_axis.tick_params(colors="#B9C7D8")
-        self.linearity_axis.xaxis.label.set_color("#B9C7D8")
-        self.linearity_axis.yaxis.label.set_color("#B9C7D8")
-        self.linearity_axis.spines["bottom"].set_color("#3B4655")
-        self.linearity_axis.spines["left"].set_color("#3B4655")
-        self.linearity_axis.spines["top"].set_color("#3B4655")
-        self.linearity_axis.spines["right"].set_color("#3B4655")
-        legend = self.linearity_axis.legend(loc="best", facecolor="#1A1F26", edgecolor="#2A313B")
+        self.linearity_axis.tick_params(colors=palette["text"])
+        self.linearity_axis.xaxis.label.set_color(palette["text"])
+        self.linearity_axis.yaxis.label.set_color(palette["text"])
+        legend = self.linearity_axis.legend(loc="best", facecolor=palette["figure"], edgecolor=palette["legend_edge"])
         if legend is not None:
             legend.get_frame().set_alpha(0.95)
             for text in legend.get_texts():
-                text.set_color("#EAF2FF")
+                text.set_color(palette["legend_text"])
 
-        self.hist_axis.set_facecolor("#11161D")
+        self._style_empty_plot_axis(self.hist_axis)
         bins = np.linspace(0.0, 1.0, 11)
-        self.hist_axis.hist(payload["confidence"], bins=bins, color="#3A8DFF", edgecolor="#CFE0FF", alpha=0.9)
+        self.hist_axis.hist(payload["confidence"], bins=bins, color="#3A8DFF", edgecolor=palette["hist_edge"], alpha=0.9)
         self.hist_axis.set_xlabel("Confidence")
         self.hist_axis.set_ylabel("Count")
-        self.hist_axis.tick_params(colors="#B9C7D8")
-        self.hist_axis.xaxis.label.set_color("#B9C7D8")
-        self.hist_axis.yaxis.label.set_color("#B9C7D8")
-        self.hist_axis.spines["bottom"].set_color("#3B4655")
-        self.hist_axis.spines["left"].set_color("#3B4655")
-        self.hist_axis.spines["top"].set_color("#3B4655")
-        self.hist_axis.spines["right"].set_color("#3B4655")
+        self.hist_axis.tick_params(colors=palette["text"])
+        self.hist_axis.xaxis.label.set_color(palette["text"])
+        self.hist_axis.yaxis.label.set_color(palette["text"])
 
         self.linearity_canvas.draw_idle()
         self.hist_canvas.draw_idle()
