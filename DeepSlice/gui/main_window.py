@@ -108,6 +108,7 @@ from ..error_logging import (
 )
 from ..metadata import metadata_loader
 from . import reporting
+from .flow_layout import FlowLayout
 from .state import DeepSliceAppState, SUPPORTED_IMAGE_FORMATS
 from .workers import FunctionWorker
 
@@ -3923,7 +3924,7 @@ class DeepSliceMainWindow(QMainWindow):
         self._style_empty_plot_axis(self.hist_axis)
         self.hist_canvas.setMinimumHeight(80)
 
-        atlas_controls = QHBoxLayout()
+        atlas_controls = FlowLayout()
         self.enable_atlas_preview_checkbox = QCheckBox("Atlas volume preview")
         self.enable_atlas_preview_checkbox.setObjectName("enable_atlas_preview_checkbox")
         self.enable_atlas_preview_checkbox.setAccessibleName("Enable Atlas Preview")
@@ -3984,9 +3985,9 @@ class DeepSliceMainWindow(QMainWindow):
         atlas_controls.addWidget(self.before_after_toggle)
         atlas_controls.addWidget(self.loupe_toggle)
         atlas_controls.addWidget(self.atlas_coords_label)
-        atlas_controls.addWidget(self.atlas_slice_info_label, stretch=1)
+        atlas_controls.addWidget(self.atlas_slice_info_label)
 
-        atlas_transform_row = QHBoxLayout()
+        atlas_transform_row = FlowLayout()
         self.atlas_flip_x_checkbox = QCheckBox("Flip X")
         self.atlas_flip_x_checkbox.setObjectName("atlas_flip_x_checkbox")
         self.atlas_flip_x_checkbox.setAccessibleName("Flip Atlas Horizontally")
@@ -4029,9 +4030,9 @@ class DeepSliceMainWindow(QMainWindow):
         atlas_transform_row.addWidget(self.atlas_flip_y_checkbox)
         atlas_transform_row.addWidget(self.atlas_rotate_combo)
         atlas_transform_row.addWidget(self.atlas_scale_label)
-        atlas_transform_row.addWidget(self.atlas_scale_slider, stretch=1)
+        atlas_transform_row.addWidget(self.atlas_scale_slider)
 
-        atlas_offset_row = QHBoxLayout()
+        atlas_offset_row = FlowLayout()
         self.atlas_offset_x_slider = QSlider(Qt.Horizontal)
         self.atlas_offset_x_slider.setObjectName("atlas_offset_x_slider")
         self.atlas_offset_x_slider.setAccessibleName("Atlas Horizontal Offset")
@@ -4055,9 +4056,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.atlas_offset_y_label.setObjectName("atlas_offset_y_label")
 
         atlas_offset_row.addWidget(self.atlas_offset_x_label)
-        atlas_offset_row.addWidget(self.atlas_offset_x_slider, stretch=1)
+        atlas_offset_row.addWidget(self.atlas_offset_x_slider)
         atlas_offset_row.addWidget(self.atlas_offset_y_label)
-        atlas_offset_row.addWidget(self.atlas_offset_y_slider, stretch=1)
+        atlas_offset_row.addWidget(self.atlas_offset_y_slider)
+        for _slider in (self.blend_slider, self.atlas_scale_slider, self.atlas_offset_x_slider, self.atlas_offset_y_slider):
+            _slider.setMinimumWidth(140)
 
         self.confidence_panel_toggle = QToolButton()
         self.confidence_panel_toggle.setText("Confidence Overlay Preview")

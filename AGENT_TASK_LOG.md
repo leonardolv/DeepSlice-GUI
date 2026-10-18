@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-18 UTC - Review page atlas control rows overflowed below ~1400px
+Status: **done**
+
+**Root cause.** The three atlas control rows (preview/volume/blend/loupe, flip/rotate/scale, offsets) were fixed `QHBoxLayout`s, so their summed widths forced the Review page to ~1747px minimum.
+
+**Fix.** New `DeepSlice/gui/flow_layout.py` (`FlowLayout`, wraps items onto extra rows, minimum width = widest item); the three rows use it, sliders get a 140px minimum so they stay usable. Review-page minimum width is now ~972px (the TopBar, 1635px, is the remaining limiter - see GUI_UX_TASK_LOG backlog).
+
+**Validation.** New `tests/test_flow_layout.py` (4 tests); full suite headless 386 passed, 10 skipped (test_neural_network_utils deselected, missing optional deps).
+
 ### 2026-10-17 UTC - Curation plots stayed dark in the light theme
 Status: **done**
 
