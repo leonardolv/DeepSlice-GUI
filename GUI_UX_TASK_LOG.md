@@ -181,7 +181,7 @@
 - **Status**: Completed
 
 ## Backlog
-- ~~Review page atlas control rows overflow~~ done 2026-10-18 (FlowLayout). New: TopBar still reports 1635px minimum width (top-bar min size hint does not account for wrapping).
+- ~~Review page atlas control rows overflow~~ done 2026-10-18 (FlowLayout). ~~TopBar 1635px minimum width~~ done 2026-10-19 (actions in FlowLayout; min ~611px).
 - Review page left column: 9 stacked full-width buttons; group under collapsible sections (priority 2).
 - Screenshot and fix populated states (images loaded, predictions present) and all dialogs (Preferences, About, Shortcuts, Hardware Health, Training) at 2 sizes (priority 3).
 - ~~Locked sidebar steps tooltip~~ already implemented (2026-10-17 verified).

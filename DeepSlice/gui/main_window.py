@@ -1535,6 +1535,12 @@ class DeepSliceMainWindow(QMainWindow):
             self.about_button,
             self.error_menu_button,
         ]
+        # Actions live in one wrapping container so the top bar's minimum width
+        # is the widest button, not the sum of all of them.
+        self._top_actions_container = QWidget()
+        self._top_actions_flow = FlowLayout(self._top_actions_container, spacing=10)
+        for widget in self._top_action_widgets:
+            self._top_actions_flow.addWidget(widget)
         self._top_bar_wide = None
         self._place_top_bar_actions(wide=True)
         return frame
@@ -1547,6 +1553,8 @@ class DeepSliceMainWindow(QMainWindow):
         for row in (self._top_row_primary, self._top_row_actions):
             while row.count():
                 row.takeAt(0)
+        self._top_actions_flow.prefer_single_row = wide
+        self._top_actions_flow.invalidate()
         self._top_row_primary.addWidget(self.project_label)
         self._top_row_primary.addWidget(self.session_status_label)
         self._top_row_primary.addStretch(1)
@@ -1554,8 +1562,7 @@ class DeepSliceMainWindow(QMainWindow):
         target = self._top_row_primary if wide else self._top_row_actions
         if not wide:
             target.addStretch(1)
-        for widget in self._top_action_widgets:
-            target.addWidget(widget)
+        target.addWidget(self._top_actions_container)
 
     def _update_top_bar_layout(self):
         if not hasattr(self, "_top_action_widgets"):
