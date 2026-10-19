@@ -13,6 +13,9 @@ class FlowLayout(QLayout):
         super().__init__(parent)
         self._items = []
         self._spacing = spacing
+        # When True, sizeHint() is the width of all items on one row (the
+        # minimum width stays the widest item, so the layout can still wrap).
+        self.prefer_single_row = False
         self.setContentsMargins(0, 0, 0, 0)
 
     def addItem(self, item):
@@ -41,7 +44,20 @@ class FlowLayout(QLayout):
         self._do_layout(rect, apply=True)
 
     def sizeHint(self):
-        return self.minimumSize()
+        if not self.prefer_single_row:
+            return self.minimumSize()
+        size = QSize(0, 0)
+        visible = 0
+        for item in self._items:
+            if item.widget() is not None and item.widget().isHidden():
+                continue
+            hint = item.sizeHint()
+            size = QSize(size.width() + hint.width(), max(size.height(), hint.height()))
+            visible += 1
+        if visible > 1:
+            size.setWidth(size.width() + self._spacing * (visible - 1))
+        m = self.contentsMargins()
+        return size + QSize(m.left() + m.right(), m.top() + m.bottom())
 
     def minimumSize(self):
         size = QSize()

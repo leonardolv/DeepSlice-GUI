@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-19 UTC - Top bar forced a ~1635px minimum window width
+Status: **done** (claude/wonderful-euler-g6akyj)
+
+**Root cause.** The ten top-bar action buttons were added directly to a `QHBoxLayout`, so the window's minimum width was their sum (TopBar 1635px, window 1655px). The existing wide/narrow row switch could never trigger below that, because the window could not shrink.
+
+**Fix.** Actions now live in one `FlowLayout` container (minimum width = widest button); `FlowLayout.prefer_single_row` makes its sizeHint the one-row width in wide mode so wide windows look unchanged. Window minimum width is now ~611px.
+
+**Validation.** New `tests/test_top_bar_min_width.py` (2 tests, headless, narrow and wide placement stays inside the bar); full suite 394 passed, 9 skipped (test_neural_network_utils excluded, missing TF).
+
 ### 2026-10-18 UTC - Review page atlas control rows overflowed below ~1400px
 Status: **done**
 
