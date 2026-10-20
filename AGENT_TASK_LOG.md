@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-20 UTC - Review page left column rows forced a 463px minimum width
+Status: **done** (claude/wonderful-euler-k1yg5a)
+
+**Root cause.** The list header (Prev/Next/Select All/Deselect All + filter), the quick-action row (three long buttons) and the anchor-action row were fixed `QHBoxLayout`s, so the Review page left column could not shrink below the sum of their widths (463px).
+
+**Fix.** These three rows use the existing `FlowLayout` and wrap onto extra rows. Left column minimum width is now 274px.
+
+**Validation.** New `tests/test_review_left_column_min_width.py` (4 tests, all red before the change); full suite 446 passed, 9 skipped (test_neural_network_utils excluded, missing TF). Ruff on the new test is clean; repo-wide ruff findings are pre-existing and unchanged by this edit.
+
 ### 2026-10-20 UTC - Session load aborted half-applied on a malformed numeric field
 Status: **done** (claude/wonderful-euler-os9p8t)
 

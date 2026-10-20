@@ -182,7 +182,7 @@
 
 ## Backlog
 - ~~Review page atlas control rows overflow~~ done 2026-10-18 (FlowLayout). ~~TopBar 1635px minimum width~~ done 2026-10-19 (actions in FlowLayout; min ~611px).
-- Review page left column: 9 stacked full-width buttons; group under collapsible sections (priority 2).
+- Review page left column: 9 stacked full-width buttons; group under collapsible sections (priority 2). (Row overflow part done 2026-10-20: rows wrap via FlowLayout.)
 - Screenshot and fix populated states (images loaded, predictions present) and all dialogs (Preferences, About, Shortcuts, Hardware Health, Training) at 2 sizes (priority 3).
 - ~~Locked sidebar steps tooltip~~ already implemented (2026-10-17 verified).
 - ~~Plot colors themed for light theme~~ done 2026-10-17 (PLOT_PALETTES).
