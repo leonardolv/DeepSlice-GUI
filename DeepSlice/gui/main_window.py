@@ -3575,7 +3575,7 @@ class DeepSliceMainWindow(QMainWindow):
         left = QWidget()
         left_layout = QVBoxLayout(left)
 
-        list_header_layout = QHBoxLayout()
+        list_header_layout = FlowLayout()
         self.curation_prev_button = QToolButton()
         self.curation_prev_button.setText("Prev")
         self.curation_prev_button.setObjectName("curation_prev_button")
@@ -3620,7 +3620,6 @@ class DeepSliceMainWindow(QMainWindow):
         list_header_layout.addWidget(self.curation_next_button)
         list_header_layout.addWidget(self.curation_select_all_btn)
         list_header_layout.addWidget(self.curation_deselect_all_btn)
-        list_header_layout.addStretch()
         list_header_layout.addWidget(QLabel("Filter:"))
         list_header_layout.addWidget(self.confidence_filter_combo)
         
@@ -3846,7 +3845,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.clear_anchor_button.setCursor(Qt.PointingHandCursor)
         self.clear_anchor_button.clicked.connect(self._clear_anchor_points)
 
-        anchor_action_row = QHBoxLayout()
+        anchor_action_row = FlowLayout()
         anchor_action_row.addWidget(self.set_anchor_button)
         anchor_action_row.addWidget(self.remove_anchor_button)
         anchor_action_row.addWidget(self.clear_anchor_button)
@@ -3875,7 +3874,7 @@ class DeepSliceMainWindow(QMainWindow):
         left_layout.addWidget(self.apply_bad_sections_button)
         left_layout.addWidget(self.detect_outliers_button)
         left_layout.addWidget(self.reset_flags_button)
-        quick_action_row = QHBoxLayout()
+        quick_action_row = FlowLayout()
         quick_action_row.addWidget(self.auto_flag_low_conf_button)
         quick_action_row.addWidget(self.interpolate_bad_depth_button)
         quick_action_row.addWidget(self.toggle_current_flag_button)
