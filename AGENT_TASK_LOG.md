@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-20 UTC - Session load aborted half-applied on a malformed numeric field
+Status: **done** (claude/wonderful-euler-os9p8t)
+
+**Root cause.** `load_session_dict` coerced `min_resolution_px` and `section_dropout_passes` with bare `int(...)`; a null, garbage or NaN value raised `TypeError`/`ValueError` mid-load, leaving every earlier field applied and every later one not. `training_patience` and `inference_batch_size` swallowed errors via broad `except`, and `training_seed` likewise, each with its own ad-hoc spelling.
+
+**Fix.** One `_coerce_int(value, default, minimum)` helper in `gui/state.py` (rejects None/bool/non-finite/non-numeric, accepts numeric strings and floats, clamps) now backs all five integer fields; a bad value keeps the current setting and loading continues. Two tests in `test_mutators_defer_is_dirty.py` used `min_resolution_px="not-a-number"` as their failure trigger; they now use `image_paths=123`, which still genuinely raises.
+
+**Validation.** New `tests/test_session_int_coercion.py` (48 cases; 20 red before the fix). Full suite 442 passed, 9 skipped (test_neural_network_utils excluded, missing TF).
+
 ### 2026-10-19 UTC - Top bar forced a ~1635px minimum window width
 Status: **done** (claude/wonderful-euler-g6akyj)
 
