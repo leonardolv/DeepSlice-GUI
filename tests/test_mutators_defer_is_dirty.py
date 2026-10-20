@@ -365,11 +365,11 @@ class TestLoadSessionDictDefersIsDirty:
         payload.update(overrides)
         return payload
 
-    def test_a_malformed_numeric_field_does_not_clear_a_pending_dirty_flag(self):
+    def test_a_load_failure_does_not_clear_a_pending_dirty_flag(self):
         st = DeepSliceAppState()
         st.is_dirty = True  # simulating pre-existing, genuinely unsaved edits
-        payload = self._base_payload(min_resolution_px="not-a-number")
-        with pytest.raises(ValueError):
+        payload = self._base_payload(image_paths=123)
+        with pytest.raises(TypeError):
             st.load_session_dict(payload)
         assert st.is_dirty is True
 
@@ -398,7 +398,7 @@ class TestLoadSessionDictDefersIsDirty:
         st = DeepSliceAppState()
         st._partial_prediction_candidate = sample_predictions()
         st._partial_prediction_reason = "prior ensemble failure"
-        payload = self._base_payload(min_resolution_px="not-a-number")
-        with pytest.raises(ValueError):
+        payload = self._base_payload(image_paths=123)
+        with pytest.raises(TypeError):
             st.load_session_dict(payload)
         assert st.has_partial_prediction_candidate() is False

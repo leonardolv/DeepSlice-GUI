@@ -41,6 +41,20 @@ def _coerce_bool(value, default: bool = False) -> bool:
         return default
 
 
+def _coerce_int(value, default: int, minimum: int | None = None) -> int:
+    """Coerce a JSON-loaded value to int, falling back to ``default`` when it is
+    missing, non-numeric or non-finite, then clamp to ``minimum``."""
+    try:
+        if isinstance(value, bool) or value is None:
+            raise ValueError
+        result = int(float(value)) if not isinstance(value, int) else int(value)
+    except (TypeError, ValueError, OverflowError):
+        result = int(default)
+    if minimum is not None:
+        result = max(minimum, result)
+    return result
+
+
 # Upper bound on enumerated gap indices in build_index_report.
 MAX_REPORTED_MISSING_INDICES = 10_000
 
@@ -1527,10 +1541,9 @@ class DeepSliceAppState:
         # ensemble is a tri-state (None / True / False); preserve None but coerce strings.
         self.ensemble = None if ensemble_value is None else _coerce_bool(ensemble_value)
         self.use_secondary_model = _coerce_bool(payload.get("use_secondary_model", False))
-        try:
-            self.inference_batch_size = int(max(1, int(payload.get("inference_batch_size", self.inference_batch_size))))
-        except Exception:
-            self.inference_batch_size = int(max(1, self.inference_batch_size))
+        self.inference_batch_size = _coerce_int(
+            payload.get("inference_batch_size"), self.inference_batch_size, minimum=1
+        )
 
         self.tissue_crop_enabled = _coerce_bool(payload.get("tissue_crop_enabled"), self.tissue_crop_enabled)
         self.clahe_enabled = _coerce_bool(payload.get("clahe_enabled"), self.clahe_enabled)
@@ -1538,7 +1551,7 @@ class DeepSliceAppState:
             payload.get("stain_normalization_mode", self.stain_normalization_mode)
         ).strip().lower()
         self.quality_gate_enabled = _coerce_bool(payload.get("quality_gate_enabled"), self.quality_gate_enabled)
-        self.min_resolution_px = int(max(64, int(payload.get("min_resolution_px", self.min_resolution_px))))
+        self.min_resolution_px = _coerce_int(payload.get("min_resolution_px"), self.min_resolution_px, minimum=64)
         self.blur_variance_threshold = _finite_float(
             payload.get("blur_variance_threshold"), self.blur_variance_threshold
         )
@@ -1562,13 +1575,12 @@ class DeepSliceAppState:
         self.tta_enabled = _coerce_bool(payload.get("tta_enabled"), self.tta_enabled)
         self.multiscale_enabled = _coerce_bool(payload.get("multiscale_enabled"), self.multiscale_enabled)
         self.fast_fp16_enabled = _coerce_bool(payload.get("fast_fp16_enabled"), self.fast_fp16_enabled)
-        self.section_dropout_passes = int(max(0, int(payload.get("section_dropout_passes", self.section_dropout_passes))))
+        self.section_dropout_passes = _coerce_int(
+            payload.get("section_dropout_passes"), self.section_dropout_passes, minimum=0
+        )
         self.confidence_weighted_ensemble = _coerce_bool(payload.get("confidence_weighted_ensemble"), self.confidence_weighted_ensemble)
 
-        try:
-            self.training_seed = int(max(0, int(payload.get("training_seed", self.training_seed))))
-        except Exception:
-            self.training_seed = int(max(0, self.training_seed))
+        self.training_seed = _coerce_int(payload.get("training_seed"), self.training_seed, minimum=0)
         self.training_group_mode = self._normalize_training_group_mode(
             payload.get("training_group_mode", self.training_group_mode)
         )
@@ -1580,10 +1592,7 @@ class DeepSliceAppState:
         )
         if self.training_train_fraction + self.training_val_fraction >= 0.99:
             self.training_val_fraction = max(0.05, 0.98 - self.training_train_fraction)
-        try:
-            self.training_patience = int(max(1, int(payload.get("training_patience", self.training_patience))))
-        except Exception:
-            pass
+        self.training_patience = _coerce_int(payload.get("training_patience"), self.training_patience, minimum=1)
         self.training_lr_factor = float(
             np.clip(_finite_float(payload.get("training_lr_factor"), self.training_lr_factor), 0.05, 0.95)
         )
