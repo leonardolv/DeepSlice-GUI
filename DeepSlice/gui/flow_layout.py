@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
-from PySide6.QtWidgets import QLayout, QSizePolicy, QWidgetItem
+from PySide6.QtWidgets import QLayout
 
 
 class FlowLayout(QLayout):

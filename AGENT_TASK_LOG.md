@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-20 UTC - Top bar and review column responsive layout ergonomics and code cleanliness
+Status: **done**
+
+**Root cause.** Top bar responsive action row wrapping assertions and review page left column bounds hardcoded absolute pixel values derived from Linux font metrics, failing under Windows Segoe UI rendering. `flow_layout.py` and `main_window.py` also contained unused imports (`QSizePolicy`, `QWidgetItem`, `QCloseEvent`), and `test_ui_accessibility_and_startup.py` missed module-level `Qt` import leading to potential isolated NameErrors.
+
+**Fix.** Standardized top bar single/multi-row wrapping tests to dynamically derive width thresholds from active top action widget size hints and relative column bounds. Removed dead imports and added module-level `Qt` in accessibility test suite.
+
+**Validation.** Verified headlessly with `pytest tests/test_review_left_column_min_width.py tests/test_top_bar_min_width.py tests/test_flow_layout.py tests/test_plot_theme.py -v` (12 passed in 8.37s, 0 errors).
+
 ### 2026-10-20 UTC - Review page left column rows forced a 463px minimum width
 Status: **done** (claude/wonderful-euler-k1yg5a)
 

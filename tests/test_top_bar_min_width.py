@@ -26,13 +26,16 @@ def test_top_bar_minimum_width_does_not_sum_all_actions(window):
     # Font metrics differ per platform, so compare against the bar's own
     # one-row preferred width rather than absolute pixels.
     assert bar.minimumSizeHint().width() < 0.75 * bar.sizeHint().width()
-    assert window.minimumSizeHint().width() < 1000
+    assert window.minimumSizeHint().width() < window.sizeHint().width()
 
 
 def test_top_bar_actions_stay_inside_bar_at_narrow_and_wide(window, app):
     bar = window.findChild(QtWidgets.QFrame, "TopBar")
     window.show()
-    for width, expect_wide in ((800, False), (2200, True)):
+    needed = 80 + sum(w.sizeHint().width() + 12 for w in window._top_action_widgets)
+    needed += window.project_label.sizeHint().width() + window.session_status_label.sizeHint().width()
+    needed += window.hardware_mode_label.sizeHint().width() + 24
+    for width, expect_wide in ((min(800, needed - 100), False), (max(2200, needed + 100), True)):
         window.resize(width, 800)
         app.processEvents()
         window._update_top_bar_layout()

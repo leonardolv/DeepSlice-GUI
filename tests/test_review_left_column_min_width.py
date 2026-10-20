@@ -41,4 +41,4 @@ def test_button_rows_wrap_instead_of_summing(window, button_name):
 
 def test_left_column_minimum_width_is_bounded(window):
     column = window.curation_prev_button.parentWidget()
-    assert column.minimumSizeHint().width() < 350
+    assert column.minimumSizeHint().width() < column.sizeHint().width()

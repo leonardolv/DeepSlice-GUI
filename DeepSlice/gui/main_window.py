@@ -26,7 +26,6 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import (
-    QCloseEvent,
     QColor,
     QDesktopServices,
     QFont,
