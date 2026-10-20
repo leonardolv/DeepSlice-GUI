@@ -4,6 +4,18 @@
 
 ## Completed
 
+### Task: Make Review Column Sections Collapsible and Group Flagging and Note Controls
+- **Completed**: 2026-10-20
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Made `controls_group` ("Propagation / Curation") and `anchor_group` ("Anchor Alignment") checkable and collapsible with `setCheckable(True)` and connected toggled callbacks to show/hide child widgets dynamically, reclaiming significant vertical screen real estate.
+    - Grouped `slice_note_edit` and `save_slice_note_button` side by side into a compact horizontal layout (`note_row`).
+    - Grouped `apply_bad_sections_button`, `detect_outliers_button`, and `reset_flags_button` into a responsive `FlowLayout` (`flags_action_row`) so they align horizontally when space permits and wrap without truncating on narrow screens.
+  - `tests/test_review_left_column_min_width.py`:
+    - Added unit tests `test_flags_action_row_is_flow_layout` and `test_collapsible_groups_toggle_contents` validating responsive layout wrapping and collapsible group visibility toggling.
+- **Verification**: Verified headlessly with `pytest tests/test_review_left_column_min_width.py tests/test_ui_accessibility_and_startup.py -v` (19 passed in 15.49s with 0 errors).
+- **Status**: Completed
+
 ### Task: Enhance Top Bar and Review Column Responsive Layout Ergonomics and Code Cleanliness
 - **Completed**: 2026-10-20
 - **Changes**:
@@ -198,7 +210,7 @@
 
 ## Backlog
 - ~~Review page atlas control rows overflow~~ done 2026-10-18 (FlowLayout). ~~TopBar 1635px minimum width~~ done 2026-10-19 (actions in FlowLayout; min ~611px).
-- Review page left column: 9 stacked full-width buttons; group under collapsible sections (priority 2). (Row overflow part done 2026-10-20: rows wrap via FlowLayout.)
+- ~~Review page left column: 9 stacked full-width buttons; group under collapsible sections~~ done 2026-10-20 (controls/anchor groups collapsible; note and flag actions grouped).
 - Screenshot and fix populated states (images loaded, predictions present) and all dialogs (Preferences, About, Shortcuts, Hardware Health, Training) at 2 sizes (priority 3).
 - ~~Locked sidebar steps tooltip~~ already implemented (2026-10-17 verified).
 - ~~Plot colors themed for light theme~~ done 2026-10-17 (PLOT_PALETTES).

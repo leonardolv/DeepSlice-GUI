@@ -3717,7 +3717,11 @@ class DeepSliceMainWindow(QMainWindow):
         self.curation_queue_label.setObjectName("HintText")
         self.curation_queue_label.setAccessibleName("Review Queue Status")
 
-        controls_group = QGroupBox("Propagation / Curation")
+        self.controls_group = QGroupBox("Propagation / Curation")
+        self.controls_group.setObjectName("controls_group")
+        self.controls_group.setCheckable(True)
+        self.controls_group.setChecked(True)
+        controls_group = self.controls_group
         controls_layout = QGridLayout(controls_group)
 
         self.normalize_angles_button = QPushButton("Normalize Angles")
@@ -3797,7 +3801,11 @@ class DeepSliceMainWindow(QMainWindow):
         controls_layout.addWidget(self.undo_button, 6, 0)
         controls_layout.addWidget(self.redo_button, 6, 1)
 
-        anchor_group = QGroupBox("Anchor Alignment")
+        self.anchor_group = QGroupBox("Anchor Alignment")
+        self.anchor_group.setObjectName("anchor_group")
+        self.anchor_group.setCheckable(True)
+        self.anchor_group.setChecked(True)
+        anchor_group = self.anchor_group
         anchor_layout = QVBoxLayout(anchor_group)
         self.anchor_summary_label = QLabel(
             "Set 3 or more known slices as anchors, then interpolate all other AP depths between anchors."
@@ -3862,25 +3870,51 @@ class DeepSliceMainWindow(QMainWindow):
         anchor_layout.addWidget(self.anchor_list)
         anchor_layout.addWidget(self.apply_anchor_interpolation_button)
 
+        def _toggle_group_contents(group: QGroupBox, visible: bool):
+            layout = group.layout()
+            if layout is None:
+                return
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                w = item.widget()
+                if w is not None:
+                    w.setVisible(visible)
+                l = item.layout()
+                if l is not None:
+                    for j in range(l.count()):
+                        cw = l.itemAt(j).widget()
+                        if cw is not None:
+                            cw.setVisible(visible)
+
+        self.controls_group.toggled.connect(lambda ch: _toggle_group_contents(self.controls_group, ch))
+        self.anchor_group.toggled.connect(lambda ch: _toggle_group_contents(self.anchor_group, ch))
+
         left_layout.addWidget(self.slice_flag_list, stretch=2)
         reorder_row = QHBoxLayout()
         reorder_row.addWidget(self.move_slice_up_button)
         reorder_row.addWidget(self.move_slice_down_button)
         left_layout.addLayout(reorder_row)
         left_layout.addWidget(self.apply_manual_order_button)
-        left_layout.addWidget(self.slice_note_edit)
-        left_layout.addWidget(self.save_slice_note_button)
-        left_layout.addWidget(self.apply_bad_sections_button)
-        left_layout.addWidget(self.detect_outliers_button)
-        left_layout.addWidget(self.reset_flags_button)
+
+        note_row = QHBoxLayout()
+        note_row.addWidget(self.slice_note_edit, stretch=1)
+        note_row.addWidget(self.save_slice_note_button)
+        left_layout.addLayout(note_row)
+
+        flags_action_row = FlowLayout()
+        flags_action_row.addWidget(self.apply_bad_sections_button)
+        flags_action_row.addWidget(self.detect_outliers_button)
+        flags_action_row.addWidget(self.reset_flags_button)
+        left_layout.addLayout(flags_action_row)
+
         quick_action_row = FlowLayout()
         quick_action_row.addWidget(self.auto_flag_low_conf_button)
         quick_action_row.addWidget(self.interpolate_bad_depth_button)
         quick_action_row.addWidget(self.toggle_current_flag_button)
         left_layout.addLayout(quick_action_row)
         left_layout.addWidget(self.curation_queue_label)
-        left_layout.addWidget(controls_group, stretch=1)
-        left_layout.addWidget(anchor_group)
+        left_layout.addWidget(self.controls_group, stretch=1)
+        left_layout.addWidget(self.anchor_group)
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
