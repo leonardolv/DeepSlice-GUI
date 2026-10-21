@@ -50,3 +50,20 @@ def test_known_stain_mode_applies():
     state = DeepSliceAppState()
     state.load_session_dict({"image_paths": [], "stain_normalization_mode": " Reinhard "})
     assert state.stain_normalization_mode == "reinhard"
+
+
+@pytest.mark.parametrize("bad", ["sideways", 5, ["rostro-caudal"], {"a": 1}, True, ""])
+def test_invalid_indexing_direction_becomes_none(bad):
+    state = DeepSliceAppState()
+    state.load_session_dict({"detected_indexing_direction": bad, "selected_indexing_direction": bad})
+    assert state.detected_indexing_direction is None
+    assert state.selected_indexing_direction is None
+
+
+def test_valid_indexing_direction_is_kept_and_normalised():
+    state = DeepSliceAppState()
+    state.load_session_dict(
+        {"detected_indexing_direction": "Rostro-Caudal ", "selected_indexing_direction": "caudal-rostro"}
+    )
+    assert state.detected_indexing_direction == "rostro-caudal"
+    assert state.selected_indexing_direction == "caudal-rostro"

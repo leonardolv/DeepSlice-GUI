@@ -68,6 +68,15 @@ def _coerce_path_list(value) -> List[str]:
 
 
 _STAIN_NORMALIZATION_MODES = ("none", "reinhard")
+_INDEXING_DIRECTIONS = ("rostro-caudal", "caudal-rostro")
+
+
+def _coerce_direction(value: object) -> Optional[str]:
+    """Return a valid indexing direction or None; session files may hold anything."""
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip().lower()
+    return cleaned if cleaned in _INDEXING_DIRECTIONS else None
 
 
 # Upper bound on enumerated gap indices in build_index_report.
@@ -1635,8 +1644,8 @@ class DeepSliceAppState:
         except Exception:
             pass
 
-        self.detected_indexing_direction = payload.get("detected_indexing_direction", None)
-        self.selected_indexing_direction = payload.get("selected_indexing_direction", None)
+        self.detected_indexing_direction = _coerce_direction(payload.get("detected_indexing_direction"))
+        self.selected_indexing_direction = _coerce_direction(payload.get("selected_indexing_direction"))
 
         # Surface missing-file warnings so users notice a relocated dataset
         # before they hit "Run alignment" and get an obscure IO error.
