@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-21 UTC - Session load kept arbitrary values as indexing direction
+Status: **done** (claude/wonderful-euler-owlznj)
+
+**Root cause.** `load_session_dict` copied `detected_indexing_direction` / `selected_indexing_direction` verbatim. Only "rostro-caudal"/"caudal-rostro" are meaningful; a list value made `main_window`'s `in {...}` check raise `TypeError` (unhashable), and any other junk was shown in labels and passed as `direction` to the alignment settings.
+
+**Fix.** `_coerce_direction` (non-string or unknown -> None, case/whitespace normalised) applied to both fields.
+
+**Validation.** 8 new cases in `tests/test_session_collection_coercion.py`; session test files pass headless (full suite not runnable here: Qt/TF libs missing).
+
 ### 2026-10-21 UTC - Session load stored malformed image_paths / stain mode and applied half a broken session
 Status: **done** (claude/wonderful-euler-0k34to)
 
