@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-21 UTC - Session load stored malformed image_paths / stain mode and applied half a broken session
+Status: **done** (claude/wonderful-euler-0k34to)
+
+**Root cause.** `load_session_dict` stored `image_paths` verbatim (a bare string, dict, or `None`/non-string entries survived into state and only blew up later, or not at all), accepted any `stain_normalization_mode` string, and parsed `predictions` last - so a structurally broken block raised after every earlier field had already been applied.
+
+**Fix.** `_coerce_path_list` (non-list raises `TypeError`, non-string/blank entries dropped); `image_paths` and `predictions` are both parsed immediately after `clear_partial_prediction_candidate()` and before any state is touched, so a rejected session is rejected whole (and keeps `is_dirty`); unknown/missing `stain_normalization_mode` keeps the current value.
+
+**Validation.** New `tests/test_session_collection_coercion.py` (13 cases). Full suite 456 passed, 10 skipped (test_neural_network_utils excluded, missing TF). Headless offscreen.
+
 ### 2026-10-20 UTC - Top bar and review column responsive layout ergonomics and code cleanliness
 Status: **done**
 

@@ -55,6 +55,21 @@ def _coerce_int(value, default: int, minimum: int | None = None) -> int:
     return result
 
 
+def _coerce_path_list(value) -> List[str]:
+    """Coerce a JSON-loaded ``image_paths`` value to a list of non-empty strings.
+
+    A value that is not a list/tuple (None, a bare string, a number, a dict) is a
+    structurally broken session and raises ``TypeError``; non-string or blank
+    entries inside a list are dropped.
+    """
+    if not isinstance(value, (list, tuple)):
+        raise TypeError(f"session 'image_paths' must be a list, got {type(value).__name__}")
+    return [item for item in value if isinstance(item, str) and item.strip()]
+
+
+_STAIN_NORMALIZATION_MODES = ("none", "reinhard")
+
+
 # Upper bound on enumerated gap indices in build_index_report.
 MAX_REPORTED_MISSING_INDICES = 10_000
 
@@ -1522,6 +1537,12 @@ class DeepSliceAppState:
 
     def load_session_dict(self, payload: Dict[str, object]):
         self.clear_partial_prediction_candidate()
+        # Parse the blocks that can still raise BEFORE touching any state, so a
+        # structurally broken session is rejected whole instead of leaving
+        # every earlier field applied and every later one not.
+        parsed_image_paths = _coerce_path_list(payload.get("image_paths", []))
+        prediction_rows = payload.get("predictions", None)
+        parsed_predictions = None if prediction_rows is None else pd.DataFrame(prediction_rows)
         # Do not flip is_dirty until the payload has actually been applied -
         # several fields below raise on malformed input (bad numeric
         # coercions, a non-list `image_paths`), and raising here must not
@@ -1534,7 +1555,7 @@ class DeepSliceAppState:
             self.set_species(target_species)
         except ValueError:
             self.species = "mouse"
-        self.image_paths = payload.get("image_paths", [])
+        self.image_paths = parsed_image_paths
         self.section_numbers = _coerce_bool(payload.get("section_numbers", True), True)
         self.legacy_section_numbers = _coerce_bool(payload.get("legacy_section_numbers", False))
         ensemble_value = payload.get("ensemble", None)
@@ -1547,9 +1568,10 @@ class DeepSliceAppState:
 
         self.tissue_crop_enabled = _coerce_bool(payload.get("tissue_crop_enabled"), self.tissue_crop_enabled)
         self.clahe_enabled = _coerce_bool(payload.get("clahe_enabled"), self.clahe_enabled)
-        self.stain_normalization_mode = str(
-            payload.get("stain_normalization_mode", self.stain_normalization_mode)
-        ).strip().lower()
+        raw_stain_mode = payload.get("stain_normalization_mode")
+        stain_mode = "" if raw_stain_mode is None else str(raw_stain_mode).strip().lower()
+        if stain_mode in _STAIN_NORMALIZATION_MODES:
+            self.stain_normalization_mode = stain_mode
         self.quality_gate_enabled = _coerce_bool(payload.get("quality_gate_enabled"), self.quality_gate_enabled)
         self.min_resolution_px = _coerce_int(payload.get("min_resolution_px"), self.min_resolution_px, minimum=64)
         self.blur_variance_threshold = _finite_float(
@@ -1629,11 +1651,10 @@ class DeepSliceAppState:
                 len(self.missing_image_paths),
             )
 
-        prediction_rows = payload.get("predictions", None)
         if prediction_rows is None:
             self.predictions = None
         else:
-            self.predictions = pd.DataFrame(prediction_rows)
+            self.predictions = parsed_predictions
             if len(self.predictions) > 0:
                 self._annotate_prediction_diagnostics()
 
