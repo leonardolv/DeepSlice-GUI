@@ -589,3 +589,31 @@ def test_polish_pass_layout_and_theme_rules():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_fullscreen_preview_and_logged_error_accessibility_and_cursors():
+    from PySide6.QtWidgets import QListWidgetItem, QPushButton, QMessageBox
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        item = QListWidgetItem("test_slice.png")
+        item.setData(Qt.UserRole, "test_slice.png")
+        preview_dlg = win._open_fullscreen_thumbnail_preview(item)
+        try:
+            assert preview_dlg.objectName() == "fullscreenThumbnailPreviewDialog"
+            close_btn = preview_dlg.findChild(QPushButton, "previewCloseBtn")
+            assert close_btn is not None
+            assert close_btn.cursor().shape() == Qt.PointingHandCursor
+            assert close_btn.accessibleName() == "Close fullscreen preview"
+        finally:
+            preview_dlg.deleteLater()
+
+        win._show_logged_error("Test Error", "Test Context", "Test Error Text")
+        msg_box = win.findChild(QMessageBox, "loggedErrorDialog")
+        assert msg_box is not None
+        assert "Test Error" in msg_box.accessibleName()
+        for btn in msg_box.buttons():
+            assert btn.cursor().shape() == Qt.PointingHandCursor
+    finally:
+        win.close()
+        win.deleteLater()

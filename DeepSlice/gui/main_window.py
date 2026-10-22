@@ -2450,6 +2450,8 @@ class DeepSliceMainWindow(QMainWindow):
         can_auto_fix = bool(analysis.get("auto_fix_available", False))
 
         message_box = QMessageBox(self)
+        message_box.setObjectName("loggedErrorDialog")
+        message_box.setAccessibleName(f"{title} - Error Dialog")
         message_box.setWindowTitle(title)
         message_box.setIcon(icon)
         message_box.setText(
@@ -2465,9 +2467,15 @@ class DeepSliceMainWindow(QMainWindow):
         message_box.setDetailedText("\n\n".join(detail_blocks))
         message_box.setStandardButtons(QMessageBox.Ok)
         copy_button = message_box.addButton("Copy Error Report", QMessageBox.ActionRole)
+        copy_button.setObjectName("loggedErrorCopyBtn")
+        copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
         auto_fix_button = None
         if can_auto_fix:
             auto_fix_button = message_box.addButton("Try Auto-Fix", QMessageBox.ActionRole)
+            auto_fix_button.setObjectName("loggedErrorAutoFixBtn")
+            auto_fix_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        for btn in message_box.buttons():
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
             message_box.exec()
 
@@ -2943,14 +2951,17 @@ class DeepSliceMainWindow(QMainWindow):
         controls.accepted.connect(dialog.accept)
         close_btn = controls.button(QDialogButtonBox.Close)
         if close_btn:
+            close_btn.setObjectName("previewCloseBtn")
             close_btn.setText("Close")
             close_btn.setAccessibleName("Close fullscreen preview")
             close_btn.setToolTip("Close preview dialog")
+            close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         root.addWidget(viewer, stretch=1)
         root.addWidget(info)
         root.addWidget(controls)
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
             dialog.exec()
+        return dialog
 
     def _clear_console(self):
         self.console_output.clear()
@@ -7410,7 +7421,8 @@ class DeepSliceMainWindow(QMainWindow):
                 QApplication.clipboard().setText(image_path or filename)
                 self._show_toast("Slice path copied", timeout_ms=1800)
         elif action == show_details_action:
-            QMessageBox.information(self, "Confidence Details", item.toolTip())
+            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+                QMessageBox.information(self, "Confidence Details", item.toolTip())
 
     def _on_curation_slice_selected(self, row_index: int):
         if self.state.predictions is None:

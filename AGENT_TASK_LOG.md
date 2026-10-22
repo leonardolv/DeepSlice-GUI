@@ -10,6 +10,12 @@ here.
 
 ## Completed
 
+### 2026-10-22 UTC - Fullscreen thumbnail preview dialog and logged error dialog accessibility, object names, and pointer cursors
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added objectName (previewCloseBtn), accessibleName, toolTip, and PointingHandCursor to the close button in `_open_fullscreen_thumbnail_preview()`, guarded execution against offscreen/headless test runs, and returned dialog instance for testability. Added objectName (loggedErrorDialog), accessible name, object names (loggedErrorCopyBtn, loggedErrorAutoFixBtn), and PointingHandCursor across all action buttons in `_show_logged_error()`. Guarded curation context menu confidence details dialog with headless safety check.
+- `tests/test_ui_accessibility_and_startup.py`: Added unit test `test_fullscreen_preview_and_logged_error_accessibility_and_cursors` validating object names, accessible names, pointing hand cursors, and headless execution.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (14 passed in 42.48s) and `pytest tests/test_review_left_column_min_width.py tests/test_top_bar_min_width.py -v` (8 passed in 7.63s, 0 errors).
+
 ### 2026-10-22 UTC - Preferences dialog button pointer cursors, button tooltips, and headless execution safety guard
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added pointing hand cursor affordances to `output_dir_browse`, `quicknii_browse`, `console_always_visible`, `ok_btn`, `cancel_btn`, and `reset_btn` in `_create_preferences_dialog()`. Added descriptive tooltips and explicit object names to `ok_btn` and `cancel_btn`. Added headless execution safety guard to `_open_preferences_dialog()` to prevent modal blocking during automated runs.

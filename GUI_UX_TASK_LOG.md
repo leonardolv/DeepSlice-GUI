@@ -4,6 +4,19 @@
 
 ## Completed
 
+### Task: Fullscreen Thumbnail Preview Dialog and Logged Error Dialog Accessibility, Object Names, and Pointer Cursors
+- **Completed**: 2026-10-22
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added explicit `setObjectName` ("previewCloseBtn"), `setAccessibleName` ("Close fullscreen preview"), `setToolTip` ("Close preview dialog"), and `PointingHandCursor` to the close button in `_open_fullscreen_thumbnail_preview()`.
+    - Guarded fullscreen preview dialog execution with headless safety check (`if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:`) and returned the dialog for inspection and unit testing.
+    - Added explicit `setObjectName` ("loggedErrorDialog"), accessible name, object names ("loggedErrorCopyBtn", "loggedErrorAutoFixBtn"), and `PointingHandCursor` across all buttons in `_show_logged_error()`.
+    - Added headless safety guard to confidence details in `_show_curation_context_menu()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_fullscreen_preview_and_logged_error_accessibility_and_cursors` validating object names, accessible names, pointing hand cursors, and non-blocking headless execution.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (14 passed in 42.48s) and `pytest tests/test_review_left_column_min_width.py tests/test_top_bar_min_width.py -v` (8 passed in 7.63s, 0 errors).
+- **Status**: Completed
+
 ### Task: Preferences Dialog Button Pointer Cursors, Button Tooltips, and Headless Execution Safety Guard
 - **Completed**: 2026-10-22
 - **Changes**:
