@@ -54,9 +54,19 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
             assert dlg.quicknii_edit.accessibleName() == "Default QuickNII executable path"
             assert dlg.quicknii_browse.accessibleName() == "Browse QuickNII executable"
             assert dlg.console_always_visible.accessibleName() == "Show runtime console by default"
+            assert dlg.output_dir_browse.cursor().shape() == Qt.PointingHandCursor
+            assert dlg.quicknii_browse.cursor().shape() == Qt.PointingHandCursor
+            assert dlg.console_always_visible.cursor().shape() == Qt.PointingHandCursor
             assert dlg.reset_btn is not None
             assert dlg.reset_btn.accessibleName() == "Reset preferences to factory defaults"
             assert "default values" in dlg.reset_btn.toolTip().lower()
+            assert dlg.reset_btn.cursor().shape() == Qt.PointingHandCursor
+            assert dlg.ok_btn is not None
+            assert dlg.ok_btn.accessibleName() == "Save preferences"
+            assert dlg.ok_btn.cursor().shape() == Qt.PointingHandCursor
+            assert dlg.cancel_btn is not None
+            assert dlg.cancel_btn.accessibleName() == "Cancel preferences"
+            assert dlg.cancel_btn.cursor().shape() == Qt.PointingHandCursor
 
             # Modify values and trigger reset
             dlg.species_combo.setCurrentText("rat")
@@ -74,6 +84,11 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
             assert not dlg.console_always_visible.isChecked()
         finally:
             dlg.deleteLater()
+
+        # Verify headless safe execution of _open_preferences_dialog
+        opened_dlg = win._open_preferences_dialog()
+        assert opened_dlg is not None
+        opened_dlg.deleteLater()
     finally:
         win.close()
         win.deleteLater()

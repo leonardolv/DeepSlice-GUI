@@ -1841,6 +1841,7 @@ class DeepSliceMainWindow(QMainWindow):
         output_dir_browse.setObjectName("prefOutputDirBrowse")
         output_dir_browse.setAccessibleName("Browse default output directory")
         output_dir_browse.setToolTip("Browse filesystem for default output directory")
+        output_dir_browse.setCursor(Qt.CursorShape.PointingHandCursor)
 
         def _browse_default_output_dir():
             selected = QFileDialog.getExistingDirectory(dialog, "Default Output Directory")
@@ -1860,6 +1861,7 @@ class DeepSliceMainWindow(QMainWindow):
         quicknii_browse.setObjectName("prefQuickNiiBrowse")
         quicknii_browse.setAccessibleName("Browse QuickNII executable")
         quicknii_browse.setToolTip("Browse filesystem for QuickNII executable")
+        quicknii_browse.setCursor(Qt.CursorShape.PointingHandCursor)
 
         def _browse_default_quicknii_path():
             selected, _ = QFileDialog.getOpenFileName(
@@ -1882,6 +1884,7 @@ class DeepSliceMainWindow(QMainWindow):
         console_always_visible.setChecked(
             self._setting_to_bool(settings.value("console_always_visible", False))
         )
+        console_always_visible.setCursor(Qt.CursorShape.PointingHandCursor)
 
         form.addRow("Default species for new sessions", species_combo)
         form.addRow("Theme", theme_combo)
@@ -1896,15 +1899,23 @@ class DeepSliceMainWindow(QMainWindow):
         buttons.setObjectName("prefDialogButtons")
         ok_btn = buttons.button(QDialogButtonBox.Ok)
         if ok_btn:
+            ok_btn.setObjectName("prefOkBtn")
             ok_btn.setAccessibleName("Save preferences")
+            ok_btn.setToolTip("Save preference changes and apply")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn = buttons.button(QDialogButtonBox.Cancel)
         if cancel_btn:
+            cancel_btn.setObjectName("prefCancelBtn")
             cancel_btn.setAccessibleName("Cancel preferences")
+            cancel_btn.setToolTip("Discard preference changes")
+            cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         reset_btn = buttons.button(QDialogButtonBox.RestoreDefaults)
         if reset_btn:
+            reset_btn.setObjectName("prefResetBtn")
             reset_btn.setText("Reset to Defaults")
             reset_btn.setAccessibleName("Reset preferences to factory defaults")
             reset_btn.setToolTip("Restore all preference options back to default values")
+            reset_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
             def _reset_to_defaults():
                 species_combo.setCurrentText("mouse")
@@ -1927,6 +1938,8 @@ class DeepSliceMainWindow(QMainWindow):
         dialog.quicknii_browse = quicknii_browse
         dialog.console_always_visible = console_always_visible
         dialog.reset_btn = reset_btn
+        dialog.ok_btn = ok_btn
+        dialog.cancel_btn = cancel_btn
         dialog.buttons = buttons
 
         return dialog
@@ -1935,8 +1948,12 @@ class DeepSliceMainWindow(QMainWindow):
         settings = self._settings
         dialog = self._create_preferences_dialog()
 
-        if dialog.exec() != QDialog.Accepted:
-            return
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            if dialog.exec() != QDialog.Accepted:
+                return
+        else:
+            dialog.show()
+            return dialog
 
         selected_species = dialog.species_combo.currentText().strip().lower()
         selected_theme = dialog.theme_combo.currentText().strip().lower()

@@ -4,6 +4,19 @@
 
 ## Completed
 
+### Task: Preferences Dialog Button Pointer Cursors, Button Tooltips, and Headless Execution Safety Guard
+- **Completed**: 2026-10-22
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added `PointingHandCursor` pointer affordances across `output_dir_browse`, `quicknii_browse`, `console_always_visible`, `ok_btn`, `cancel_btn`, and `reset_btn` in `_create_preferences_dialog()`.
+    - Added descriptive tooltips and explicit object names to `ok_btn` (`prefOkBtn`, "Save preference changes and apply") and `cancel_btn` (`prefCancelBtn`, "Discard preference changes").
+    - Exposed `ok_btn` and `cancel_btn` references on dialog instance for testability.
+    - Added headless execution safety guard to `_open_preferences_dialog()` (`if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:`), returning the dialog without modal blocking during automated test runs.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Expanded `test_preferences_dialog_accessibility_and_reset_to_defaults` to assert pointing hand cursors across all buttons, object names, button tooltips, and non-blocking headless execution.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py -v` (13 passed in 8.27s) and `pytest tests/test_review_left_column_min_width.py tests/test_top_bar_min_width.py -v` (8 passed in 8.02s, 0 errors).
+- **Status**: Completed
+
 ### Task: Make Review Column Sections Collapsible and Group Flagging and Note Controls
 - **Completed**: 2026-10-20
 - **Changes**:
