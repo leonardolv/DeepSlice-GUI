@@ -617,3 +617,51 @@ def test_fullscreen_preview_and_logged_error_accessibility_and_cursors():
     finally:
         win.close()
         win.deleteLater()
+
+def test_training_actions_and_split_dialog_accessibility_and_cursors(tmp_path):
+    from PySide6.QtWidgets import QMessageBox
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Check widget object names, accessible names, cursors, and tooltips
+        assert win.preview_training_split_button.objectName() == "previewTrainingSplitBtn"
+        assert win.preview_training_split_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.preview_training_split_button.toolTip() != ""
+
+        assert win.save_training_split_button.objectName() == "saveTrainingSplitBtn"
+        assert win.save_training_split_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.save_training_split_button.toolTip() != ""
+
+        assert win.save_training_metadata_button.objectName() == "saveTrainingMetadataBtn"
+        assert win.save_training_metadata_button.cursor().shape() == Qt.PointingHandCursor
+        assert win.save_training_metadata_button.toolTip() != ""
+
+        assert win.training_split_summary_label.objectName() == "trainingSplitSummaryLabel"
+        assert win.training_split_summary_label.accessibleName() == "Training dataset split summary"
+
+        # Non-blocking headless toast when images empty
+        res = win._preview_training_split()
+        assert res is None
+        assert win._save_training_split_manifest() is None
+        assert win._save_training_metadata_manifest() is None
+
+        # When images exist, verify dialog construction and properties
+        img_file = tmp_path / "slice_s001.png"
+        img_file.write_bytes(b"dummy")
+        win.state.image_paths = [str(img_file)]
+        win.state.section_numbers = [1]
+        win.state.section_depth = [10.0]
+
+        dlg = win._preview_training_split()
+        assert dlg is not None
+        try:
+            assert dlg.objectName() == "trainingSplitDialog"
+            assert dlg.accessibleName() == "Training Split Preview Dialog"
+            for btn in dlg.buttons():
+                assert btn.cursor().shape() == Qt.PointingHandCursor
+        finally:
+            dlg.deleteLater()
+    finally:
+        win.close()
+        win.deleteLater()
+

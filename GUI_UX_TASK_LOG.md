@@ -4,6 +4,21 @@
 
 ## Completed
 
+### Task: Training Split Dialog, Action Buttons Accessibility, Object Names, Tooltips, and Non-Blocking Headless Execution
+- **Completed**: 2026-10-22
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Configured explicit `setObjectName` ("previewTrainingSplitBtn"), `setToolTip` ("Preview training, validation, and test split"), and pointing hand cursor on preview split button.
+    - Configured explicit `setObjectName` ("saveTrainingSplitBtn"), `setToolTip` ("Export dataset split manifest to JSON"), and pointing hand cursor on save split manifest button.
+    - Configured explicit `setObjectName` ("saveTrainingMetadataBtn"), `setToolTip` ("Export training configuration metadata to JSON"), and pointing hand cursor on save training metadata button.
+    - Configured explicit `setObjectName` ("trainingSplitSummaryLabel") and accessible name ("Training dataset split summary") on split summary label.
+    - Replaced blocking modal `QMessageBox` popups when image lists are empty with non-blocking warning toasts in `_preview_training_split`, `_save_training_split_manifest`, and `_save_training_metadata_manifest`.
+    - Wrapped split preview dialog with explicit `setObjectName` ("trainingSplitDialog"), accessible name, pointing hand cursors on buttons, headless execution guard, and returned dialog instance for automated verification.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_training_actions_and_split_dialog_accessibility_and_cursors` validating object names, accessible names, button tooltips, pointing hand cursors, and non-blocking headless execution.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k "test_training_actions" -v` (1 passed in 53.47s, 0 errors).
+- **Status**: Completed
+
 ### Task: Fullscreen Thumbnail Preview Dialog and Logged Error Dialog Accessibility, Object Names, and Pointer Cursors
 - **Completed**: 2026-10-22
 - **Changes**:

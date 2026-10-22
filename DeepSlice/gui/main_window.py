@@ -3334,18 +3334,24 @@ class DeepSliceMainWindow(QMainWindow):
         self.training_mixed_precision_checkbox.toggled.connect(self._on_training_controls_changed)
 
         self.preview_training_split_button = QPushButton("Preview Split")
+        self.preview_training_split_button.setObjectName("previewTrainingSplitBtn")
         self.preview_training_split_button.setCursor(Qt.PointingHandCursor)
         self.preview_training_split_button.setAccessibleName("Preview Training Split")
+        self.preview_training_split_button.setToolTip("Preview training, validation, and test split")
         self.preview_training_split_button.clicked.connect(self._preview_training_split)
 
         self.save_training_split_button = QPushButton("Save Split Manifest")
+        self.save_training_split_button.setObjectName("saveTrainingSplitBtn")
         self.save_training_split_button.setCursor(Qt.PointingHandCursor)
         self.save_training_split_button.setAccessibleName("Save Split Manifest")
+        self.save_training_split_button.setToolTip("Export dataset split manifest to JSON")
         self.save_training_split_button.clicked.connect(self._save_training_split_manifest)
 
         self.save_training_metadata_button = QPushButton("Save Training Metadata")
+        self.save_training_metadata_button.setObjectName("saveTrainingMetadataBtn")
         self.save_training_metadata_button.setCursor(Qt.PointingHandCursor)
         self.save_training_metadata_button.setAccessibleName("Save Training Metadata")
+        self.save_training_metadata_button.setToolTip("Export training configuration metadata to JSON")
         self.save_training_metadata_button.clicked.connect(self._save_training_metadata_manifest)
 
         training_actions_row = QHBoxLayout()
@@ -3357,6 +3363,8 @@ class DeepSliceMainWindow(QMainWindow):
         training_actions_widget.setLayout(training_actions_row)
 
         self.training_split_summary_label = QLabel("Split preview: no images loaded")
+        self.training_split_summary_label.setObjectName("trainingSplitSummaryLabel")
+        self.training_split_summary_label.setAccessibleName("Training dataset split summary")
         self.training_split_summary_label.setWordWrap(True)
 
         training_layout.addRow("Group images by", self.training_group_mode_combo)
@@ -5321,8 +5329,8 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _preview_training_split(self):
         if len(self.state.image_paths) == 0:
-            QMessageBox.information(self, "Training Split", "Load images before previewing a split.")
-            return
+            self._show_toast("Load images before previewing a split.", timeout_ms=3000, level="warning")
+            return None
 
         try:
             preview = self.state.build_training_split_preview()
@@ -5334,7 +5342,7 @@ class DeepSliceMainWindow(QMainWindow):
                 exc=exc,
                 icon=QMessageBox.Warning,
             )
-            return
+            return None
 
         counts = preview["counts"]
         group_counts = preview["group_counts"]
@@ -5347,15 +5355,22 @@ class DeepSliceMainWindow(QMainWindow):
             f"Test: {counts['test']} images ({group_counts['test']} groups)",
             f"Group leakage-free: {leakage_text}",
         ]
-        if preview["leakage_free"]:
-            QMessageBox.information(self, "Training Split Preview", "\n".join(lines))
-        else:
-            QMessageBox.warning(self, "Training Split Preview", "\n".join(lines))
+        msg_box = QMessageBox(self)
+        msg_box.setObjectName("trainingSplitDialog")
+        msg_box.setWindowTitle("Training Split Preview")
+        msg_box.setText("\n".join(lines))
+        msg_box.setIcon(QMessageBox.Information if preview["leakage_free"] else QMessageBox.Warning)
+        msg_box.setAccessibleName("Training Split Preview Dialog")
+        for btn in msg_box.buttons():
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            msg_box.exec()
+        return msg_box
 
     def _save_training_split_manifest(self):
         if len(self.state.image_paths) == 0:
-            QMessageBox.information(self, "Save Training Split", "Load images before exporting split manifest.")
-            return
+            self._show_toast("Load images before exporting split manifest.", timeout_ms=3000, level="warning")
+            return None
 
         base_dir = os.getcwd()
         if hasattr(self, "output_dir_edit"):
@@ -5387,8 +5402,8 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _save_training_metadata_manifest(self):
         if len(self.state.image_paths) == 0:
-            QMessageBox.information(self, "Save Training Metadata", "Load images before exporting training metadata.")
-            return
+            self._show_toast("Load images before exporting training metadata.", timeout_ms=3000, level="warning")
+            return None
 
         base_dir = os.getcwd()
         if hasattr(self, "output_dir_edit"):

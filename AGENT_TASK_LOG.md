@@ -10,6 +10,12 @@ here.
 
 ## Completed
 
+### 2026-10-22 UTC - Training split dialog, action buttons accessibility, object names, tooltips, and non-blocking headless execution
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added explicit object names (previewTrainingSplitBtn, saveTrainingSplitBtn, saveTrainingMetadataBtn, trainingSplitSummaryLabel), descriptive tooltips, and pointing hand cursors across training actions and summary widgets. Replaced blocking QMessageBox popups when images are empty with non-blocking warning toasts. Guarded split preview dialog with objectName (trainingSplitDialog), accessible names, pointing hand cursors, and headless execution safety checks.
+- `tests/test_ui_accessibility_and_startup.py`: Added unit test `test_training_actions_and_split_dialog_accessibility_and_cursors` validating object names, accessible names, button tooltips, pointing hand cursors, and non-blocking headless execution.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k "test_training_actions" -v` (1 passed in 53.47s, 0 errors).
+
 ### 2026-10-22 UTC - Fullscreen thumbnail preview dialog and logged error dialog accessibility, object names, and pointer cursors
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added objectName (previewCloseBtn), accessibleName, toolTip, and PointingHandCursor to the close button in `_open_fullscreen_thumbnail_preview()`, guarded execution against offscreen/headless test runs, and returned dialog instance for testability. Added objectName (loggedErrorDialog), accessible name, object names (loggedErrorCopyBtn, loggedErrorAutoFixBtn), and PointingHandCursor across all action buttons in `_show_logged_error()`. Guarded curation context menu confidence details dialog with headless safety check.
