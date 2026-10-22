@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-22 UTC - Session load accepted a predictions block with no Filenames/geometry columns
+Status: **done** (claude/wonderful-euler-eto0m2)
+
+**Root cause.** `load_session_dict` built `pd.DataFrame(payload["predictions"])` from any list (`[1, 2]`, `[{"a": 1}]`, rows without `Filenames`). The load succeeded, `_annotate_prediction_diagnostics` only logged non-fatal warnings, and the tables / export / angle propagation later raised `KeyError` on `Filenames` or `ox..vz`.
+
+**Fix.** `_parse_prediction_rows` requires a list of row objects and, for a non-empty table, `Filenames` plus the nine plane-geometry columns; otherwise `ValueError` before any state is touched (session rejected whole, `is_dirty` kept). Empty list still loads.
+
+**Validation.** 7 new cases in `tests/test_session_collection_coercion.py`; 214 session/state tests pass (Qt/matplotlib/TF suites not runnable here).
+
 ### 2026-10-22 UTC - Non-object .json file crashed Load Session and left the busy spinner on
 Status: **done** (claude/wonderful-euler-3cbm7k)
 
