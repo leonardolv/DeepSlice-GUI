@@ -76,3 +76,29 @@ def test_non_object_payload_is_rejected_with_a_clear_error(bad):
     with pytest.raises(TypeError, match="JSON object"):
         state.load_session_dict(bad)
     assert state.is_dirty is True
+
+
+_GEOMETRY = {k: 0.0 for k in ("ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz")}
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [[1, 2], [[1, 2], [3, 4]], [{"a": 1}], [{"Filenames": "a.png"}], {"Filenames": ["a"]}],
+)
+def test_predictions_without_required_columns_reject_the_load(bad):
+    state = DeepSliceAppState()
+    state.gamma_correction = 1.0
+    state.is_dirty = True
+    with pytest.raises(ValueError):
+        state.load_session_dict({"predictions": bad, "gamma_correction": 1.5})
+    assert state.gamma_correction == 1.0
+    assert state.predictions is None
+    assert state.is_dirty is True
+
+
+def test_well_formed_predictions_still_load():
+    state = DeepSliceAppState()
+    state.load_session_dict({"predictions": [{"Filenames": "a.png", **_GEOMETRY}]})
+    assert list(state.predictions["Filenames"]) == ["a.png"]
+    state.load_session_dict({"predictions": []})
+    assert len(state.predictions) == 0

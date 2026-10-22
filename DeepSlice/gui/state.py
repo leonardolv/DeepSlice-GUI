@@ -67,6 +67,31 @@ def _coerce_path_list(value) -> List[str]:
     return [item for item in value if isinstance(item, str) and item.strip()]
 
 
+_PREDICTION_REQUIRED_COLUMNS = (
+    "Filenames", "ox", "oy", "oz", "ux", "uy", "uz", "vx", "vy", "vz",
+)
+
+
+def _parse_prediction_rows(value) -> pd.DataFrame:
+    """Build the predictions frame from a session's ``predictions`` records.
+
+    Must be a list of row objects; a non-empty table must carry ``Filenames``
+    and the nine plane-geometry columns, because every downstream consumer
+    (tables, export, angle propagation) indexes them directly. Anything else
+    raises ``ValueError`` so the load is rejected before any state is touched.
+    """
+    if not isinstance(value, (list, tuple)) or not all(isinstance(r, dict) for r in value):
+        raise ValueError("session 'predictions' must be a list of row objects")
+    frame = pd.DataFrame(list(value))
+    if len(frame) > 0:
+        missing = [c for c in _PREDICTION_REQUIRED_COLUMNS if c not in frame.columns]
+        if missing:
+            raise ValueError(
+                "session 'predictions' is missing required column(s): " + ", ".join(missing)
+            )
+    return frame
+
+
 _STAIN_NORMALIZATION_MODES = ("none", "reinhard")
 _INDEXING_DIRECTIONS = ("rostro-caudal", "caudal-rostro")
 
@@ -1555,7 +1580,7 @@ class DeepSliceAppState:
         # every earlier field applied and every later one not.
         parsed_image_paths = _coerce_path_list(payload.get("image_paths", []))
         prediction_rows = payload.get("predictions", None)
-        parsed_predictions = None if prediction_rows is None else pd.DataFrame(prediction_rows)
+        parsed_predictions = None if prediction_rows is None else _parse_prediction_rows(prediction_rows)
         # Do not flip is_dirty until the payload has actually been applied -
         # several fields below raise on malformed input (bad numeric
         # coercions, a non-list `image_paths`), and raising here must not
