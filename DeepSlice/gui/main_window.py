@@ -8187,7 +8187,7 @@ class DeepSliceMainWindow(QMainWindow):
                 # let the QuickNII path have a look at it.
                 payload = None
 
-            if payload is not None and payload.get("session_format") == "deepslice_gui_v1":
+            if isinstance(payload, dict) and payload.get("session_format") == "deepslice_gui_v1":
                 try:
                     self.state.load_session_dict(payload)
                     self._load_anchor_targets_from_payload(payload)

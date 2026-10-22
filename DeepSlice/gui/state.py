@@ -1545,6 +1545,10 @@ class DeepSliceAppState:
         }
 
     def load_session_dict(self, payload: Dict[str, object]):
+        if not isinstance(payload, dict):
+            raise TypeError(
+                f"A session file must contain a JSON object, not {type(payload).__name__}"
+            )
         self.clear_partial_prediction_candidate()
         # Parse the blocks that can still raise BEFORE touching any state, so a
         # structurally broken session is rejected whole instead of leaving

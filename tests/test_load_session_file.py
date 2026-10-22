@@ -134,3 +134,20 @@ def test_a_file_that_is_not_valid_json_falls_through_to_quicknii(
 
     stub._show_logged_exception.assert_not_called()
     fake_worker_cls.assert_called_once()
+
+
+def test_a_json_array_falls_through_to_quicknii_instead_of_crashing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A top-level JSON array has no ``.get``; it used to raise AttributeError
+    out of the slot and leave the session spinner showing forever."""
+    fake_worker_cls = MagicMock()
+    monkeypatch.setattr(main_window_module, "FunctionWorker", fake_worker_cls)
+    path = tmp_path / "list.json"
+    path.write_text("[1, 2, 3]", encoding="utf-8")
+    stub = _StubWindow()
+
+    _load(stub, str(path))
+
+    stub._show_logged_exception.assert_not_called()
+    fake_worker_cls.assert_called_once()

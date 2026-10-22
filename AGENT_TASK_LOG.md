@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-22 UTC - Non-object .json file crashed Load Session and left the busy spinner on
+Status: **done** (claude/wonderful-euler-3cbm7k)
+
+**Root cause.** `_load_session_file`'s generic `.json` branch called `payload.get("session_format")` on whatever `json.load` returned; a top-level array/string/number has no `.get`, so `AttributeError` escaped the slot after `_set_session_io_busy(True)` and the spinner never cleared. `load_session_dict` likewise assumed a dict.
+
+**Fix.** `isinstance(payload, dict)` guard (non-objects fall through to the QuickNII path, which reports its own error); `load_session_dict` raises a clear `TypeError` for non-dict payloads before touching state.
+
+**Validation.** 5 new state-level cases (26 pass in `test_session_collection_coercion.py`) plus a stub-window test in `test_load_session_file.py` (not runnable here: matplotlib/Qt missing).
+
 ### 2026-10-21 UTC - Session load kept arbitrary values as indexing direction
 Status: **done** (claude/wonderful-euler-owlznj)
 

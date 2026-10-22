@@ -67,3 +67,12 @@ def test_valid_indexing_direction_is_kept_and_normalised():
     )
     assert state.detected_indexing_direction == "rostro-caudal"
     assert state.selected_indexing_direction == "caudal-rostro"
+
+
+@pytest.mark.parametrize("bad", [[], [1, 2], "text", 5, None])
+def test_non_object_payload_is_rejected_with_a_clear_error(bad):
+    state = DeepSliceAppState()
+    state.is_dirty = True
+    with pytest.raises(TypeError, match="JSON object"):
+        state.load_session_dict(bad)
+    assert state.is_dirty is True
