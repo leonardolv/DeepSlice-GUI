@@ -86,7 +86,9 @@ def get_mean_angle(DV_list, ML_list, method, depths=None, species=None):
         if len(df_center) > 2:
             weighted_accuracy = plane_alignment.make_gaussian_weights(depth_max + 1)
         else:
-            weighted_accuracy = [1.0] * len(df_center)
+            # Uniform weights, but indexable by depth below (lookup uses the
+            # depth value, not the section number).
+            weighted_accuracy = [1.0] * int(depth_max + 1)
         df_center = np.array(df_center)
         df_center[df_center < depth_min] = depth_min
         df_center[df_center > depth_max] = depth_max
