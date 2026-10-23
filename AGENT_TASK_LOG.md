@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-23 UTC - Normalize Angles crashed with IndexError on 1-2 sections (weighted_mean)
+Status: **done** (claude/wonderful-euler-zu8z6a)
+
+**Root cause.** `get_mean_angle(..., "weighted_mean")` used Gaussian weights of length `depth_max + 1` for more than 2 sections, but for 1-2 sections substituted `[1.0] * len(df_center)` and then indexed that list by brain-centre depth (~200), so it raised `IndexError`. A short series could not be angle-normalized.
+
+**Fix.** Uniform weights now have length `depth_max + 1`, so the depth lookup works (result is the plain mean).
+
+**Validation.** New `tests/test_weighted_mean_few_sections.py` (1, 2 sections, out-of-range depth clamping); 20 tests across it, angle-convergence and spacing suites pass.
+
 ### 2026-10-22 UTC - Training split dialog, action buttons accessibility, object names, tooltips, and non-blocking headless execution
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added explicit object names (previewTrainingSplitBtn, saveTrainingSplitBtn, saveTrainingMetadataBtn, trainingSplitSummaryLabel), descriptive tooltips, and pointing hand cursors across training actions and summary widgets. Replaced blocking QMessageBox popups when images are empty with non-blocking warning toasts. Guarded split preview dialog with objectName (trainingSplitDialog), accessible names, pointing hand cursors, and headless execution safety checks.
