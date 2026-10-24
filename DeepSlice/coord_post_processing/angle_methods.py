@@ -112,6 +112,11 @@ def propagate_angles(df, method, species):
     temp = df.copy()
     if "bad_section" in temp:
         temp = temp[~temp["bad_section"].astype(bool)]
+    if len(temp) == 0:
+        raise ValueError(
+            "Cannot propagate angles: no usable sections (all sections are "
+            "flagged as bad or there are no predictions). Unflag at least one section."
+        )
     DV_angle_list, ML_angle_list = calculate_angles(temp)
 
     depths = calculate_brain_center_depths(
