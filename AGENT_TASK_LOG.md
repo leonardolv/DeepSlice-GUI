@@ -10,6 +10,15 @@ here.
 
 ## Completed
 
+### 2026-10-24 UTC - Normalize Angles with every section flagged bad gave an unrelated crash
+Status: **done** (claude/wonderful-euler-4wy9c7)
+
+**Root cause.** `angle_methods.propagate_angles` filtered out `bad_section` rows and then averaged the empty remainder (NaN, "Mean of empty slice"). The NaN/empty weights then surfaced as `ValueError: plane normal component ... is zero` (mean) or `ZeroDivisionError: Weights sum to zero` (weighted_mean), with no hint that the cause was the bad-section flags.
+
+**Fix.** Raise a clear `ValueError("Cannot propagate angles: no usable sections ...")` before any maths when no usable section remains.
+
+**Validation.** New `tests/test_propagate_angles_no_usable_sections.py` (4 tests; 3 fail before, all pass after); 20 related angle/spacing tests pass. Qt GUI suites not runnable here (no PySide6).
+
 ### 2026-10-23 UTC - Normalize Angles crashed with IndexError on 1-2 sections (weighted_mean)
 Status: **done** (claude/wonderful-euler-zu8z6a)
 
