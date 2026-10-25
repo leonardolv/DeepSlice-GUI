@@ -754,3 +754,46 @@ def test_actionable_warning_headless_and_accessibility():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_thumbnail_and_curation_context_menus_accessibility_and_actions():
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        from PySide6.QtWidgets import QListWidgetItem
+        from PySide6.QtCore import QPoint
+        item = QListWidgetItem("dummy_slice_01.png")
+        item.setData(Qt.UserRole, "/path/to/dummy_slice_01.png")
+        win.thumbnail_list.addItem(item)
+
+        menu = win._show_thumbnail_context_menu(QPoint(10, 10))
+        assert menu is not None
+        assert menu.objectName() == "thumbnailContextMenu"
+        assert menu.accessibleName() == "Thumbnail Item Context Menu"
+
+        actions = {a.objectName(): a for a in menu.actions()}
+        assert "thumbnailPreviewAction" in actions
+        assert "thumbnailCopyPathAction" in actions
+        assert "thumbnailRemoveAction" in actions
+        assert actions["thumbnailPreviewAction"].text() == "Preview Fullscreen"
+        assert actions["thumbnailCopyPathAction"].text() == "Copy Image Path"
+        assert actions["thumbnailRemoveAction"].text() == "Remove this image"
+
+        cur_item = QListWidgetItem("Section 01")
+        cur_item.setData(Qt.UserRole, 0)
+        win.slice_flag_list.addItem(cur_item)
+        cur_menu = win._show_curation_context_menu(QPoint(10, 10))
+        assert cur_menu is not None
+        assert cur_menu.objectName() == "curationContextMenu"
+        assert cur_menu.accessibleName() == "Curation Slice Context Menu"
+        cur_actions = {a.objectName(): a for a in cur_menu.actions()}
+        assert "curationToggleFlagAction" in cur_actions
+        assert "curationJumpViewerAction" in cur_actions
+        assert "curationSetAnchorAction" in cur_actions
+        assert "curationRemoveAnchorAction" in cur_actions
+        assert "curationEditNoteAction" in cur_actions
+        assert "curationCopyPathAction" in cur_actions
+        assert "curationShowDetailsAction" in cur_actions
+    finally:
+        win.close()
+        win.deleteLater()
