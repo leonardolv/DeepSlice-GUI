@@ -10,6 +10,16 @@ here.
 
 ## Completed
 
+### 2026-10-25 UTC - space_according_to_index crashed whenever a bad_section column existed
+Status: **done** (claude/wonderful-euler-nsp1xp)
+
+**Root cause.** `calculate_weighted_accuracy` tested `y is False` on flags taken from `predictions["bad_section"].values` (`np.bool_`, never identical to `False`), so every section was treated as bad, all weights became 0 and `np.average` raised `ZeroDivisionError` - even with no section flagged. Separately, the flags were read before `enforce_section_ordering` sorted the frame by `nr`, so on unsorted input they were paired with the wrong sections.
+
+**Fix.** `0.0 if bool(y) else x`; flags are read after the sort.
+
+**Validation.** New `tests/test_space_according_to_index_bad_sections.py` (3 tests, all fail before, pass after); 18 related tests pass. Qt suites not runnable here (no PySide6).
+
+
 ### 2026-10-24 UTC - Normalize Angles with every section flagged bad gave an unrelated crash
 Status: **done** (claude/wonderful-euler-4wy9c7)
 
