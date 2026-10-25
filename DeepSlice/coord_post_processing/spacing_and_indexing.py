@@ -227,11 +227,13 @@ def space_according_to_index(
             "No section indexes found, cannot space according to a missing index. You likely did not run predict() with section_numbers=True"
         )
     else:
+        predictions = enforce_section_ordering(predictions, species=species)
+        # Read the flags only after sorting by section number: they are paired
+        # positionally with ``depths``/``nr`` below.
         if "bad_section" in predictions.columns:
             bad_sections = predictions["bad_section"].values
         else:
             bad_sections = None
-        predictions = enforce_section_ordering(predictions, species=species)
         depths = calculate_brain_center_depths(predictions, species=species)
         depths = np.array(depths)
         if section_thickness is None:
@@ -391,7 +393,7 @@ def calculate_weighted_accuracy(
         if len(bad_sections) != len(weighted_accuracy):
             raise ValueError("bad_sections and section_numbers must have the same length")
         weighted_accuracy = [
-            x if y is False else 0.0 for x, y in zip(weighted_accuracy, bad_sections)
+            0.0 if bool(y) else x for x, y in zip(weighted_accuracy, bad_sections)
         ]
 
     return weighted_accuracy
