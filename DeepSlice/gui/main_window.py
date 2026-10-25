@@ -2219,6 +2219,13 @@ class DeepSliceMainWindow(QMainWindow):
         )
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setAccessibleName("Onboarding Walkthrough Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("onboardingOkBtn")
+            ok_btn.setAccessibleName("Dismiss onboarding dialog")
+            ok_btn.setToolTip("Dismiss onboarding dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
@@ -2242,6 +2249,13 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setText(notes)
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setAccessibleName("What's New Highlights Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("whatsNewOkBtn")
+            ok_btn.setAccessibleName("Dismiss what's new dialog")
+            ok_btn.setToolTip("Dismiss what's new dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
@@ -2717,6 +2731,13 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setText(text)
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setAccessibleName("Naming Convention Help Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("namingHelperOkBtn")
+            ok_btn.setAccessibleName("Dismiss naming convention help dialog")
+            ok_btn.setToolTip("Dismiss naming convention help dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
@@ -2737,6 +2758,13 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setText(guide)
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setAccessibleName("Orientation Guide Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("orientationGuideOkBtn")
+            ok_btn.setAccessibleName("Dismiss orientation guide dialog")
+            ok_btn.setToolTip("Dismiss orientation guide dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
@@ -2756,6 +2784,13 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setText(text)
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setAccessibleName("Direction Guide Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("directionGuideOkBtn")
+            ok_btn.setAccessibleName("Dismiss direction guide dialog")
+            ok_btn.setToolTip("Dismiss direction guide dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
@@ -2774,6 +2809,13 @@ class DeepSliceMainWindow(QMainWindow):
         )
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setAccessibleName("Ensemble Prediction Help Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("ensembleExplanationOkBtn")
+            ok_btn.setAccessibleName("Dismiss ensemble prediction help dialog")
+            ok_btn.setToolTip("Dismiss ensemble prediction help dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
@@ -2800,6 +2842,13 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setText("\n".join(lines))
         msg_box.setIcon(QMessageBox.Warning)
         msg_box.setAccessibleName("Configuration Validation Warnings Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("configurationValidationOkBtn")
+            ok_btn.setAccessibleName("Dismiss validation warnings dialog")
+            ok_btn.setToolTip("Dismiss validation warnings dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
@@ -2818,6 +2867,13 @@ class DeepSliceMainWindow(QMainWindow):
         )
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setAccessibleName("Export Format Documentation Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("exportFormatHelpOkBtn")
+            ok_btn.setAccessibleName("Dismiss export format help dialog")
+            ok_btn.setToolTip("Dismiss export format help dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:

@@ -10,6 +10,12 @@ here.
 
 ## Completed
 
+### 2026-10-25 UTC - Helper, Onboarding, and Guide Dialogs Standard Buttons, Accessibility, Object Names, and Tooltips
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added explicit `setStandardButtons(QMessageBox.StandardButton.Ok)` across `_show_onboarding_dialog()`, `_show_whats_new_dialog()`, `_show_naming_helper()`, `_show_orientation_guide()`, `_show_direction_guide()`, `_show_ensemble_explanation()`, `_show_configuration_validation()`, and `_show_export_format_help()`. Configured explicit object names (`onboardingOkBtn`, `whatsNewOkBtn`, `namingHelperOkBtn`, `orientationGuideOkBtn`, `directionGuideOkBtn`, `ensembleExplanationOkBtn`, `configurationValidationOkBtn`, `exportFormatHelpOkBtn`), accessible names, descriptive tooltips, and pointing hand cursors across all guide dialog action buttons.
+- `tests/test_ui_accessibility_and_startup.py`: Expanded `test_helper_dialogs_accessibility_and_headless_safety` validating standard button instantiation, object names, accessible names, button tooltips, and pointing hand cursor affordances.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k "test_helper_dialogs" -v` (1 passed in 2.56s, 0 errors) and `python -m pytest tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (8 passed in 4.18s, 0 errors).
+
 ### 2026-10-25 UTC - About, Shortcuts, and Hardware Health dialog action button standard buttons, accessibility, object names, and tooltips
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added explicit `setStandardButtons(QMessageBox.StandardButton.Ok)` across `_show_about_dialog()`, `_show_shortcuts_help()`, and `_show_hardware_health()` ensuring buttons are instantiated consistently. Configured explicit object names (`aboutOkBtn`, `shortcutsOkBtn`, `hardwareHealthOkBtn`), accessible names, descriptive tooltips, and pointing hand cursors across all info and diagnostic dialog action buttons.

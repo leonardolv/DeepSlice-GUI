@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QApplication, QPushButton, QMessageBox
 
 from DeepSlice.gui.main_window import DeepSliceMainWindow, DropArea, ThumbnailListWidget
 
@@ -300,56 +300,84 @@ def test_helper_dialogs_accessibility_and_headless_safety():
         assert naming_box.objectName() == "namingHelperDialog"
         assert naming_box.accessibleName() == "Naming Convention Help Dialog"
         assert "Naming Convention" in naming_box.text()
-        for btn in naming_box.buttons():
-            assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(naming_box.buttons()) == 1
+        btn = naming_box.button(QMessageBox.StandardButton.Ok)
+        assert btn.objectName() == "namingHelperOkBtn"
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(btn.toolTip()) > 0
+        assert len(btn.accessibleName()) > 0
 
         # Orientation guide dialog
         orient_box = win._show_orientation_guide()
         assert orient_box.objectName() == "orientationGuideDialog"
         assert orient_box.accessibleName() == "Orientation Guide Dialog"
         assert "Orientation Guide" in orient_box.text()
-        for btn in orient_box.buttons():
-            assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(orient_box.buttons()) == 1
+        btn = orient_box.button(QMessageBox.StandardButton.Ok)
+        assert btn.objectName() == "orientationGuideOkBtn"
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(btn.toolTip()) > 0
+        assert len(btn.accessibleName()) > 0
 
         # Direction guide dialog
         dir_box = win._show_direction_guide()
         assert dir_box.objectName() == "directionGuideDialog"
         assert dir_box.accessibleName() == "Direction Guide Dialog"
         assert "Direction Override" in dir_box.text()
-        for btn in dir_box.buttons():
-            assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(dir_box.buttons()) == 1
+        btn = dir_box.button(QMessageBox.StandardButton.Ok)
+        assert btn.objectName() == "directionGuideOkBtn"
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(btn.toolTip()) > 0
+        assert len(btn.accessibleName()) > 0
 
         # Ensemble explanation dialog
         ens_box = win._show_ensemble_explanation()
         assert ens_box.objectName() == "ensembleExplanationDialog"
         assert ens_box.accessibleName() == "Ensemble Prediction Help Dialog"
         assert "Ensemble Prediction" in ens_box.text()
-        for btn in ens_box.buttons():
-            assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(ens_box.buttons()) == 1
+        btn = ens_box.button(QMessageBox.StandardButton.Ok)
+        assert btn.objectName() == "ensembleExplanationOkBtn"
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(btn.toolTip()) > 0
+        assert len(btn.accessibleName()) > 0
 
         # Export format help dialog
         fmt_box = win._show_export_format_help()
         assert fmt_box.objectName() == "exportFormatHelpDialog"
         assert fmt_box.accessibleName() == "Export Format Documentation Dialog"
         assert "QuickNII" in fmt_box.text()
-        for btn in fmt_box.buttons():
-            assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(fmt_box.buttons()) == 1
+        btn = fmt_box.button(QMessageBox.StandardButton.Ok)
+        assert btn.objectName() == "exportFormatHelpOkBtn"
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(btn.toolTip()) > 0
+        assert len(btn.accessibleName()) > 0
 
         # Onboarding dialog
         onboarding_box = win._show_onboarding_dialog()
         assert onboarding_box.objectName() == "onboardingDialog"
         assert onboarding_box.accessibleName() == "Onboarding Walkthrough Dialog"
         assert "Welcome to DeepSlice" in onboarding_box.windowTitle()
-        for btn in onboarding_box.buttons():
-            assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(onboarding_box.buttons()) == 1
+        btn = onboarding_box.button(QMessageBox.StandardButton.Ok)
+        assert btn.objectName() == "onboardingOkBtn"
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(btn.toolTip()) > 0
+        assert len(btn.accessibleName()) > 0
 
         # What's New dialog
         whats_new_box = win._show_whats_new_dialog("1.0.0")
         assert whats_new_box.objectName() == "whatsNewDialog"
         assert whats_new_box.accessibleName() == "What's New Highlights Dialog"
         assert "What's New" in whats_new_box.windowTitle()
-        for btn in whats_new_box.buttons():
-            assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(whats_new_box.buttons()) == 1
+        btn = whats_new_box.button(QMessageBox.StandardButton.Ok)
+        assert btn.objectName() == "whatsNewOkBtn"
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert len(btn.toolTip()) > 0
+        assert len(btn.accessibleName()) > 0
 
         # Hardware health dialog
         health_box = win._show_hardware_health()

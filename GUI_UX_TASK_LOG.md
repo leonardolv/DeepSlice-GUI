@@ -4,6 +4,17 @@
 
 ## Completed
 
+### Task: Helper, Onboarding, and Guide Dialogs Standard Buttons, Accessibility, Object Names, and Tooltips
+- **Completed**: 2026-10-25
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added explicit `setStandardButtons(QMessageBox.StandardButton.Ok)` across `_show_onboarding_dialog()`, `_show_whats_new_dialog()`, `_show_naming_helper()`, `_show_orientation_guide()`, `_show_direction_guide()`, `_show_ensemble_explanation()`, `_show_configuration_validation()`, and `_show_export_format_help()` ensuring dialog action buttons are instantiated consistently in headless and runtime contexts.
+    - Configured explicit object names (`onboardingOkBtn`, `whatsNewOkBtn`, `namingHelperOkBtn`, `orientationGuideOkBtn`, `directionGuideOkBtn`, `ensembleExplanationOkBtn`, `configurationValidationOkBtn`, `exportFormatHelpOkBtn`), accessible names, descriptive tooltips, and pointing hand cursors across all guide and walkthrough dialog action buttons.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added `QMessageBox` import and expanded `test_helper_dialogs_accessibility_and_headless_safety` to explicitly assert standard button instantiation, object names, accessible names, tooltips, and pointing hand cursor affordances across helper, guide, and walkthrough dialogs.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k "test_helper_dialogs" -v` (1 passed in 2.56s, 0 errors) and `python -m pytest tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (8 passed in 4.18s, 0 errors).
+- **Status**: Completed
+
 ### Task: About, Shortcuts, and Hardware Health Dialogs Action Button Standard Buttons, Accessibility, Object Names, and Tooltips
 - **Completed**: 2026-10-25
 - **Changes**:
