@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QPushButton
 
 from DeepSlice.gui.main_window import DeepSliceMainWindow, DropArea, ThumbnailListWidget
 
@@ -199,6 +199,11 @@ def test_hardware_health_cpu_fallback(monkeypatch):
             assert "CPU fallback" in dlg.text()
             assert dlg.accessibleName() == "Hardware Health Diagnostics Dialog"
             assert dlg.objectName() == "hardwareHealthDialog"
+            btn = dlg.findChild(QPushButton, "hardwareHealthOkBtn")
+            assert btn is not None
+            assert btn.cursor().shape() == Qt.PointingHandCursor
+            assert "Hardware" in btn.accessibleName()
+            assert btn.toolTip() != ""
     finally:
         win.close()
         win.deleteLater()
@@ -549,6 +554,13 @@ def test_shortcuts_and_linearity_zoom_tooltips():
         assert "Ctrl+," in dialog_text
         assert "Ctrl+0" in dialog_text
         assert "Ctrl++ / Ctrl+-" in dialog_text
+        assert dialog.objectName() == "shortcutsDialog"
+        assert dialog.accessibleName() == "Keyboard Shortcuts Help Dialog"
+        btn = dialog.findChild(QPushButton, "shortcutsOkBtn")
+        assert btn is not None
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert "Shortcuts" in btn.accessibleName()
+        assert btn.toolTip() != ""
     finally:
         win.close()
         win.deleteLater()
@@ -665,3 +677,23 @@ def test_training_actions_and_split_dialog_accessibility_and_cursors(tmp_path):
         win.close()
         win.deleteLater()
 
+
+
+def test_about_dialog_accessibility_and_button_cursors():
+    from PySide6.QtWidgets import QPushButton
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        dlg = win._show_about_dialog()
+        assert dlg is not None
+        assert dlg.objectName() == "aboutDialog"
+        assert dlg.windowTitle() == "About DeepSlice"
+        assert dlg.accessibleName() == "About DeepSlice Information Dialog"
+        btn = dlg.findChild(QPushButton, "aboutOkBtn")
+        assert btn is not None
+        assert btn.cursor().shape() == Qt.PointingHandCursor
+        assert "About" in btn.accessibleName()
+        assert btn.toolTip() != ""
+    finally:
+        win.close()
+        win.deleteLater()

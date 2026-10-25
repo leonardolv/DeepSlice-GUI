@@ -2001,8 +2001,12 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setWindowTitle("About DeepSlice")
         msg_box.setText(text)
         msg_box.setIcon(QMessageBox.Information)
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg_box.setAccessibleName("About DeepSlice Information Dialog")
         for btn in msg_box.buttons():
+            btn.setObjectName("aboutOkBtn")
+            btn.setAccessibleName("Close About dialog")
+            btn.setToolTip("Dismiss About dialog")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
             msg_box.exec()
@@ -2121,8 +2125,12 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setWindowTitle("Shortcuts")
         msg_box.setText(text)
         msg_box.setIcon(QMessageBox.Information)
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg_box.setAccessibleName("Keyboard Shortcuts Help Dialog")
         for btn in msg_box.buttons():
+            btn.setObjectName("shortcutsOkBtn")
+            btn.setAccessibleName("Close Shortcuts help dialog")
+            btn.setToolTip("Dismiss Shortcuts dialog")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
             msg_box.exec()
@@ -8488,8 +8496,12 @@ class DeepSliceMainWindow(QMainWindow):
             msg_box.setWindowTitle("Hardware Health")
             msg_box.setText("\n".join(lines))
             msg_box.setIcon(QMessageBox.Information)
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.setAccessibleName("Hardware Health Diagnostics Dialog")
             for btn in msg_box.buttons():
+                btn.setObjectName("hardwareHealthOkBtn")
+                btn.setAccessibleName("Close Hardware Health dialog")
+                btn.setToolTip("Dismiss Hardware Health dialog")
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
             if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
                 msg_box.exec()
@@ -8510,8 +8522,12 @@ class DeepSliceMainWindow(QMainWindow):
             msg_box.setWindowTitle("Hardware Health")
             msg_box.setText("\n".join(lines))
             msg_box.setIcon(QMessageBox.Information)
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.setAccessibleName("Hardware Health Diagnostics Dialog")
             for btn in msg_box.buttons():
+                btn.setObjectName("hardwareHealthOkBtn")
+                btn.setAccessibleName("Close Hardware Health dialog")
+                btn.setToolTip("Dismiss Hardware Health dialog")
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
             if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
                 msg_box.exec()

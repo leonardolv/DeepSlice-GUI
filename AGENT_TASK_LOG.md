@@ -10,6 +10,12 @@ here.
 
 ## Completed
 
+### 2026-10-25 UTC - About, Shortcuts, and Hardware Health dialog action button standard buttons, accessibility, object names, and tooltips
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added explicit `setStandardButtons(QMessageBox.StandardButton.Ok)` across `_show_about_dialog()`, `_show_shortcuts_help()`, and `_show_hardware_health()` ensuring buttons are instantiated consistently. Configured explicit object names (`aboutOkBtn`, `shortcutsOkBtn`, `hardwareHealthOkBtn`), accessible names, descriptive tooltips, and pointing hand cursors across all info and diagnostic dialog action buttons.
+- `tests/test_ui_accessibility_and_startup.py`: Expanded `test_shortcuts_and_linearity_zoom_tooltips` and `test_hardware_health_cpu_fallback` and added `test_about_dialog_accessibility_and_button_cursors` asserting object names, accessible names, tooltips, and pointing hand cursors.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (16 passed in 8.23s) and `pytest tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (8 passed in 7.98s, 0 errors).
+
 ### 2026-10-25 UTC - space_according_to_index crashed whenever a bad_section column existed
 Status: **done** (claude/wonderful-euler-nsp1xp)
 

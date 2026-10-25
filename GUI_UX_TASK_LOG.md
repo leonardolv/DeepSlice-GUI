@@ -4,6 +4,20 @@
 
 ## Completed
 
+### Task: About, Shortcuts, and Hardware Health Dialogs Action Button Standard Buttons, Accessibility, Object Names, and Tooltips
+- **Completed**: 2026-10-25
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added explicit `setStandardButtons(QMessageBox.StandardButton.Ok)` across `_show_about_dialog()`, `_show_shortcuts_help()`, and `_show_hardware_health()` (both GPU/CPU and lightweight fallback paths) ensuring dialog action buttons are instantiated and accessible in headless and runtime contexts.
+    - Configured explicit `setObjectName` ("aboutOkBtn"), `setAccessibleName` ("Close About dialog"), `setToolTip` ("Dismiss About dialog"), and `PointingHandCursor` on About dialog action buttons.
+    - Configured explicit `setObjectName` ("shortcutsOkBtn"), `setAccessibleName` ("Close Shortcuts help dialog"), `setToolTip` ("Dismiss Shortcuts dialog"), and `PointingHandCursor` on Shortcuts dialog action buttons.
+    - Configured explicit `setObjectName` ("hardwareHealthOkBtn"), `setAccessibleName` ("Close Hardware Health dialog"), `setToolTip` ("Dismiss Hardware Health dialog"), and `PointingHandCursor` on Hardware Health dialog action buttons.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Expanded `test_shortcuts_and_linearity_zoom_tooltips` and `test_hardware_health_cpu_fallback` asserting button object names, accessible names, tooltips, and pointing hand cursors.
+    - Added unit test `test_about_dialog_accessibility_and_button_cursors` asserting About dialog object name, window title, accessible name, and button accessibility attributes.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (16 passed in 8.23s) and `python -m pytest tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (8 passed in 7.98s, 0 errors).
+- **Status**: Completed
+
 ### Task: Training Split Dialog, Action Buttons Accessibility, Object Names, Tooltips, and Non-Blocking Headless Execution
 - **Completed**: 2026-10-22
 - **Changes**:
