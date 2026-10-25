@@ -1812,6 +1812,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         dialog = QDialog(self)
         dialog.setObjectName("preferencesDialog")
+        dialog.setAccessibleName("Preferences Dialog")
         dialog.setWindowTitle("Preferences")
         layout = QVBoxLayout(dialog)
         form = QFormLayout()
@@ -2488,13 +2489,23 @@ class DeepSliceMainWindow(QMainWindow):
             detail_blocks.append("Auto Analysis\n" + analysis_text)
         message_box.setDetailedText("\n\n".join(detail_blocks))
         message_box.setStandardButtons(QMessageBox.Ok)
+        ok_btn = message_box.button(QMessageBox.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("loggedErrorOkBtn")
+            ok_btn.setAccessibleName("Acknowledge error dialog")
+            ok_btn.setToolTip("Acknowledge and dismiss error dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         copy_button = message_box.addButton("Copy Error Report", QMessageBox.ActionRole)
         copy_button.setObjectName("loggedErrorCopyBtn")
+        copy_button.setAccessibleName("Copy full error report to clipboard")
+        copy_button.setToolTip("Copy full error report to clipboard")
         copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
         auto_fix_button = None
         if can_auto_fix:
             auto_fix_button = message_box.addButton("Try Auto-Fix", QMessageBox.ActionRole)
             auto_fix_button.setObjectName("loggedErrorAutoFixBtn")
+            auto_fix_button.setAccessibleName("Attempt automatic pattern fix")
+            auto_fix_button.setToolTip("Attempt automatic pattern fix")
             auto_fix_button.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in message_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -2530,16 +2541,29 @@ class DeepSliceMainWindow(QMainWindow):
         default 'Close' button.
         """
         box = QMessageBox(self)
+        box.setObjectName("actionableWarningDialog")
+        box.setAccessibleName(f"{title} - Warning Dialog")
         box.setWindowTitle(title)
         box.setIcon(icon)
         box.setText(message)
         close_button = box.addButton(QMessageBox.Close)
+        close_button.setObjectName("actionableWarningCloseBtn")
+        close_button.setAccessibleName("Dismiss warning dialog")
+        close_button.setToolTip("Dismiss warning dialog")
+        close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         action_buttons = []
-        for label, callback in (actions or []):
+        for idx, (label, callback) in enumerate(actions or []):
             btn = box.addButton(str(label), QMessageBox.ActionRole)
+            btn.setObjectName(f"actionableWarningActionBtn{idx}")
+            btn.setAccessibleName(f"Action: {label}")
+            btn.setToolTip(f"Execute {label}")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
             action_buttons.append((btn, callback))
+        for btn in box.buttons():
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
         box.setDefaultButton(close_button)
-        box.exec()
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            box.exec()
         clicked = box.clickedButton()
         for btn, callback in action_buttons:
             if clicked is btn and callable(callback):
@@ -2550,6 +2574,7 @@ class DeepSliceMainWindow(QMainWindow):
                         "Actionable-warning callback failed for %s", title
                     )
                 return
+        return box
 
     def _build_ingestion_page(self) -> QWidget:
         page = QWidget()
@@ -2997,6 +3022,7 @@ class DeepSliceMainWindow(QMainWindow):
         image_path = str(item.data(Qt.UserRole))
         dialog = QDialog(self)
         dialog.setObjectName("fullscreenThumbnailPreviewDialog")
+        dialog.setAccessibleName("Fullscreen Section Thumbnail Preview Dialog")
         dialog.setWindowTitle(f"Preview - {os.path.basename(image_path)}")
         dialog.setWindowState(Qt.WindowFullScreen)
         root = QVBoxLayout(dialog)
@@ -3035,7 +3061,13 @@ class DeepSliceMainWindow(QMainWindow):
         if hasattr(self, "copy_console_button"):
             original_text = self.copy_console_button.text()
             self.copy_console_button.setText("✓ Copied!")
-            QTimer.singleShot(1500, lambda: self.copy_console_button.setText(original_text))
+            def _reset():
+                try:
+                    if hasattr(self, "copy_console_button"):
+                        self.copy_console_button.setText(original_text)
+                except RuntimeError:
+                    pass
+            QTimer.singleShot(1500, _reset)
 
     @staticmethod
     def _format_duration(total_seconds: int) -> str:
@@ -5425,6 +5457,13 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setText("\n".join(lines))
         msg_box.setIcon(QMessageBox.Information if preview["leakage_free"] else QMessageBox.Warning)
         msg_box.setAccessibleName("Training Split Preview Dialog")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setObjectName("trainingSplitOkBtn")
+            ok_btn.setAccessibleName("Dismiss training split preview dialog")
+            ok_btn.setToolTip("Dismiss training split preview dialog")
+            ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         for btn in msg_box.buttons():
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:

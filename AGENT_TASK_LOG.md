@@ -10,6 +10,12 @@ here.
 
 ## Completed
 
+### 2026-10-25 UTC - Actionable warning headless non-blocking guard, dialog accessibility, safe console timer, and standard buttons
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added headless offscreen guard on `_actionable_warning()` to prevent modal blocking during automated test runs; configured object names, accessible names, tooltips, and pointing hand cursors on warning dialog buttons; added accessible names on preferences and fullscreen preview dialogs; added standard Ok buttons on logged error and training split dialogs; guarded console copy timer callback against widget deletion.
+- `tests/test_ui_accessibility_and_startup.py`: Added `test_actionable_warning_headless_and_accessibility` and expanded assertions for dialog accessible names and button metadata.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k "test_actionable_warning_headless_and_accessibility or test_preferences_dialog or test_training_actions" -v` (3 passed in 10.83s, 0 errors).
+
 ### 2026-10-25 UTC - Helper, Onboarding, and Guide Dialogs Standard Buttons, Accessibility, Object Names, and Tooltips
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added explicit `setStandardButtons(QMessageBox.StandardButton.Ok)` across `_show_onboarding_dialog()`, `_show_whats_new_dialog()`, `_show_naming_helper()`, `_show_orientation_guide()`, `_show_direction_guide()`, `_show_ensemble_explanation()`, `_show_configuration_validation()`, and `_show_export_format_help()`. Configured explicit object names (`onboardingOkBtn`, `whatsNewOkBtn`, `namingHelperOkBtn`, `orientationGuideOkBtn`, `directionGuideOkBtn`, `ensembleExplanationOkBtn`, `configurationValidationOkBtn`, `exportFormatHelpOkBtn`), accessible names, descriptive tooltips, and pointing hand cursors across all guide dialog action buttons.

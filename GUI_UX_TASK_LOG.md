@@ -4,6 +4,22 @@
 
 ## Completed
 
+### Task: Actionable Warning Headless Non-Blocking Guard, Dialog Accessibility, Safe Console Timer, and Standard Buttons
+- **Completed**: 2026-10-25
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Hardened `_actionable_warning()` with offscreen non-blocking headless execution guard (`QT_QPA_PLATFORM != offscreen`), explicit dialog object name (`actionableWarningDialog`), accessible name, close button object name (`actionableWarningCloseBtn`), action button object names (`actionableWarningActionBtn{idx}`), tooltips, and pointing hand cursors.
+    - Added explicit `setAccessibleName("Preferences Dialog")` to `_create_preferences_dialog()`.
+    - Added explicit `setAccessibleName("Fullscreen Section Thumbnail Preview Dialog")` to `_open_fullscreen_thumbnail_preview()`.
+    - Added standard Ok button configuration with object name (`loggedErrorOkBtn`), accessible name, and tooltips in `_show_logged_error()`.
+    - Added standard Ok button configuration with object name (`trainingSplitOkBtn`), accessible name, and tooltips in `_preview_training_split()`.
+    - Guarded console copy confirmation timer callback against deleted widget lifecycle in `_copy_console()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added `test_actionable_warning_headless_and_accessibility` validating headless execution, object names, accessible names, button tooltips, and cursor shapes.
+    - Expanded preferences and training split tests to assert dialog accessible names and standard button object names.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k "test_actionable_warning_headless_and_accessibility or test_preferences_dialog or test_training_actions" -v` (3 passed in 10.83s, 0 errors).
+- **Status**: Completed
+
 ### Task: Helper, Onboarding, and Guide Dialogs Standard Buttons, Accessibility, Object Names, and Tooltips
 - **Completed**: 2026-10-25
 - **Changes**:

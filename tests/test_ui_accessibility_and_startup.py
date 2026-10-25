@@ -47,6 +47,7 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
     try:
         dlg = win._create_preferences_dialog()
         try:
+            assert dlg.accessibleName() == "Preferences Dialog"
             assert dlg.species_combo.accessibleName() == "Default species for new sessions"
             assert dlg.theme_combo.accessibleName() == "Application theme"
             assert dlg.output_dir_edit.accessibleName() == "Default output directory path"
@@ -697,6 +698,10 @@ def test_training_actions_and_split_dialog_accessibility_and_cursors(tmp_path):
         try:
             assert dlg.objectName() == "trainingSplitDialog"
             assert dlg.accessibleName() == "Training Split Preview Dialog"
+            ok_btn = dlg.button(QMessageBox.StandardButton.Ok)
+            assert ok_btn is not None
+            assert ok_btn.objectName() == "trainingSplitOkBtn"
+            assert ok_btn.accessibleName() == "Dismiss training split preview dialog"
             for btn in dlg.buttons():
                 assert btn.cursor().shape() == Qt.PointingHandCursor
         finally:
@@ -722,6 +727,30 @@ def test_about_dialog_accessibility_and_button_cursors():
         assert btn.cursor().shape() == Qt.PointingHandCursor
         assert "About" in btn.accessibleName()
         assert btn.toolTip() != ""
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_actionable_warning_headless_and_accessibility():
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        box = win._actionable_warning(
+            title="Alignment Warning",
+            message="Section spacing discrepancy detected.",
+            actions=[("Ignore and Proceed", lambda: None)],
+        )
+        assert box is not None
+        assert box.objectName() == "actionableWarningDialog"
+        assert "Alignment Warning" in box.accessibleName()
+        close_btn = box.findChild(QPushButton, "actionableWarningCloseBtn")
+        assert close_btn is not None
+        assert close_btn.cursor().shape() == Qt.PointingHandCursor
+        action_btn = box.findChild(QPushButton, "actionableWarningActionBtn0")
+        assert action_btn is not None
+        assert action_btn.cursor().shape() == Qt.PointingHandCursor
+        assert action_btn.accessibleName() == "Action: Ignore and Proceed"
     finally:
         win.close()
         win.deleteLater()
