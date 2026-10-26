@@ -3780,16 +3780,22 @@ class DeepSliceMainWindow(QMainWindow):
 
 
 
-        form.addRow("Default species for new sessions", species_combo)
+        species_label = QLabel("Default species for new sessions")
+        species_label.setObjectName("prefSpeciesLabel")
+        theme_label = QLabel("Theme")
+        theme_label.setObjectName("prefThemeLabel")
+        output_dir_label = QLabel("Default output directory")
+        output_dir_label.setObjectName("prefOutputDirLabel")
+        quicknii_label = QLabel("Default QuickNII path")
+        quicknii_label.setObjectName("prefQuickNiiLabel")
+        console_label = QLabel("Console")
+        console_label.setObjectName("prefConsoleLabel")
 
-        form.addRow("Theme", theme_combo)
-
-        form.addRow("Default output directory", output_dir_row)
-
-        form.addRow("Default QuickNII path", quicknii_row)
-
-        form.addRow("Console", console_always_visible)
-
+        form.addRow(species_label, species_combo)
+        form.addRow(theme_label, theme_combo)
+        form.addRow(output_dir_label, output_dir_row)
+        form.addRow(quicknii_label, quicknii_row)
+        form.addRow(console_label, console_always_visible)
         layout.addLayout(form)
 
 
@@ -3878,21 +3884,42 @@ class DeepSliceMainWindow(QMainWindow):
 
         dialog.output_dir_browse = output_dir_browse
 
+        def get_values() -> dict:
+            return {
+                "default_species": species_combo.currentText().strip().lower(),
+                "theme": theme_combo.currentText().strip().lower(),
+                "default_output_directory": output_dir_edit.text().strip(),
+                "quicknii_path": quicknii_edit.text().strip(),
+                "console_always_visible": bool(console_always_visible.isChecked()),
+            }
+
+        def set_values(values: dict) -> None:
+            if "default_species" in values and values["default_species"] in {"mouse", "rat"}:
+                species_combo.setCurrentText(values["default_species"])
+            if "theme" in values and values["theme"] in {"dark", "light"}:
+                theme_combo.setCurrentText(values["theme"])
+            if "default_output_directory" in values:
+                output_dir_edit.setText(str(values["default_output_directory"]))
+            if "quicknii_path" in values:
+                quicknii_edit.setText(str(values["quicknii_path"]))
+            if "console_always_visible" in values:
+                console_always_visible.setChecked(bool(values["console_always_visible"]))
+
+        dialog.get_values = get_values
+        dialog.set_values = set_values
+        dialog.form = form
+        dialog.species_label = species_label
+        dialog.theme_label = theme_label
+        dialog.output_dir_label = output_dir_label
+        dialog.quicknii_label = quicknii_label
+        dialog.console_label = console_label
         dialog.quicknii_edit = quicknii_edit
-
         dialog.quicknii_browse = quicknii_browse
-
         dialog.console_always_visible = console_always_visible
-
         dialog.reset_btn = reset_btn
-
         dialog.ok_btn = ok_btn
-
         dialog.cancel_btn = cancel_btn
-
         dialog.buttons = buttons
-
-
 
         return dialog
 
@@ -3900,11 +3927,18 @@ class DeepSliceMainWindow(QMainWindow):
 
     def _save_and_apply_preferences(self, dialog: QDialog) -> None:
         settings = self._settings
-        selected_species = dialog.species_combo.currentText().strip().lower()
-        selected_theme = dialog.theme_combo.currentText().strip().lower()
-        default_output_dir = dialog.output_dir_edit.text().strip()
-        default_quicknii_path = dialog.quicknii_edit.text().strip()
-        always_console = bool(dialog.console_always_visible.isChecked())
+        vals = dialog.get_values() if hasattr(dialog, "get_values") else {
+            "default_species": dialog.species_combo.currentText().strip().lower(),
+            "theme": dialog.theme_combo.currentText().strip().lower(),
+            "default_output_directory": dialog.output_dir_edit.text().strip(),
+            "quicknii_path": dialog.quicknii_edit.text().strip(),
+            "console_always_visible": bool(dialog.console_always_visible.isChecked()),
+        }
+        selected_species = vals["default_species"]
+        selected_theme = vals["theme"]
+        default_output_dir = vals["default_output_directory"]
+        default_quicknii_path = vals["quicknii_path"]
+        always_console = vals["console_always_visible"]
 
         settings.setValue("default_species", selected_species)
         settings.setValue("theme", selected_theme)

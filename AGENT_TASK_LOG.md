@@ -20,6 +20,12 @@ here.
 
 ## Completed
 
+### 2026-10-26 UTC - PreferencesDialog get_values/set_values helpers, form layout bindings, and label object names
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added explicit object names on preferences form labels (`prefSpeciesLabel`, `prefThemeLabel`, `prefOutputDirLabel`, `prefQuickNiiLabel`, `prefConsoleLabel`); added `dialog.get_values()` and `dialog.set_values()` helpers; exposed `dialog.form`; updated `_save_and_apply_preferences` to consume `dialog.get_values()`.
+- `tests/test_ui_accessibility_and_startup.py`: Added assertions testing form layout, label object names, and programmatic get/set values.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (18 passed in 9.09s, 0 errors).
+
 ### 2026-10-26 UTC - PreferencesDialog Combobox Cursors, Automatic Acceptance Persistence, and Unit Tests
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added pointing hand cursor affordances to `species_combo` and `theme_combo` in `_create_preferences_dialog`; refactored `_save_and_apply_preferences(dialog)` and wired `dialog.accepted` signal so settings are safely and uniformly persisted across interactive and headless test invocations.

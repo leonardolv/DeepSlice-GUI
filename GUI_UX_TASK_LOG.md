@@ -8,6 +8,19 @@
 
 ## Completed
 
+### Task: PreferencesDialog get_values/set_values helpers, form layout bindings, and label object names
+- **Completed**: 2026-10-26
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added explicit object names on preferences form labels (`prefSpeciesLabel`, `prefThemeLabel`, `prefOutputDirLabel`, `prefQuickNiiLabel`, `prefConsoleLabel`).
+    - Added `dialog.get_values()` returning dict of current values and `dialog.set_values(values: dict)` for programmatic configuration and testing.
+    - Exposed `dialog.form` and label references on dialog.
+    - Updated `_save_and_apply_preferences` to consume `dialog.get_values()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Expanded `test_preferences_dialog_accessibility_and_reset_to_defaults` testing form layout, label object names, and `get_values`/`set_values` round-trip.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (18 passed in 9.09s, 0 errors).
+- **Status**: Completed
+
 ### Task: PreferencesDialog combobox cursors, automatic acceptance persistence, and unit tests
 - **Completed**: 2026-10-26
 - **Changes**:

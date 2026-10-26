@@ -48,6 +48,20 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
         dlg = win._create_preferences_dialog()
         try:
             assert dlg.accessibleName() == "Preferences Dialog"
+            assert dlg.form is not None
+            assert dlg.species_label.objectName() == "prefSpeciesLabel"
+            assert dlg.theme_label.objectName() == "prefThemeLabel"
+            assert dlg.output_dir_label.objectName() == "prefOutputDirLabel"
+            assert dlg.quicknii_label.objectName() == "prefQuickNiiLabel"
+            assert dlg.console_label.objectName() == "prefConsoleLabel"
+            vals = dlg.get_values()
+            assert "default_species" in vals
+            assert "theme" in vals
+            dlg.set_values({"default_species": "rat", "theme": "light", "default_output_directory": "C:/custom_set", "console_always_visible": True})
+            assert dlg.species_combo.currentText() == "rat"
+            assert dlg.theme_combo.currentText() == "light"
+            assert dlg.output_dir_edit.text() == "C:/custom_set"
+            assert dlg.console_always_visible.isChecked()
             assert dlg.species_combo.accessibleName() == "Default species for new sessions"
             assert dlg.theme_combo.accessibleName() == "Application theme"
             assert dlg.output_dir_edit.accessibleName() == "Default output directory path"
