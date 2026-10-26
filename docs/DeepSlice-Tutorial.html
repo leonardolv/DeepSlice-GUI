@@ -118,6 +118,9 @@ footer{text-align:center;color:#50657d;font-size:.82rem;padding:12px}
   <p>Desktop Workflow Guide</p>
 </div>
 
+<div class="nav-group">Start here</div>
+<a class="nav-link" href="#quick-start">Quick Start (10 steps)</a>
+
 <div class="nav-group">Foundations</div>
 <a class="nav-link" href="#prerequisites">Prerequisites</a>
 <a class="nav-link" href="#installation">Installation</a>
@@ -127,20 +130,21 @@ footer{text-align:center;color:#50657d;font-size:.82rem;padding:12px}
 <div class="nav-group">Core Workflow</div>
 <a class="nav-link" href="#lesson-ingestion">1. Add images</a>
 <a class="nav-link" href="#lesson-configuration">2. Settings</a>
-<a class="nav-link" href="#lesson-prediction">Prediction</a>
-<a class="nav-link" href="#lesson-curation">Curation</a>
-<a class="nav-link" href="#lesson-export">Export</a>
+<a class="nav-link" href="#lesson-prediction">3. Run alignment</a>
+<a class="nav-link" href="#lesson-curation">4. Review &amp; fix</a>
+<a class="nav-link" href="#lesson-export">5. Export</a>
 
 <div class="nav-group">Operations</div>
 <a class="nav-link" href="#lesson-session">Session &amp; QuickNII Roundtrip</a>
 <a class="nav-link" href="#lesson-errors">Diagnostics &amp; Auto-Fix</a>
 
 <div class="nav-group">Appendices</div>
+<a class="nav-link" href="#shortcuts">Keyboard Shortcuts</a>
 <a class="nav-link" href="#troubleshooting">Troubleshooting</a>
 <a class="nav-link" href="#next-steps">Next Steps</a>
 
 <div class="sidebar-footer">
-  <a href="README.md">Open Project README &rarr;</a>
+  <a href="../README.md">Open Project README &rarr;</a>
 </div>
 </nav>
 
@@ -148,87 +152,177 @@ footer{text-align:center;color:#50657d;font-size:.82rem;padding:12px}
 
 <header class="hero" id="top">
   <h2>DeepSlice Desktop - Professional Tutorial</h2>
-  <p>This guide mirrors the app exactly and tells you what to click, where to click it, and when each action should be used. Follow it end-to-end to go from raw histology images to curated QuickNII-compatible outputs and reproducible reports.</p>
+  <p>This guide mirrors the app and tells you what to click, where to click it, and why. Follow it end-to-end to go from raw histology images to curated QuickNII-compatible outputs and reproducible reports. In a hurry? The Quick Start below gets a first result in ten steps.</p>
   <div class="badges">
-    <span class="badge">11 Lessons</span>
+    <span class="badge">Quick Start + 11 Lessons</span>
     <span class="badge">Beginner to Advanced</span>
     <span class="badge">~45-60 min</span>
   </div>
 </header>
 
-<section class="lesson" id="prerequisites" data-search="prerequisites requirements deep slice desktop python windows histology quicknii">
+<section class="lesson" id="quick-start" data-search="quick start first run example tutorial ten steps overview">
 <span class="lesson-badge lb-beginner">Beginner</span>
-<h2>Lesson 0 - Prerequisites</h2>
+<h2>Quick Start - Your First Alignment in 10 Steps</h2>
 
-<ul class="checklist">
-  <li>Windows 10/11 (64-bit)</li>
-  <li>Python 3.10+ in a virtual environment</li>
-  <li>At least 8 GB RAM (16 GB+ recommended for larger datasets)</li>
-  <li>Histology images in <code>.jpg</code>, <code>.jpeg</code>, <code>.png</code>, <code>.tif</code>, or <code>.tiff</code></li>
-  <li>File naming with section IDs (recommended): <code>_s001</code>, <code>_s002</code>, ...</li>
-</ul>
-
-<div class="note"><strong>Important:</strong> The current desktop release supports <strong>coronal</strong> orientation in the main workflow. Sagittal and horizontal are listed as coming soon.</div>
-</section>
-
-<section class="lesson" id="installation" data-search="installation tensorflow pyside6 deep slice desktop setup">
-<span class="lesson-badge lb-beginner">Beginner</span>
-<h2>Lesson 1 - Installation (Including TensorFlow Fix)</h2>
-
-<p>Set up a clean environment, install DeepSlice, and ensure TensorFlow is available so prediction can run.</p>
+<p>Example dataset used throughout this guide: a folder <code>Mouse12/</code> holding 45 coronal sections named <code>Mouse12_s001.tif</code> to <code>Mouse12_s045.tif</code>. Substitute your own folder.</p>
 
 <div class="step">
   <div class="step-num">1</div>
   <div class="step-body">
-    <h4>Open PowerShell in the repository root</h4>
-    <pre>cd "D:\CLOUD\OneDrive - O365 Turun yliopisto\CODE\GITHUB\DeepSlice-LLV"</pre>
+    <h4>Start the app</h4>
+    <p>Run <code>deepslice-gui</code> in a terminal (see <a href="#installation">Installation</a> if the command is not found).</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">2</div>
   <div class="step-body">
-    <h4>Create and activate virtual environment</h4>
-    <pre>python -m venv .venv
-.venv\Scripts\activate</pre>
+    <h4>Step 1 - Add images</h4>
+    <p>Drag the <code>Mouse12</code> folder onto the drop area, or click <em>Add Folder</em>.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">3</div>
   <div class="step-body">
-    <h4>Install the project</h4>
-    <pre>python -m pip install --upgrade pip
-python -m pip install -e .</pre>
+    <h4>Check the index table</h4>
+    <p>Every row of the table should show a number in <em>Detected Index</em> (1 to 45) and <em>OK</em> in <em>Status</em>. The banner reads "45 files - 45 valid indices - 0 warnings".</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">4</div>
   <div class="step-body">
-    <h4>Install critical runtime dependencies</h4>
-    <pre>python -m pip install "tensorflow&lt;3.0" scikit-image</pre>
-    <p>This resolves the common startup errors <code>ModuleNotFoundError: tensorflow</code> and <code>ModuleNotFoundError: skimage</code>.</p>
+    <h4>Step 2 - Settings</h4>
+    <p>Click <em>Next: Settings</em> (or press <span class="sc">Ctrl+2</span>), pick <em>Mouse (Allen CCFv3)</em> and leave everything else at its default.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">5</div>
   <div class="step-body">
-    <h4>Optional: verify import before opening the GUI</h4>
-    <pre>python -c "import tensorflow as tf; print(tf.__version__)"</pre>
+    <h4>Step 3 - Run alignment</h4>
+    <p>Click <em>Next: Run alignment</em>, then <em>Run Alignment</em>. The button briefly reads "Scanning inputs..." while the <a href="#quality-gate">input quality gate</a> checks your images. If a "Quality Gate Warning" appears, read it, then choose Yes (continue) or No (go fix the images).</p>
   </div>
 </div>
 
-<div class="warn"><strong>Windows GPU note:</strong> TensorFlow on native Windows generally runs CPU-only for newer versions. This is normal; DeepSlice still runs correctly on CPU.</div>
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <h4>Wait for the progress bar</h4>
+    <p>You can watch <em>Phase</em>, <em>Progress</em>, <em>Elapsed</em> and <em>Remaining</em>. A CPU run can take several minutes.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <h4>Step 4 - Review &amp; fix</h4>
+    <p>Click <em>Next: Review &amp; fix</em>. Click <em>Detect Outliers</em>, then <em>Normalize Angles</em>. Press <span class="sc">J</span> / <span class="sc">K</span> to step through sections and compare each with the atlas. Not happy with a change? Click <em>Undo</em>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <h4>Step 5 - Export</h4>
+    <p>Press <span class="sc">Ctrl+E</span>. Click <em>Browse</em> to choose an Output Directory, keep <em>JSON (QuickNII/VisuAlign)</em>, then click <em>Export Predictions</em>. You get <code>DeepSliceResults.json</code> and <code>DeepSliceResults.csv</code>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">9</div>
+  <div class="step-body">
+    <h4>Save the session</h4>
+    <p>Press <span class="sc">Ctrl+S</span> and save a <code>.deepslice-session.json</code> file so you can resume later.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">10</div>
+  <div class="step-body">
+    <h4>Open the result in QuickNII</h4>
+    <p>Click <em>Open in QuickNII</em> (set the QuickNII path first if prompted), or load the JSON in QuickNII / VisuAlign yourself.</p>
+  </div>
+</div>
 
 <div class="outcome">
   <h4>&#10003; Outcome</h4>
-  <p>The runtime environment is ready and prediction imports no longer fail due to missing TensorFlow.</p>
+  <p>You have an exported alignment plus a resumable session. The lessons below explain each step in depth.</p>
 </div>
 </section>
 
-<section class="lesson" id="first-launch" data-search="launch startup health check hardware button">
+<section class="lesson" id="prerequisites" data-search="prerequisites requirements deep slice desktop python windows histology quicknii">
+<span class="lesson-badge lb-beginner">Beginner</span>
+<h2>Lesson 0 - Prerequisites</h2>
+
+<ul class="checklist">
+  <li>A 64-bit computer that can install TensorFlow and PySide6 (Windows 10/11 is the main target)</li>
+  <li>Python 3.9 to 3.12 in a virtual environment (3.11 or 3.12 recommended)</li>
+  <li>At least 8 GB RAM (16 GB+ recommended for larger datasets)</li>
+  <li>Histology images in <code>.jpg</code>, <code>.jpeg</code>, <code>.png</code>, <code>.tif</code>, or <code>.tiff</code> (other file types are listed as "Unsupported files excluded")</li>
+  <li>File naming with section IDs (recommended): <code>_s001</code>, <code>_s002</code>, ...</li>
+  <li>Optional: QuickNII installed, if you want one-click opening of results</li>
+</ul>
+
+<div class="note"><strong>Important:</strong> The current desktop release supports <strong>coronal</strong> sections in the main workflow. Sagittal and horizontal appear in the <em>Cutting plane</em> list as "coming soon" and will block <em>Run Alignment</em> if selected.</div>
+</section>
+
+<section class="lesson" id="installation" data-search="installation tensorflow pyside6 deep slice desktop setup pip extras">
+<span class="lesson-badge lb-beginner">Beginner</span>
+<h2>Lesson 1 - Installation</h2>
+
+<p>Set up a clean environment and install DeepSlice together with its GUI dependencies. The installer pins a TensorFlow version known to work with DeepSlice, so you normally do not install TensorFlow by hand.</p>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <h4>Open a terminal in the repository folder</h4>
+    <pre>cd path\to\DeepSlice-GUI</pre>
+    <p>On macOS/Linux use forward slashes. Use the folder that contains <code>setup.py</code>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h4>Create and activate a virtual environment</h4>
+    <pre>python -m venv .venv
+.venv\Scripts\activate</pre>
+    <p>On macOS/Linux: <code>source .venv/bin/activate</code>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <h4>Install the project with all optional features</h4>
+    <pre>python -m pip install --upgrade pip
+python -m pip install -e ".[all]"</pre>
+    <p>This installs TensorFlow, scikit-image and PySide6, plus two optional extras: <code>reportlab</code> (needed for <em>Generate Report (PDF)</em>) and <code>nibabel</code> (needed for the atlas volume preview). Plain <code>python -m pip install -e .</code> works too; the PDF report and atlas preview then ask you to install the missing package when first used.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h4>Optional: verify TensorFlow imports</h4>
+    <pre>python -c "import tensorflow as tf; print(tf.__version__)"</pre>
+    <p>Expect a 2.x version (2.13 to 2.15 on Python 3.9-3.11, 2.16 on Python 3.12).</p>
+  </div>
+</div>
+
+<div class="warn"><strong>Do not run <code>pip install "tensorflow&lt;3.0"</code> on top of this.</strong> It can replace the pinned TensorFlow with a newer one that DeepSlice has not been tested with. If you do see <code>ModuleNotFoundError: tensorflow</code> or <code>skimage</code>, re-run step 3, or use <em>Errors &gt; Try Auto-Fix Last Error</em> (Lesson 10).</div>
+
+<div class="warn"><strong>GPU note:</strong> TensorFlow on native Windows generally runs CPU-only for newer versions. This is normal; DeepSlice still runs correctly on CPU, just more slowly.</div>
+
+<div class="outcome">
+  <h4>&#10003; Outcome</h4>
+  <p>The runtime environment is ready and the <code>deepslice-gui</code> command exists in your virtual environment.</p>
+</div>
+</section>
+
+<section class="lesson" id="first-launch" data-search="launch startup health check hardware button onboarding whats new">
 <span class="lesson-badge lb-beginner">Beginner</span>
 <h2>Lesson 2 - First Launch &amp; Health Check</h2>
 
@@ -236,24 +330,32 @@ python -m pip install -e .</pre>
   <div class="step-num">1</div>
   <div class="step-body">
     <h4>Launch the GUI</h4>
-    <pre>python DeepSlice/main.py</pre>
-    <p>Wait for the DeepSlice Desktop main window to appear.</p>
+    <pre>deepslice-gui</pre>
+    <p>Equivalent alternatives: <code>python -m DeepSlice.gui.app</code> or <code>python DeepSlice/main.py</code>. Wait for the DeepSlice Desktop window to appear.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">2</div>
   <div class="step-body">
-    <h4>Click <em>Hardware Health</em> in the top bar</h4>
-    <p>Use this immediately after launch to verify whether TensorFlow is in CPU or GPU mode and confirm the runtime is healthy.</p>
+    <h4>Read the first-run walkthrough</h4>
+    <p>On the very first launch a short "Welcome to DeepSlice" dialog lists the five steps. After an upgrade a "What's new" dialog may follow. Click <em>OK</em> to dismiss each.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">3</div>
   <div class="step-body">
+    <h4>Click <em>Hardware Health</em> in the top bar</h4>
+    <p>The dialog lists Mode (CPU or GPU), TensorFlow, CUDA and cuDNN versions and detected GPUs. The label next to it, <em>Runs on: CPU</em> or <em>Runs on: GPU</em>, updates too.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
     <h4>Confirm error tooling is available</h4>
-    <p>Top bar should include <em>Open Error Log</em>, <em>Copy Last Error</em>, and <em>Try Auto-Fix Last Error</em>.</p>
+    <p>The top bar has an <em>Errors</em> menu containing <em>Open Error Log</em>, <em>Copy Last Error</em> and <em>Try Auto-Fix Last Error</em>. The last two stay greyed out until an error has occurred.</p>
   </div>
 </div>
 
@@ -263,40 +365,41 @@ python -m pip install -e .</pre>
 </div>
 </section>
 
-<section class="lesson" id="ui-orientation" data-search="ui orientation ingestion configuration prediction curation export">
+<section class="lesson" id="ui-orientation" data-search="ui orientation ingestion configuration prediction curation export banner step list top bar">
 <span class="lesson-badge lb-beginner">Beginner</span>
 <h2>Lesson 3 - UI Orientation</h2>
 
-<p>The application uses a left step navigator and a right content stack. Workflow order is strict and intentional.</p>
+<p>The window has a step list on the left and the current step's page on the right. Workflow order is intentional: later steps stay locked until their inputs exist.</p>
 
 <div class="grid-2">
-  <div class="card"><h4>Step Navigator</h4><p>1. Add images -> 2. Settings -> 3. Run alignment -> 4. Review &amp; fix -> 5. Export. Locked steps unlock as data becomes available; hover a locked step to see what unlocks it.</p></div>
-  <div class="card"><h4>Guidance Banner</h4><p>The blue banner above every page says what to do on that step, reports your progress (for example how many images are loaded) and has a <em>Next</em> button that is enabled as soon as the next step is unlocked.</p></div>
-  <div class="card"><h4>Top Bar</h4><p><em>Runs on: CPU/GPU</em> (hover for what that means), Hardware Health, Save Session, Load Session / QuickNII, Shortcuts, Preferences, About, and the Errors menu (Open Error Log, Copy Last Error, Try Auto-Fix Last Error).</p></div>
-  <div class="card"><h4>Status Prefixes</h4><p><code>✓</code> completed, <code>●</code> current, <code>◌</code> locked/pending.</p></div>
-  <div class="card"><h4>Runtime Console</h4><p>Available in Prediction. Use when running alignment or debugging processing tasks.</p></div>
+  <div class="card"><h4>Step Navigator</h4><p>1. Add images -> 2. Settings -> 3. Run alignment -> 4. Review &amp; fix -> 5. Export. Steps 2 and 3 unlock once at least one image is loaded; steps 4 and 5 unlock after the alignment has run. Hover a locked step to see what unlocks it. The percentage above the list shows overall completion and the <em>&lt;&lt;</em> button collapses the list.</p></div>
+  <div class="card"><h4>Guidance Banner</h4><p>The blue banner above every page says "Step N of 5", what to do, a live status line (for example "45 images loaded") and a <em>Next: ...</em> button that is enabled as soon as the next step is unlocked.</p></div>
+  <div class="card"><h4>Top Bar</h4><p>Project name, <em>Session:</em> status, <em>Runs on: CPU/GPU</em>, then the buttons <em>Theme</em> (Dark/Light), <em>Hardware Health</em>, <em>New Session</em>, <em>Save Session</em>, <em>Load Session / QuickNII</em>, <em>Shortcuts</em>, <em>Preferences</em>, <em>About</em> and <em>Errors</em>. On narrow windows the buttons wrap to a second row.</p></div>
+  <div class="card"><h4>Step Markers</h4><p>In the step list <code>✓</code> means completed, <code>●</code> current, <code>◌</code> locked.</p></div>
+  <div class="card"><h4>Runtime Console</h4><p>On the Run alignment page, <em>Show Runtime Console</em> reveals live logs with <em>Auto-scroll</em>, <em>Clear</em> and <em>Copy</em>. Use it when running alignment or debugging.</p></div>
+  <div class="card"><h4>Help</h4><p>Press <span class="sc">F1</span> to open the help page at the section for the step you are on, or <span class="sc">Ctrl+/</span> for the shortcut sheet. Hover any control for a tooltip.</p></div>
 </div>
 
-<div class="tip"><strong>Workflow rule:</strong> If <em>Run Alignment</em> is disabled, the orange line right under the button (and the button tooltip) names what is blocking it, for example "No images loaded".</div>
+<div class="tip"><strong>Workflow rule:</strong> If <em>Run Alignment</em> is disabled, the orange line right under the button (and the button tooltip) names what is blocking it, for example "No images loaded" or "Duplicate section numbers are not allowed".</div>
 </section>
 
-<section class="lesson" id="lesson-ingestion" data-search="ingestion add folder add files section numbers index table">
+<section class="lesson" id="lesson-ingestion" data-search="ingestion add folder add files section numbers index table naming duplicates thumbnails">
 <span class="lesson-badge lb-beginner">Beginner</span>
-<h2>Lesson 4 - Ingestion</h2>
+<h2>Lesson 4 - Step 1: Add Images</h2>
 
 <div class="step">
   <div class="step-num">1</div>
   <div class="step-body">
-    <h4>Go to Ingestion (left navigator)</h4>
-    <p>If this is a new session, the app opens here by default.</p>
+    <h4>Open "1. Add images"</h4>
+    <p>A new session opens here by default. Anywhere else, press <span class="sc">Ctrl+1</span>.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">2</div>
   <div class="step-body">
-    <h4>Add images</h4>
-    <p>Click <em>Add Folder</em> for recursive folder import or <em>Add Files</em> for explicit selection. Use <em>Clear</em> to reset.</p>
+    <h4>Add your images</h4>
+    <p>Drag a folder or files onto the drop area ("Drag and Drop Images or Folders"; folder drops recurse into subfolders), or click <em>Add Folder</em> / <em>Add Files</em>. <em>Clear All</em> removes every loaded image. You can also drop files onto the thumbnail grid.</p>
   </div>
 </div>
 
@@ -304,15 +407,17 @@ python -m pip install -e .</pre>
   <div class="step-num">3</div>
   <div class="step-body">
     <h4>Check the filename and orientation options</h4>
-    <p>Leave <em>Read section numbers from filenames (e.g. _s012)</em> on for indexed workflows. Enable <em>Older naming: use the last 3 digits of the filename</em> only if your naming does not use <code>_sXXX</code>. <em>Cutting plane</em> must be Coronal for now.</p>
+    <p>In the <strong>Filename and orientation</strong> box, leave <em>Read section numbers from filenames (e.g. _s012)</em> ticked for indexed workflows. Tick <em>Older naming: use the last 3 digits of the filename</em> only if your files do not use <code>_sXXX</code>; it takes the last three digits found anywhere in the name. <em>Cutting plane</em> must stay on "Coronal (supported)". The <em>?</em> and <em>Guide</em> buttons open short explanations.</p>
+    <div class="tip"><strong>Naming examples:</strong> <code>brain1_s001.png</code> is section 1; <code>mouse_A_s142_fluoro.tif</code> is section 142. With the older option, <code>slide_A_017.tif</code> is read as 17. Each filename may contain <code>_s</code> followed by digits only once: <code>run_s2_brain_s010.tif</code> is rejected as ambiguous, and one bad filename marks every row as a <em>Parse Error</em> until fixed.</div>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">4</div>
   <div class="step-body">
-    <h4>Review index and status table</h4>
-    <p>Check for parse errors, duplicates, and missing indices before leaving this step.</p>
+    <h4>Review the index table</h4>
+    <p>The table has three columns: <em>Filename</em>, <em>Detected Index</em>, <em>Status</em>. <em>OK</em> is good. A red <em>Duplicate</em> row means two files share one section number; a <em>Parse Error</em> means no number could be read. The banner above the table summarises the count, valid indices and warnings, and the orange text lists duplicates, missing indices and unsupported files.</p>
+    <div class="warn"><strong>Example problem:</strong> <code>ratA_s010.tif</code> and <code>ratA_s010_copy.tif</code> both map to index 10, so both rows turn red and <em>Run Alignment</em> reports "Duplicate section numbers are not allowed". Remove or rename one file (right-click a thumbnail &gt; <em>Remove this image</em>).</div>
   </div>
 </div>
 
@@ -320,25 +425,25 @@ python -m pip install -e .</pre>
   <div class="step-num">5</div>
   <div class="step-body">
     <h4>Thumbnail QA</h4>
-    <p>Click thumbnails to preview loaded files and visually confirm image orientation/quality before inference.</p>
+    <p>Use <em>Sort:</em> (Filename, Detected Index, Modified Date) and <em>Filter by filename...</em> to inspect large sets. Click a thumbnail to preview it, double-click for a fullscreen preview, or right-click for <em>Preview Fullscreen</em>, <em>Copy Image Path</em> and <em>Remove this image</em>. Look for sections that are flipped, wrongly rotated or blank before inference.</p>
   </div>
 </div>
 
 <div class="outcome">
   <h4>&#10003; Outcome</h4>
-  <p>Dataset is loaded and pre-flight checks are clear enough to proceed.</p>
+  <p>The dataset is loaded, each file has a unique valid section number, and you can click <em>Next: Settings</em>.</p>
 </div>
 </section>
 
-<section class="lesson" id="lesson-configuration" data-search="configuration species thickness direction ensemble secondary model">
+<section class="lesson" id="lesson-configuration" data-search="configuration settings species thickness direction ensemble secondary model advanced quality gate preprocessing training">
 <span class="lesson-badge lb-beginner">Beginner</span>
-<h2>Lesson 5 - Configuration</h2>
+<h2>Lesson 5 - Step 2: Settings</h2>
 
 <div class="step">
   <div class="step-num">1</div>
   <div class="step-body">
     <h4>Select species</h4>
-    <p>Click <em>Mouse (Allen CCFv3)</em> or <em>Rat (Waxholm Rat Atlas)</em> in <strong>Species / Atlas</strong>. This controls model and atlas configuration.</p>
+    <p>In <strong>Species / Atlas</strong> choose <em>Mouse (Allen CCFv3)</em> or <em>Rat (Waxholm Rat Atlas)</em>. This selects the model and atlas. Rat support is labelled beta in the project README.</p>
   </div>
 </div>
 
@@ -346,7 +451,8 @@ python -m pip install -e .</pre>
   <div class="step-num">2</div>
   <div class="step-body">
     <h4>Set physical geometry</h4>
-    <p>Use <em>Auto-estimate thickness</em> for first pass. Click <em>Suggest Thickness</em> when predictions exist and you need a guided value. Use <em>Direction Override</em> only to intentionally override detected direction.</p>
+    <p>In <strong>Physical Geometry</strong>, leave <em>Auto-estimate thickness</em> ticked for a first pass. To enter a value yourself, untick it and type <em>Section Thickness</em> in um (typical range 20-100 um). <em>Suggest Thickness</em> works after predictions exist and fills in an estimate for you. <em>Detected direction</em> shows what DeepSlice inferred; use <em>Direction Override</em> (Auto, rostro-caudal, caudal-rostro) only to deliberately override it. The <em>Guide</em> button explains the options.</p>
+    <div class="tip"><strong>Example:</strong> DeepSlice multiplies the difference between section numbers by the thickness. You cut 40 um sections and your files keep the original numbers (<code>_s004</code>, <code>_s008</code>, <code>_s012</code> for every 4th section): enter 40. If you renumbered the kept sections 1, 2, 3 instead, enter the real distance between neighbours, 160 um.</div>
   </div>
 </div>
 
@@ -354,130 +460,192 @@ python -m pip install -e .</pre>
   <div class="step-num">3</div>
   <div class="step-body">
     <h4>Open Advanced options only if needed</h4>
-    <p>Prediction modes, quality thresholds, preprocessing and the training toolkit are tucked behind <em>Advanced options (optional - defaults work for most data)</em>. Click it to expand. Enable <em>Ensemble prediction</em> for robust production runs. Use <em>Use secondary model only</em> for comparison diagnostics, not for normal baseline processing.</p>
+    <p>Click <em>Advanced options (optional - defaults work for most data)</em> to expand four groups:</p>
+    <ul>
+      <li><strong>Prediction Modes:</strong> <em>Ensemble prediction (if available)</em> (on by default, slower but often more stable; the <em>?</em> button explains it), <em>Use secondary model only (for comparison)</em> (do not combine with ensemble) and <em>Legacy section-number parser</em>.</li>
+      <li><strong>Quality and Runtime:</strong> <em>Outlier sensitivity</em> (sigma), <em>High confidence &gt;=</em>, <em>Medium confidence &gt;=</em> and <em>Inference batch size</em>.</li>
+      <li><strong>Preprocessing and Inference:</strong> <em>Enable input quality gate</em> (see Lesson 6), <em>Tissue ROI crop</em>, <em>CLAHE contrast normalization</em>, <em>Stain normalization</em>, <em>Min resolution (px)</em>, <em>Blur threshold</em>, <em>Test-time augmentation (flip)</em>, <em>Multi-scale inference</em>, <em>Fast mode (float16 inputs)</em> and more.</li>
+      <li><strong>Training Toolkit:</strong> dataset split and training metadata for fine-tuning; not needed for alignment.</li>
+    </ul>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">4</div>
   <div class="step-body">
-    <h4>Read validation banner</h4>
-    <p>The <em>Validation:</em> message at the bottom of Settings tells you if execution is ready or what exactly still blocks <em>Run Alignment</em>.</p>
+    <h4>Validate</h4>
+    <p>The panel shows <em>Will process N slices</em> and an estimated processing time. Click <em>Validate Configuration</em> for a summary. The <em>Validation:</em> line at the bottom reads "ready" or names what still blocks <em>Run Alignment</em>.</p>
+    <div class="note"><strong>Technical Insights</strong> (right side, collapsed) explains how angles and thickness are estimated.</div>
   </div>
 </div>
 
 <div class="outcome">
   <h4>&#10003; Outcome</h4>
-  <p>Configuration is explicitly validated and ready for prediction.</p>
+  <p>Configuration shows "Validation: ready" and you are set to run the prediction.</p>
 </div>
 </section>
 
-<section class="lesson" id="lesson-prediction" data-search="prediction run alignment progress console phase">
+<section class="lesson" id="lesson-prediction" data-search="prediction run alignment progress console phase quality gate cancel thickness blurry resolution">
 <span class="lesson-badge lb-beginner">Beginner</span>
-<h2>Lesson 6 - Prediction</h2>
+<h2>Lesson 6 - Step 3: Run Alignment</h2>
 
 <div class="step">
   <div class="step-num">1</div>
   <div class="step-body">
     <h4>Click <em>Run Alignment</em></h4>
-    <p>Do this only after Configuration shows ready state. This starts model loading/inference in a background worker.</p>
+    <p>Do this once the orange blocker line is gone. Possible prompts, in order:</p>
+    <ul>
+      <li><strong>Re-run Alignment</strong> - appears only if you already curated a previous result; continuing discards those edits.</li>
+      <li><strong>Proceed With Warnings</strong> - for non-blocking issues such as fewer than 10 slices.</li>
+      <li><strong>Quality Gate Warning</strong> - see the next step.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="step" id="quality-gate">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h4>Understand the input quality gate</h4>
+    <p>The quality gate is a pre-flight scan that reads each image before the model runs so you find problems in minutes, not after a long run. It is controlled by <em>Settings &gt; Advanced options &gt; Preprocessing and Inference &gt; Enable input quality gate</em> and is <strong>on by default</strong>.</p>
+    <ul>
+      <li>While it scans, the button reads <em>Scanning inputs...</em> and is disabled. The scan runs in the background, so the window stays responsive.</li>
+      <li>It checks for: images of different sizes (resolution mismatch), and per-image flags <em>low resolution</em>, <em>blurry</em>, <em>underexposed</em>, <em>overexposed</em>, <em>saturated</em> and <em>artifact</em>, plus files that cannot be read at all.</li>
+      <li>Nothing flagged: prediction starts immediately.</li>
+      <li>Something flagged: a <strong>Quality Gate Warning</strong> dialog lists the findings and asks "Continue with prediction?". The default answer is <em>No</em>.</li>
+      <li>The thresholds are tunable in the same group: an image is "low resolution" when its shorter side is below <em>Min resolution (px)</em> (default 500), and "blurry" when its sharpness (Laplacian variance) is below <em>Blur threshold</em> (default 0.0002). Lower either value if the defaults are too strict for your microscope.</li>
+      <li>If the scan itself fails you see "Input Quality Scan Failed", then "Skip Quality Gate" asking whether to continue without it.</li>
+      <li>Untick the checkbox to skip the scan entirely and start prediction directly.</li>
+    </ul>
+    <div class="tip"><strong>Example dialog:</strong> "Input resolution mismatch detected (4000x3000, 2000x1500)", "Quality gate flags: low resolution: 1, blurry: 3" and "2 image(s) could not be read and will likely fail during prediction (s017.tif, s018.tif)". Click <em>No</em>, go back to step 1, remove or re-export those files, then run again. Click <em>Yes</em> only if you accept the risk, for example a few slightly blurry sections you will review later.</div>
+    <div class="note">The gate only reports; it never edits or deletes your files.</div>
   </div>
 </div>
 
 <div class="step">
-  <div class="step-num">2</div>
+  <div class="step-num">3</div>
   <div class="step-body">
     <h4>Monitor runtime phase and progress</h4>
-    <p>Use <em>Phase</em>, <em>Progress</em>, and progress bar to track primary/secondary passes and data loading.</p>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">3</div>
-  <div class="step-body">
-    <h4>Open runtime console when needed</h4>
-    <p>Click <em>Show Runtime Console</em> to see detailed logs and troubleshooting context during processing.</p>
+    <p>Read <em>Phase</em> (for example "Phase 1/3"; 3 phases with ensemble, 2 without), <em>Progress</em>, <em>Elapsed</em>, <em>Remaining</em> and the progress bar. The window title shows the running percentage. Use <em>Cancel Alignment</em> to stop at the next safe batch boundary; if only the secondary pass failed, DeepSlice may offer to keep the partial result.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">4</div>
   <div class="step-body">
-    <h4>Accept predicted thickness when available</h4>
-    <p>After completion, click <em>Use Predicted Thickness</em> if you want the estimated value copied into Configuration.</p>
+    <h4>Open the runtime console when needed</h4>
+    <p>Click <em>Show Runtime Console</em> for detailed logs. <em>Copy</em> puts the whole log on the clipboard, handy for bug reports.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">5</div>
   <div class="step-body">
-    <h4>Preview per-slice alignment vectors</h4>
-    <p>Use the slice selector to inspect O/U/V overlays and confirm inference output quality before curation.</p>
-  </div>
-</div>
-
-<div class="outcome">
-  <h4>&#10003; Outcome</h4>
-  <p>Predictions are generated, indexed direction is detected, and the curation workflow is unlocked.</p>
-</div>
-</section>
-
-<section class="lesson" id="lesson-curation" data-search="curation outliers normalize angles enforce spacing atlas preview">
-<span class="lesson-badge lb-intermediate">Intermediate</span>
-<h2>Lesson 7 - Curation</h2>
-
-<p>Use this stage to improve geometric consistency and exclude unreliable sections before export.</p>
-
-<div class="step">
-  <div class="step-num">1</div>
-  <div class="step-body">
-    <h4>Flag problematic slices</h4>
-    <p>In the left slice list, check suspicious rows and click <em>Apply Bad Section Flags</em>.</p>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">2</div>
-  <div class="step-body">
-    <h4>Detect outliers automatically (recommended baseline)</h4>
-    <p>Click <em>Detect Outliers</em> to auto-mark low-consistency sections.</p>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">3</div>
-  <div class="step-body">
-    <h4>Apply geometric refinements in this order</h4>
-    <ol>
-      <li><em>Normalize Angles</em></li>
-      <li><em>Enforce Index Order</em></li>
-      <li><em>Enforce Index Spacing</em></li>
-    </ol>
-    <p>Use this sequence when section numbering is trustworthy and you want stable serial geometry.</p>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">4</div>
-  <div class="step-body">
-    <h4>Manual angle override only when justified</h4>
-    <p>Set ML/DV in spin boxes and click <em>Apply Manual Angles</em> only when you have explicit domain reason to override the inferred mean.</p>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">5</div>
-  <div class="step-body">
-    <h4>Use atlas preview for depth sanity checks</h4>
-    <p>Enable <em>Atlas volume preview</em>, select volume, optionally enable <em>Blend atlas on histology</em>, then adjust blend slider to compare alignment context.</p>
+    <h4>Check the results panel</h4>
+    <p>After completion you see <em>Estimated thickness</em> and <em>Detected indexing direction</em>. Click <em>Use Predicted Thickness</em> to copy the estimate into Settings (it unticks <em>Auto-estimate thickness</em> and sets the value).</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">6</div>
   <div class="step-body">
-    <h4>Use Undo/Redo aggressively during curation</h4>
-    <p>Every curation action snapshots state. If a transform degrades quality, click <em>Undo</em> immediately.</p>
+    <h4>Preview per-slice alignment vectors</h4>
+    <p>Use the slice selector (rows look like "12 | Mouse12_s012.tif") to see the O/U/V plane vectors, the matching atlas section and the model-input preview. Check a few sections from the start, middle and end.</p>
+  </div>
+</div>
+
+<div class="outcome">
+  <h4>&#10003; Outcome</h4>
+  <p>Predictions are generated, the indexing direction is detected, and steps 4 and 5 are unlocked.</p>
+</div>
+</section>
+
+<section class="lesson" id="lesson-curation" data-search="curation review fix outliers normalize angles enforce spacing atlas preview anchors flags undo">
+<span class="lesson-badge lb-intermediate">Intermediate</span>
+<h2>Lesson 7 - Step 4: Review &amp; Fix</h2>
+
+<p>Use this stage to improve geometric consistency and exclude unreliable sections before export. Single-key shortcuts (<span class="sc">J</span>, <span class="sc">K</span>, <span class="sc">F</span>, <span class="sc">A</span>, <span class="sc">D</span>) only work on this page.</p>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <h4>Get oriented</h4>
+    <p>The left list shows every section with a checkbox; a ticked box means "flagged bad". Move with <em>Prev</em> / <em>Next</em> or <span class="sc">K</span> / <span class="sc">J</span>, or click a point on the linearity plot to jump to that section. Narrow the list with <em>Filter:</em> All Confidences, High Only, Medium Only, Low Only, or Review Queue (the sections most worth inspecting; the count is shown as "Review queue: N slices"). Plot buttons <em>Fit</em>, <em>+</em>, <em>-</em> zoom the plot.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h4>Flag problematic sections</h4>
+    <p>Tick a row's checkbox, press <span class="sc">F</span> (or <span class="sc">Space</span> in the list), click <em>Toggle Current</em>, or right-click &gt; <em>Flag as Bad</em>. <em>Select All</em> / <em>Deselect All</em> act on every row. Then click <em>Apply Bad Section Flags</em> (<span class="sc">Ctrl+Enter</span>) so the flagged sections are excluded from the alignment calculations; ticking alone changes nothing until you apply.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <h4>Let the app suggest flags (recommended baseline)</h4>
+    <ul>
+      <li><em>Detect Outliers</em> marks sections that deviate statistically in angle or spacing (strictness set by <em>Outlier sensitivity</em> in Settings).</li>
+      <li><em>Auto-Flag Low Confidence</em> also flags sections below your <em>Medium confidence</em> threshold and high-risk ones.</li>
+      <li><em>Interpolate Flagged Depths</em> then fills the AP depth of flagged sections from confident neighbours (gaps up to 6 sections).</li>
+      <li><em>Reset All Flags</em> clears the ticks again.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h4>Apply geometric refinements in this order</h4>
+    <p>In the <strong>Propagation / Curation</strong> group:</p>
+    <ol>
+      <li><em>Normalize Angles</em> - brings the cutting angles of all sections to a common value (a warning toast appears if it did not fully converge).</li>
+      <li><em>Enforce Index Order</em> - makes the depth order match the section numbers.</li>
+      <li><em>Enforce Index Spacing</em> - makes the spacing even, using your Settings thickness (or the auto estimate).</li>
+    </ol>
+    <p>Use this sequence when section numbering is trustworthy and you want stable serial geometry.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <h4>Manual angle override only when justified</h4>
+    <p>Enter <em>ML Angle</em> and <em>DV Angle</em> in degrees and click <em>Apply Manual Angles</em> only when you have an explicit reason to override the inferred mean.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <h4>Fix the order by hand</h4>
+    <p>If files were numbered wrongly, drag rows in the list, or select a row and use <em>Move Up</em> / <em>Move Down</em>, then click <em>Apply Manual Reordering</em>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <h4>Pin known sections with anchors</h4>
+    <p>In <strong>Anchor Alignment</strong>: select a section, type its known <em>Target AP depth</em>, click <em>Set/Update Anchor</em> (<span class="sc">A</span>). <em>Remove Anchor</em> (<span class="sc">D</span>) and <em>Clear</em> undo anchors. With at least two anchors, <em>Distribute Between Anchors</em> spreads the remaining depths between them.</p>
+    <div class="tip"><strong>Example:</strong> Section 1 sits at the olfactory bulb and section 45 at the cerebellum, and you know both depths. Anchor both, then click <em>Distribute Between Anchors</em>.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <h4>Use the atlas preview for sanity checks</h4>
+    <p>Tick <em>Atlas volume preview</em>, choose a <em>Volume</em>, optionally tick <em>Blend atlas on histology</em> and move the slider (5-95%). <em>Before/After Overlay</em> compares raw predictions with your curation; <em>Loupe</em> magnifies under the pointer. <em>Flip X</em>, <em>Flip Y</em>, <em>Rotate</em>, <em>Scale</em> and <em>Offset</em> adjust the atlas display only. The first use downloads the atlas volumes and needs the <code>nibabel</code> package.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">9</div>
+  <div class="step-body">
+    <h4>Annotate and undo freely</h4>
+    <p>Type a remark in the note field and click <em>Save Slice Note</em>. Every curation action is snapshotted: <em>Undo (n)</em> (<span class="sc">Ctrl+Z</span>) and <em>Redo (n)</em> (<span class="sc">Ctrl+Y</span>) show how many steps are available.</p>
   </div>
 </div>
 
@@ -487,26 +655,26 @@ python -m pip install -e .</pre>
 </div>
 </section>
 
-<section class="lesson" id="lesson-export" data-search="export predictions json xml report pdf quicknii">
+<section class="lesson" id="lesson-export" data-search="export predictions json xml report pdf quicknii csv output directory">
 <span class="lesson-badge lb-beginner">Beginner</span>
-<h2>Lesson 8 - Export</h2>
+<h2>Lesson 8 - Step 5: Export</h2>
 
 <div class="step">
   <div class="step-num">1</div>
   <div class="step-body">
     <h4>Set output destination</h4>
-    <p>In <strong>Export Configuration</strong>, click <em>Browse</em> and choose Output Directory, then set Base Filename.</p>
+    <p>In <strong>Export Configuration</strong>, click <em>Browse</em> next to <em>Output Directory</em> (the choice is remembered), then set <em>Base Filename</em> (default <code>DeepSliceResults</code>).</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">2</div>
   <div class="step-body">
-    <h4>Select primary export format</h4>
+    <h4>Select the primary export format</h4>
     <table class="ref-table">
       <thead><tr><th>Option</th><th>When to use</th></tr></thead>
       <tbody>
-      <tr><td><strong>JSON (QuickNII/VisuAlign)</strong></td><td>Default for modern workflows and marker preservation.</td></tr>
+      <tr><td><strong>JSON (QuickNII/VisuAlign)</strong></td><td>Default for modern workflows and marker preservation. Required for <em>Open in QuickNII</em>.</td></tr>
       <tr><td><strong>Legacy XML</strong></td><td>Use only for older downstream tooling.</td></tr>
       </tbody>
     </table>
@@ -517,15 +685,15 @@ python -m pip install -e .</pre>
   <div class="step-num">3</div>
   <div class="step-body">
     <h4>Click <em>Export Predictions</em></h4>
-    <p>This writes your selected JSON/XML plus an automatic CSV sidecar in the same location.</p>
+    <p>This writes <code>&lt;base&gt;.json</code> (or <code>.xml</code>) plus an automatic <code>&lt;base&gt;.csv</code> sidecar. If any section has confidence below 0.50 you are asked "Export anyway?". Afterwards <em>Open Folder</em> and <em>Copy Path</em> help you find the files. Example result: <code>D:\results\DeepSliceResults.json</code> and <code>D:\results\DeepSliceResults.csv</code>.</p>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">4</div>
   <div class="step-body">
-    <h4>Generate PDF report</h4>
-    <p>Click <em>Generate Report (PDF)</em> after final curation for a shareable, reproducible summary artifact.</p>
+    <h4>Generate a PDF report</h4>
+    <p>Choose the <strong>PDF Contents</strong> (<em>Summary Stats</em>, <em>Linearity Plot</em>, <em>Sample Images</em>, <em>Angle Metrics</em>), optionally click <em>Preview Report</em>, then <em>Generate Report (PDF)</em>. The file is <code>&lt;base&gt;_report.pdf</code> in the output directory. It needs the <code>reportlab</code> package (<code>pip install reportlab</code>).</p>
   </div>
 </div>
 
@@ -533,7 +701,7 @@ python -m pip install -e .</pre>
   <div class="step-num">5</div>
   <div class="step-body">
     <h4>Open directly in QuickNII</h4>
-    <p>Set QuickNII path once in this panel, then click <em>Open in QuickNII</em> after a JSON export.</p>
+    <p>Optionally enter the QuickNII executable via <em>Browse</em> (or set a default in <em>Preferences</em>), export as JSON first, then click <em>Open in QuickNII</em>.</p>
   </div>
 </div>
 
@@ -543,7 +711,7 @@ python -m pip install -e .</pre>
 </div>
 </section>
 
-<section class="lesson" id="lesson-session" data-search="save session load session quicknii json xml markers">
+<section class="lesson" id="lesson-session" data-search="save session load session quicknii json xml markers new session recent">
 <span class="lesson-badge lb-intermediate">Intermediate</span>
 <h2>Lesson 9 - Session &amp; QuickNII Roundtrip</h2>
 
@@ -551,7 +719,7 @@ python -m pip install -e .</pre>
   <div class="step-num">1</div>
   <div class="step-body">
     <h4>Save state during long work</h4>
-    <p>Click <em>Save Session</em> in the top bar. This stores GUI state and makes long curation work resumable.</p>
+    <p>Click <em>Save Session</em> (<span class="sc">Ctrl+S</span>) and choose a name; the file ends in <code>.deepslice-session.json</code>. It stores images, options, predictions, curation and anchors. A dot in the <em>Session:</em> label and a <code>*</code> in the window title mean unsaved changes.</p>
   </div>
 </div>
 
@@ -559,7 +727,7 @@ python -m pip install -e .</pre>
   <div class="step-num">2</div>
   <div class="step-body">
     <h4>Load previous sessions</h4>
-    <p>Click <em>Load Session / QuickNII</em> and select <code>.deepslice-session.json</code> to continue exactly where you left off.</p>
+    <p>Click <em>Load Session / QuickNII</em> (<span class="sc">Ctrl+O</span>) &gt; <em>Browse...</em> and pick a <code>.deepslice-session.json</code> to continue where you left off. The same menu lists up to five <em>Recent</em> sessions.</p>
   </div>
 </div>
 
@@ -567,7 +735,15 @@ python -m pip install -e .</pre>
   <div class="step-num">3</div>
   <div class="step-body">
     <h4>Load QuickNII JSON/XML for re-curation</h4>
-    <p>Use the same button to load existing QuickNII files. Species and markers are preserved when available.</p>
+    <p>Pick an existing QuickNII <code>.json</code> or <code>.xml</code> with the same dialog. Species and markers are preserved when available.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h4>Start fresh</h4>
+    <p><em>New Session</em> (<span class="sc">Ctrl+N</span>) resets the workspace; if you have unsaved changes you are asked first. Closing the window asks the same question.</p>
   </div>
 </div>
 
@@ -577,17 +753,17 @@ python -m pip install -e .</pre>
 </div>
 </section>
 
-<section class="lesson" id="lesson-errors" data-search="error log copy last error auto fix diagnostics">
+<section class="lesson" id="lesson-errors" data-search="error log copy last error auto fix diagnostics preferences">
 <span class="lesson-badge lb-intermediate">Intermediate</span>
 <h2>Lesson 10 - Diagnostics, Error Reports, and Auto-Fix</h2>
 
-<p>This app includes structured logging and guided remediation for common runtime issues.</p>
+<p>This app includes structured logging and guided remediation for common runtime issues. All three tools live in the top bar's <em>Errors</em> menu.</p>
 
 <div class="grid-2">
-  <div class="card"><h4>Open Error Log</h4><p>Opens persistent log file for full traceback and runtime details.</p></div>
-  <div class="card"><h4>Copy Last Error</h4><p>Copies a complete report payload with context, traceback, and analysis.</p></div>
-  <div class="card"><h4>Try Auto-Fix Last Error</h4><p>Runs safe automated fixes (for known patterns like missing dependencies).</p></div>
-  <div class="card"><h4>Error Dialog Buttons</h4><p>Use <em>Copy Error Report</em> to share diagnostics; use <em>Try Auto-Fix</em> when available.</p></div>
+  <div class="card"><h4>Open Error Log</h4><p>Opens the persistent log file for full traceback and runtime details.</p></div>
+  <div class="card"><h4>Copy Last Error</h4><p>Copies a complete report payload with context, traceback, and analysis. Greyed out until an error has occurred.</p></div>
+  <div class="card"><h4>Try Auto-Fix Last Error</h4><p>Runs safe automated fixes for known patterns such as a missing Python package.</p></div>
+  <div class="card"><h4>Error Dialog Buttons</h4><p>Use <em>Copy Error Report</em> to share diagnostics; use <em>Try Auto-Fix</em> when it is offered.</p></div>
 </div>
 
 <h3>Recommended response sequence</h3>
@@ -595,8 +771,10 @@ python -m pip install -e .</pre>
   <li>Read the dialog context and analysis summary.</li>
   <li>Click <em>Try Auto-Fix</em> if offered.</li>
   <li>If still failing, click <em>Copy Error Report</em> and share that payload.</li>
-  <li>Open log file to inspect full traceback chronology.</li>
+  <li>Open the log file to inspect the full traceback chronology.</li>
 </ol>
+
+<div class="tip"><strong>Preferences</strong> (<span class="sc">Ctrl+,</span>) lets you set the default species for new sessions, theme, default output directory, default QuickNII path and whether the runtime console is shown by default.</div>
 
 <div class="outcome">
   <h4>&#10003; Outcome</h4>
@@ -604,25 +782,55 @@ python -m pip install -e .</pre>
 </div>
 </section>
 
-<section class="lesson" id="troubleshooting" data-search="troubleshooting tensorflow pyside6 quicknii orientation">
+<section class="lesson" id="shortcuts" data-search="keyboard shortcuts keys ctrl">
+<span class="lesson-badge lb-beginner">Reference</span>
+<h2>Keyboard Shortcuts</h2>
+
+<p>The same list is available in the app via <em>Shortcuts</em> or <span class="sc">Ctrl+/</span>.</p>
+
+<table class="ref-table">
+<thead><tr><th>Keys</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><span class="sc">Ctrl+1</span> to <span class="sc">Ctrl+5</span></td><td>Jump to step 1-5 (locked steps stay locked)</td></tr>
+<tr><td><span class="sc">Ctrl+N</span> / <span class="sc">Ctrl+S</span> / <span class="sc">Ctrl+O</span></td><td>New session / Save session / Load session or QuickNII file</td></tr>
+<tr><td><span class="sc">Ctrl+E</span></td><td>Jump to the Export page</td></tr>
+<tr><td><span class="sc">Ctrl+,</span></td><td>Open Preferences</td></tr>
+<tr><td><span class="sc">Ctrl+Z</span> / <span class="sc">Ctrl+Y</span></td><td>Undo / Redo curation changes</td></tr>
+<tr><td><span class="sc">J</span> / <span class="sc">K</span></td><td>Next / previous section (Review &amp; fix page)</td></tr>
+<tr><td><span class="sc">F</span></td><td>Toggle the bad-section flag of the current section</td></tr>
+<tr><td><span class="sc">A</span> / <span class="sc">D</span></td><td>Set / remove an anchor for the current section</td></tr>
+<tr><td><span class="sc">Ctrl+Enter</span></td><td>Apply bad-section flags</td></tr>
+<tr><td><span class="sc">Ctrl++</span> / <span class="sc">Ctrl+-</span> / <span class="sc">Ctrl+0</span></td><td>Zoom the linearity plot in / out / fit</td></tr>
+<tr><td><span class="sc">Space</span></td><td>Tick or untick the selected row in the section list</td></tr>
+<tr><td><span class="sc">Ctrl+/</span> or <span class="sc">Ctrl+?</span></td><td>Show the shortcut sheet</td></tr>
+<tr><td><span class="sc">F1</span></td><td>Open help for the current step</td></tr>
+</tbody>
+</table>
+</section>
+
+<section class="lesson" id="troubleshooting" data-search="troubleshooting tensorflow pyside6 quicknii orientation quality gate pdf atlas">
 <span class="lesson-badge lb-beginner">Beginner</span>
 <h2>Troubleshooting</h2>
 
 <table class="ref-table">
 <thead><tr><th>Problem</th><th>Resolution</th></tr></thead>
 <tbody>
-<tr><td><code>ModuleNotFoundError: No module named 'tensorflow'</code></td><td>Activate project venv and run <code>python -m pip install "tensorflow&lt;3.0"</code>.</td></tr>
-<tr><td><code>ModuleNotFoundError: No module named 'skimage'</code></td><td>Run <code>python -m pip install scikit-image</code> in the same activated project venv.</td></tr>
-<tr><td>Run Alignment disabled</td><td>Read <em>Validation:</em> text in Configuration and Ingestion warnings (common causes: duplicate/missing section numbers, non-coronal selection, too few slices).</td></tr>
-<tr><td>No section numbers detected</td><td>Rename files to include <code>_sXXX</code> pattern or enable <em>Older naming</em>.</td></tr>
+<tr><td><code>ModuleNotFoundError: No module named 'tensorflow'</code></td><td>Activate the project venv and re-run <code>python -m pip install -e .</code> (it installs the supported TensorFlow version), or use <em>Errors &gt; Try Auto-Fix Last Error</em>.</td></tr>
+<tr><td><code>ModuleNotFoundError: No module named 'skimage'</code></td><td>Run <code>python -m pip install scikit-image</code> in the same activated venv (or re-run the project install).</td></tr>
+<tr><td><code>deepslice-gui</code> is not found</td><td>The venv is not active or the install step failed. Activate it, or start with <code>python -m DeepSlice.gui.app</code>.</td></tr>
+<tr><td>Run Alignment disabled</td><td>Read the orange line under the button and the <em>Validation:</em> text in Settings. Common causes: no images, fewer than 2 sections, duplicate or unreadable section numbers, non-coronal cutting plane, ensemble and secondary-only both ticked, or manual thickness of zero.</td></tr>
+<tr><td>"Quality Gate Warning" appears every run</td><td>Fix or remove the listed images (see <a href="#quality-gate">the quality gate</a>), lower <em>Min resolution (px)</em> or <em>Blur threshold</em> if the defaults are too strict for your data, or untick <em>Enable input quality gate</em>.</td></tr>
+<tr><td>Quality gate says images "could not be read"</td><td>The file is corrupt or not a supported image. Re-export it from your microscope software as TIFF/PNG/JPG.</td></tr>
+<tr><td>No section numbers detected</td><td>Rename files to include the <code>_sXXX</code> pattern or tick <em>Older naming</em>.</td></tr>
 <tr><td>Hardware Health shows CPU only</td><td>Expected on many native Windows TensorFlow setups. CPU mode is supported.</td></tr>
-<tr><td>QuickNII launch fails</td><td>Set valid QuickNII executable path in Export panel and ensure JSON export exists.</td></tr>
-<tr><td>Atlas preview unavailable</td><td>Check runtime log for atlas download/import issues and verify network/path permissions for metadata assets.</td></tr>
+<tr><td>Generate Report (PDF) fails</td><td>Install the extra: <code>python -m pip install reportlab</code>.</td></tr>
+<tr><td>QuickNII launch fails</td><td>Set a valid QuickNII executable path in the Export panel and make sure a JSON export exists.</td></tr>
+<tr><td>Atlas preview unavailable</td><td>Install <code>nibabel</code> (<code>python -m pip install nibabel</code>), then check the runtime log for atlas download issues and verify network/path permissions.</td></tr>
 <tr><td>Prediction failed dialog appears</td><td>Use <em>Copy Error Report</em> and share the full payload; run <em>Try Auto-Fix</em> if available.</td></tr>
 </tbody>
 </table>
 
-<div class="danger"><strong>Do not ignore repeated prediction errors.</strong> If the same traceback repeats, capture one complete report and resolve root cause before re-running multiple times.</div>
+<div class="danger"><strong>Do not ignore repeated prediction errors.</strong> If the same traceback repeats, capture one complete report and resolve the root cause before re-running multiple times.</div>
 </section>
 
 <section class="lesson" id="next-steps" data-search="next steps checklist deep slice workflow">
@@ -632,23 +840,23 @@ python -m pip install -e .</pre>
 <div class="grid-3">
   <div class="card">
     <h4>Production Template</h4>
-    <p>Create a standard profile: species, section-number policy, and export defaults for your lab.</p>
+    <p>Agree a standard profile for your lab: species, section-number policy, thickness, quality-gate settings and export defaults (set in Preferences).</p>
   </div>
   <div class="card">
     <h4>QC Discipline</h4>
-    <p>Adopt fixed curation sequence: Outliers -> Normalize Angles -> Enforce Order -> Enforce Spacing.</p>
+    <p>Adopt a fixed curation sequence: Detect Outliers -> Apply Bad Section Flags -> Normalize Angles -> Enforce Index Order -> Enforce Index Spacing.</p>
   </div>
   <div class="card">
     <h4>Traceability</h4>
-    <p>Always save session snapshots before major curation operations and before final export.</p>
+    <p>Save a session before major curation operations and before final export.</p>
   </div>
 </div>
 
 <h3>Operational Completion Checklist</h3>
 <ul class="checklist">
   <li>App launches and Hardware Health executes successfully</li>
-  <li>Dataset ingested with clean index parsing</li>
-  <li>Configuration validated and Run Alignment completes</li>
+  <li>Dataset ingested with every row showing Status "OK"</li>
+  <li>Configuration validated; input quality gate findings reviewed; Run Alignment completes</li>
   <li>Curation applied with at least one quality-control pass</li>
   <li>JSON export + CSV sidecar generated</li>
   <li>PDF report generated for documentation</li>

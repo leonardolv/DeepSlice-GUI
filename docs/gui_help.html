@@ -67,7 +67,7 @@
 <body>
   <div class="wrap">
     <h1 id="global">DeepSlice GUI Help</h1>
-    <p>Use this page with F1 context help in the app.</p>
+    <p>Use this page with F1 context help in the app. For a guided walkthrough with examples, see <a href="DeepSlice-Tutorial.html">the full tutorial</a>.</p>
 
     <nav>
       <a href="#global">Global</a>
@@ -81,12 +81,15 @@
     <section>
       <h2>Global Shortcuts</h2>
       <ul>
-        <li>Ctrl+1..Ctrl+5: jump to workflow steps</li>
+        <li>Ctrl+1..Ctrl+5: jump to workflow steps (locked steps stay locked)</li>
+        <li>Ctrl+E: jump to Export</li>
         <li>Ctrl+N: start a new session</li>
         <li>Ctrl+S: save session</li>
         <li>Ctrl+O: load session or QuickNII file</li>
-        <li>Ctrl+/: open shortcut cheat sheet</li>
+        <li>Ctrl+,: open Preferences</li>
+        <li>Ctrl+/ (or Ctrl+?): open shortcut cheat sheet</li>
         <li>F1: open this help page for the current step</li>
+        <li>Review &amp; fix page only: J / K next / previous section, F toggle bad flag, A / D set / remove anchor, Ctrl+Enter apply bad-section flags, Ctrl+Z / Ctrl+Y undo / redo, Ctrl++ / Ctrl+- / Ctrl+0 zoom the linearity plot</li>
       </ul>
     </section>
 
@@ -94,51 +97,58 @@
       <h2>Step 1: Add images</h2>
       <ul>
         <li>Follow the blue guidance banner at the top of each step; its Next button unlocks the next step.</li>
-        <li>Add files/folders or drag and drop.</li>
-        <li>Use naming helper for _sXXX index parsing.</li>
-        <li>Use sorting/filter to inspect large sets quickly.</li>
-        <li>Check the index table for duplicates and parse warnings.</li>
+        <li>Click Add Folder or Add Files, or drag and drop onto the drop area. Clear All removes every image. Accepted: JPG, JPEG, PNG, TIF, TIFF.</li>
+        <li>Keep "Read section numbers from filenames (e.g. _s012)" ticked; the ? button explains naming (brain1_s001.png is section 1). Use "Older naming" only for files without _sXXX.</li>
+        <li>Cutting plane must be Coronal (supported).</li>
+        <li>Use the Sort and "Filter by filename..." controls to inspect large sets; double-click a thumbnail for a fullscreen preview, right-click to copy its path or remove it.</li>
+        <li>Check the index table (Filename, Detected Index, Status): every row should say OK. Duplicate means two files share a section number and blocks the run.</li>
       </ul>
     </section>
 
     <section id="configuration">
       <h2>Step 2: Settings</h2>
       <ul>
-        <li>Select species and review atlas preview card.</li>
-        <li>Set thickness manually or auto-estimate.</li>
-        <li>Advanced options (prediction modes, quality, preprocessing, training) are collapsed by default; the defaults suit most data.</li>
-        <li>Use Validate Configuration before prediction.</li>
-        <li>Read ensemble help for speed vs stability tradeoff.</li>
+        <li>Select Mouse (Allen CCFv3) or Rat (Waxholm Rat Atlas) under Species / Atlas.</li>
+        <li>Physical Geometry: keep "Auto-estimate thickness" or untick it and enter Section Thickness (um). Direction Override only if you need to override the detected direction.</li>
+        <li>Advanced options (Prediction Modes, Quality and Runtime, Preprocessing and Inference, Training Toolkit) are collapsed by default; the defaults suit most data.</li>
+        <li>"Enable input quality gate" (Preprocessing and Inference, on by default) scans your images when you press Run Alignment. Tune it with Min resolution (px) and Blur threshold.</li>
+        <li>Use Validate Configuration before prediction; the Validation line names anything that still blocks Run Alignment.</li>
+        <li>Read the ensemble ? help for the speed vs stability tradeoff.</li>
       </ul>
     </section>
 
     <section id="prediction">
       <h2>Step 3: Run alignment</h2>
       <ul>
-        <li>Run Alignment to start inference.</li>
+        <li>Run Alignment starts the job. If the quality gate is on, the button first reads "Scanning inputs..." while every image is checked.</li>
+        <li>A "Quality Gate Warning" lists resolution mismatches, flagged images (low resolution, blurry, underexposed, overexposed, saturated, artifact) and unreadable files. Choose Yes to continue or No to go back and fix them.</li>
         <li>Use Cancel Alignment to stop at a safe batch boundary.</li>
-        <li>Monitor phase progress, elapsed time, and ETA.</li>
-        <li>Use console copy/clear for troubleshooting.</li>
+        <li>Monitor Phase, Progress, Elapsed and Remaining.</li>
+        <li>Show Runtime Console reveals logs with Auto-scroll, Clear and Copy buttons.</li>
+        <li>After completion, Use Predicted Thickness copies the estimate into Settings.</li>
       </ul>
     </section>
 
     <section id="curation">
       <h2>Step 4: Review &amp; fix</h2>
       <ul>
-        <li>Review confidence colors and linearity plot.</li>
-        <li>Use context menu or space key to toggle bad flags.</li>
-        <li>Apply outlier detection and angle/spacing tools.</li>
-        <li>Use Undo/Redo and confidence filtering for targeted edits.</li>
+        <li>Review confidence colors and the linearity plot; the Filter box offers All Confidences, High Only, Medium Only, Low Only and Review Queue.</li>
+        <li>Toggle bad flags with the checkbox, the F or Space key, Toggle Current, or the right-click menu, then click Apply Bad Section Flags.</li>
+        <li>Detect Outliers, Auto-Flag Low Confidence and Interpolate Flagged Depths suggest and repair flagged sections.</li>
+        <li>In Propagation / Curation use Normalize Angles, then Enforce Index Order, then Enforce Index Spacing. Apply Manual Angles overrides ML/DV.</li>
+        <li>Anchor Alignment: Set/Update Anchor, then Distribute Between Anchors (needs at least two anchors).</li>
+        <li>Undo (n) / Redo (n) buttons snapshot every curation action.</li>
       </ul>
     </section>
 
     <section id="export">
       <h2>Step 5: Export</h2>
       <ul>
-        <li>Choose output format and base filename.</li>
-        <li>Export writes primary format plus CSV sidecar.</li>
-        <li>Open folder / copy path for downstream workflows.</li>
-        <li>Generate or preview PDF report with selectable sections.</li>
+        <li>Browse for the Output Directory, set Base Filename, and choose JSON (QuickNII/VisuAlign) or Legacy XML.</li>
+        <li>Export Predictions writes the chosen format plus a CSV sidecar; you are asked to confirm if any section has confidence below 0.50.</li>
+        <li>Open Folder / Copy Path help locate the files.</li>
+        <li>Preview Report and Generate Report (PDF) use the PDF Contents checkboxes and need the reportlab package.</li>
+        <li>Open in QuickNII needs a JSON export from this session; set the QuickNII path first if prompted.</li>
       </ul>
     </section>
   </div>
