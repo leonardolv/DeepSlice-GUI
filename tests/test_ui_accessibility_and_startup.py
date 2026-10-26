@@ -57,6 +57,8 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
             assert dlg.console_always_visible.accessibleName() == "Show runtime console by default"
             assert dlg.output_dir_browse.cursor().shape() == Qt.PointingHandCursor
             assert dlg.quicknii_browse.cursor().shape() == Qt.PointingHandCursor
+            assert dlg.species_combo.cursor().shape() == Qt.PointingHandCursor
+            assert dlg.theme_combo.cursor().shape() == Qt.PointingHandCursor
             assert dlg.console_always_visible.cursor().shape() == Qt.PointingHandCursor
             assert dlg.reset_btn is not None
             assert dlg.reset_btn.accessibleName() == "Reset preferences to factory defaults"
@@ -86,9 +88,17 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
         finally:
             dlg.deleteLater()
 
-        # Verify headless safe execution of _open_preferences_dialog
+        # Verify headless safe execution and signal wiring of _open_preferences_dialog
         opened_dlg = win._open_preferences_dialog()
         assert opened_dlg is not None
+        opened_dlg.species_combo.setCurrentText("rat")
+        opened_dlg.theme_combo.setCurrentText("light")
+        opened_dlg.output_dir_edit.setText("C:/test_output")
+        opened_dlg.accept()
+        assert str(win._settings.value("default_species")) == "rat"
+        assert str(win._settings.value("theme")) == "light"
+        assert str(win._settings.value("default_output_directory")) == "C:/test_output"
+        assert win.state.species == "rat"
         opened_dlg.deleteLater()
     finally:
         win.close()
