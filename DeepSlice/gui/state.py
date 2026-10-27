@@ -1569,6 +1569,49 @@ class DeepSliceAppState:
             "predictions": prediction_records,
         }
 
+    def _apply_session_quality_controls(self, outlier_sigma, confidence_medium, confidence_high):
+        """Apply session quality thresholds, keeping every valid one.
+
+        ``set_quality_controls`` validates the three values together, so one
+        out-of-range or malformed value used to make a bare ``except`` drop
+        the other two as well, silently. Here each rejected value falls back
+        to the current setting (with a warning) and the rest are applied.
+        """
+        current = {
+            "outlier_sigma": self.outlier_sigma_threshold,
+            "confidence_medium": self.confidence_medium_threshold,
+            "confidence_high": self.confidence_high_threshold,
+        }
+        requested = {
+            "outlier_sigma": outlier_sigma,
+            "confidence_medium": confidence_medium,
+            "confidence_high": confidence_high,
+        }
+        try:
+            self.set_quality_controls(**requested)
+            return
+        except (TypeError, ValueError):
+            pass
+        accepted = dict(current)
+        for name in ("outlier_sigma", "confidence_medium", "confidence_high"):
+            trial = dict(accepted)
+            trial[name] = requested[name]
+            probe = (self.outlier_sigma_threshold, self.confidence_medium_threshold, self.confidence_high_threshold)
+            try:
+                self.set_quality_controls(**trial)
+                accepted = trial
+            except (TypeError, ValueError):
+                _logger.warning(
+                    "load_session_dict: ignoring invalid %s value %r from session", name, requested[name]
+                )
+            finally:
+                (
+                    self.outlier_sigma_threshold,
+                    self.confidence_medium_threshold,
+                    self.confidence_high_threshold,
+                ) = probe
+        self.set_quality_controls(**accepted)
+
     def load_session_dict(self, payload: Dict[str, object]):
         if not isinstance(payload, dict):
             raise TypeError(
@@ -1661,17 +1704,11 @@ class DeepSliceAppState:
         )
         self.training_use_mixed_precision = _coerce_bool(payload.get("training_use_mixed_precision"), self.training_use_mixed_precision)
 
-        outlier_sigma = payload.get("outlier_sigma_threshold", self.outlier_sigma_threshold)
-        confidence_high = payload.get("confidence_high_threshold", self.confidence_high_threshold)
-        confidence_medium = payload.get("confidence_medium_threshold", self.confidence_medium_threshold)
-        try:
-            self.set_quality_controls(
-                outlier_sigma=float(outlier_sigma),
-                confidence_medium=float(confidence_medium),
-                confidence_high=float(confidence_high),
-            )
-        except Exception:
-            pass
+        self._apply_session_quality_controls(
+            payload.get("outlier_sigma_threshold", self.outlier_sigma_threshold),
+            payload.get("confidence_medium_threshold", self.confidence_medium_threshold),
+            payload.get("confidence_high_threshold", self.confidence_high_threshold),
+        )
 
         self.detected_indexing_direction = _coerce_direction(payload.get("detected_indexing_direction"))
         self.selected_indexing_direction = _coerce_direction(payload.get("selected_indexing_direction"))
