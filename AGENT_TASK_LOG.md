@@ -19,6 +19,15 @@ here.
 
 
 ## Completed
+### 2026-10-27 UTC - Session load dropped all three quality thresholds when one was invalid
+Status: **done** (Claude)
+
+**Root cause.** `load_session_dict` passed outlier sigma, medium and high confidence to `set_quality_controls` (which validates them jointly) inside `try/except Exception: pass`. One out-of-range or malformed value silently discarded the other valid ones too, with no log line.
+
+**Fix.** `DeepSliceAppState._apply_session_quality_controls`: tries the joint apply first; on failure, applies each value individually on top of the current settings, keeps valid ones, and logs a warning naming each rejected value.
+
+**Validation.** New `tests/test_session_quality_controls.py` (5 of 6 fail before the fix); full suite 534 passed, 9 skipped (scikit-image, matplotlib, PySide6 had to be installed in the sandbox). PR: see GitHub branch `claude/wonderful-euler-5agjho`.
+
 
 ### 2026-10-26 UTC - PreferencesDialog get_values/set_values helpers, form layout bindings, and label object names
 Status: **done** (Antigravity)
