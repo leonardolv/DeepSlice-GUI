@@ -19,6 +19,15 @@ here.
 
 
 ## Completed
+### 2026-10-28 UTC - All-bad sections with an explicit thickness raised a bare ZeroDivisionError
+Status: **done** (Claude)
+
+**Root cause.** With every section flagged bad and a user-specified thickness, `ideal_spacing` passed all-zero weights to `np.average`, raising `ZeroDivisionError: Weights sum to zero` (the auto-thickness path already gave a clear message).
+
+**Fix.** `ideal_spacing` raises a `ValueError` ("No usable sections remain ...") when no weight is positive.
+
+**Validation.** New `tests/test_ideal_spacing_all_bad.py` (first test fails before the fix); full suite 542 passed, 9 skipped. PR: see GitHub branch `claude/bold-cray-0mju2w`.
+
 ### 2026-10-28 UTC - Auto bad-section detection flagged every section of a perfectly linear series
 Status: **done** (Claude)
 
