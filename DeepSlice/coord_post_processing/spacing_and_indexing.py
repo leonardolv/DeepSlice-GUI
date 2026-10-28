@@ -312,7 +312,7 @@ def set_bad_sections_util(
     df["bad_section"] = False
 
     bad_section_indexes = [
-        df.Filenames.str.contains(bad_section) for bad_section in bad_sections
+        df.Filenames.str.contains(str(bad_section), regex=False) for bad_section in bad_sections
     ]
     if np.any([np.sum(x) > 1 for x in bad_section_indexes]):
         raise ValueError(

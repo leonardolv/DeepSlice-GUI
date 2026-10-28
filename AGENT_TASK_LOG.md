@@ -19,6 +19,15 @@ here.
 
 
 ## Completed
+### 2026-10-28 UTC - Bad-section identifiers were interpreted as regular expressions
+Status: **done** (Claude)
+
+**Root cause.** `set_bad_sections_util` used `Series.str.contains(bad_section)`, whose default is `regex=True`. Identifiers such as `a.1` matched unrelated files (`aX1`), and `s[1]+` or an unbalanced `(` silently matched the wrong sections or raised `re.error`.
+
+**Fix.** Literal substring match (`regex=False`, identifier coerced to `str`); the "multiple sections match" check is unchanged.
+
+**Validation.** New `tests/test_bad_sections_literal_match.py` (2 of 4 fail before the fix); full suite 532 passed, 10 skipped. PR: see GitHub branch `claude/bold-cray-4f1lyt`.
+
 ### 2026-10-27 UTC - Session load dropped all three quality thresholds when one was invalid
 Status: **done** (Claude)
 
