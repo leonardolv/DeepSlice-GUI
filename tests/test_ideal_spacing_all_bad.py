@@ -9,8 +9,9 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from DeepSlice.coord_post_processing import spacing_and_indexing as si
 from test_space_according_to_index_bad_sections import _df
+
+from DeepSlice.coord_post_processing import spacing_and_indexing as si
 
 
 def test_all_bad_with_explicit_thickness_gives_clear_error():
