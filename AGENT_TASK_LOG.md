@@ -19,6 +19,15 @@ here.
 
 
 ## Completed
+### 2026-10-28 UTC - Auto bad-section detection flagged every section of a perfectly linear series
+Status: **done** (Claude)
+
+**Root cause.** `set_bad_sections_util(auto=True)` flagged sections whose depth residual exceeded `1.5 * std(residuals)`. For an exactly evenly spaced series the residuals are pure floating-point noise (~1e-14), so the cutoff is noise too and every section was marked bad (verified: 12 of 12), after which angle propagation fails with "no usable sections".
+
+**Fix.** The cutoff is floored at `1e-9 * max(1, ptp(depths))`; real outliers are still flagged.
+
+**Validation.** New `tests/test_auto_bad_sections_noise_floor.py` (linear-series test fails before the fix); full suite 534 passed, 10 skipped. PR: see GitHub (branch `claude/bold-cray-9v6ioy`).
+
 ### 2026-10-28 UTC - Bad-section identifiers were interpreted as regular expressions
 Status: **done** (Claude)
 

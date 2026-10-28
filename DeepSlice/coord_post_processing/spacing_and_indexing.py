@@ -334,7 +334,11 @@ def set_bad_sections_util(
         y = df["depths"].values
         m, b = np.polyfit(x, y, 1)
         residuals = y - (m * x + b)
-        outliers = np.abs(residuals) > 1.5 * np.std(residuals)
+        # Floor the cutoff at floating-point noise: for a (near) perfectly linear
+        # series std(residuals) is ~1e-14 and rounding error alone would flag
+        # most or all sections as outliers.
+        noise_floor = 1e-9 * max(1.0, float(np.ptp(y)))
+        outliers = np.abs(residuals) > max(1.5 * np.std(residuals), noise_floor)
         df["bad_section"] = df["bad_section"].astype(bool) | outliers
 
     df["bad_section"] = df["bad_section"].astype(bool) | manual_bad_section_mask
