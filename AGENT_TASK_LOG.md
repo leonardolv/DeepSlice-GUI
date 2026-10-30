@@ -19,6 +19,15 @@ here.
 
 
 ## Completed
+### 2026-10-30 UTC - A user-specified section thickness reversed caudal-to-rostral series
+Status: **done** (Claude)
+
+**Root cause.** `space_according_to_index(section_thickness=...)` used the positive user value directly, but the inferred thickness is signed (depth falls with section number when a series is cut caudal-to-rostral). With a given thickness the ideal spacing therefore ran the opposite way and the sections were laid out in reverse order (verified: oy 130..100 became 105..135). Separately, `ideal_spacing` with every section flagged bad raised a bare `ZeroDivisionError` from `np.average`.
+
+**Fix.** A given thickness is taken as a magnitude and signed by `determine_direction_of_indexing`; `ideal_spacing` raises a clear `ValueError` when all sections are bad.
+
+**Validation.** New `tests/test_user_thickness_direction.py` (first and third tests fail before the fix); full suite 538 passed, 10 skipped. PR: see GitHub branch `claude/bold-cray-nvlnre`.
+
 ### 2026-10-28 UTC - Auto bad-section detection flagged every section of a perfectly linear series
 Status: **done** (Claude)
 
