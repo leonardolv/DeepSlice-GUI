@@ -290,6 +290,22 @@ def number_sections(filenames: List[str], legacy=False) -> List[int]:
     return section_numbers
 
 
+def _match_bad_section(filenames: pd.Series, identifier: str) -> pd.Series:
+    """
+    Boolean mask of the filenames a bad-section identifier refers to.
+
+    An identifier equal to exactly one filename (or its basename) selects only
+    that file, so a full name such as ``1.png`` still works when ``11.png`` and
+    ``21.png`` also contain it as a substring. Otherwise it is a literal
+    substring match, which the caller requires to be unique.
+    """
+    names = filenames.astype(str)
+    exact = (names == identifier) | (names.map(lambda n: Path(n).name) == identifier)
+    if exact.sum() == 1:
+        return exact
+    return names.str.contains(identifier, regex=False)
+
+
 def set_bad_sections_util(
     df: pd.DataFrame, bad_sections: List[str], auto=False, species="mouse"
 ) -> pd.DataFrame:
@@ -312,7 +328,7 @@ def set_bad_sections_util(
     df["bad_section"] = False
 
     bad_section_indexes = [
-        df.Filenames.str.contains(str(bad_section), regex=False) for bad_section in bad_sections
+        _match_bad_section(df.Filenames, str(bad_section)) for bad_section in bad_sections
     ]
     if np.any([np.sum(x) > 1 for x in bad_section_indexes]):
         raise ValueError(

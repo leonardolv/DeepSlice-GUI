@@ -17,8 +17,16 @@ here.
 ## In Progress
 
 
-
 ## Completed
+### 2026-10-30 UTC - Bad-section flagging by exact filename was rejected when the name was a substring of another
+Status: **done** (Claude)
+
+**Root cause.** The GUI flags bad sections by passing full filenames to `set_bad_sections_util`, which does a substring match and raises "Multiple sections match" if more than one file matches. With files like `1.png`, `11.png`, `21.png`, flagging `1.png` always failed with an error dialog.
+
+**Fix.** New `_match_bad_section`: an identifier equal to exactly one filename (or basename) selects only that file; otherwise the old literal-substring behaviour and uniqueness check apply.
+
+**Validation.** New `tests/test_bad_sections_exact_filename.py` (first test fails before the fix). Suite: 541 passed, 9 skipped; 3 pre-existing failures in `test_neural_network_utils.py` (also fail on clean main in this sandbox).
+
 ### 2026-10-28 UTC - Auto bad-section detection flagged every section of a perfectly linear series
 Status: **done** (Claude)
 
