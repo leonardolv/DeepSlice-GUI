@@ -6,6 +6,17 @@
 
 ## Completed
 
+### Task: DeepSliceMainWindow accessibility metadata, root object names, and public ergonomic property helpers
+- **Completed**: 2026-11-04
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Configured explicit `setObjectName("deepSliceMainWindow")`, `setAccessibleName("DeepSlice Desktop Main Window")`, and `setAccessibleDescription(...)` on root window.
+    - Added public ergonomic property helpers: `current_page_index`, `current_page_title`, `loaded_image_count`, `selected_species`, `has_predictions`, and `is_dirty`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test assertions verifying root window object name, accessibility name and description, and initial state of public property accessors.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (19 passed in 19.43s, 0 errors).
+- **Status**: Completed
+
 ### Task: Replace naked QMessageBox.warning calls with accessible _actionable_warning and action callbacks in export and reporting
 - **Completed**: 2026-11-04
 - **Changes**:

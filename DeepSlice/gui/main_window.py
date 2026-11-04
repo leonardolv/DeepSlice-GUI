@@ -1550,6 +1550,12 @@ class DeepSliceMainWindow(QMainWindow):
 
 
 
+        self.setObjectName("deepSliceMainWindow")
+
+        self.setAccessibleName("DeepSlice Desktop Main Window")
+
+        self.setAccessibleDescription("Automated whole-brain histological section alignment workstation")
+
         self.setWindowTitle(self._window_title_base)
 
         self.resize(1600, 980)
@@ -1595,6 +1601,41 @@ class DeepSliceMainWindow(QMainWindow):
         self._logger.info("DeepSlice GUI initialized. Error log: %s", self.error_log_path)
 
 
+
+    @property
+    def current_page_index(self) -> int:
+        """Return the current step/page index in the main stacked widget."""
+        return int(self.stack.currentIndex()) if hasattr(self, "stack") else 0
+
+    @property
+    def current_page_title(self) -> str:
+        """Return the title/headline of the active workflow step."""
+        idx = max(0, min(self.current_page_index, len(self.STEP_GUIDE) - 1))
+        return self.STEP_GUIDE[idx][0]
+
+    @property
+    def loaded_image_count(self) -> int:
+        """Return count of currently loaded section images."""
+        return len(self.state.image_paths) if hasattr(self, "state") and self.state.image_paths else 0
+
+    @property
+    def selected_species(self) -> str:
+        """Return currently configured target species ('mouse' or 'rat')."""
+        return self.state.species if hasattr(self, "state") else "mouse"
+
+    @property
+    def has_predictions(self) -> bool:
+        """Return whether alignment predictions are currently generated."""
+        return (
+            hasattr(self, "state")
+            and self.state.predictions is not None
+            and not self.state.predictions.empty
+        )
+
+    @property
+    def is_dirty(self) -> bool:
+        """Return whether the current session has unsaved modifications."""
+        return self.state.is_dirty if hasattr(self, "state") else False
 
     def _notify_startup_progress(self, message: str, percent: int):
 

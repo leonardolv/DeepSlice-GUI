@@ -33,6 +33,15 @@ def test_main_window_status_accessibility_and_headless_startup():
     app = QApplication.instance() or QApplication([])
     win = DeepSliceMainWindow()
     try:
+        assert win.objectName() == "deepSliceMainWindow"
+        assert win.accessibleName() == "DeepSlice Desktop Main Window"
+        assert win.accessibleDescription() == "Automated whole-brain histological section alignment workstation"
+        assert win.current_page_index == 0
+        assert win.current_page_title == win.STEP_GUIDE[0][0]
+        assert win.loaded_image_count == 0
+        assert win.selected_species in ("mouse", "rat")
+        assert win.has_predictions is False
+        assert win.is_dirty is False
         assert win.status_bar.accessibleName() == "Main Status Bar"
         assert win.global_progress.accessibleName() == "Global Task Progress"
         assert win.global_progress.toolTip() != ""
