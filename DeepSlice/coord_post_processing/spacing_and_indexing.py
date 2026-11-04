@@ -128,6 +128,11 @@ def ideal_spacing(
     weighted_accuracy = calculate_weighted_accuracy(
         section_numbers, section_depth, species, bad_sections, method
     )
+    if not np.sum(weighted_accuracy) > 0:
+        raise ValueError(
+            "No usable sections to space: every section is marked as bad. "
+            "Unmark at least one section before spacing according to index."
+        )
     distance_to_ideal = np.average(
         section_depth - index_spaced_depth, weights=weighted_accuracy
     )
