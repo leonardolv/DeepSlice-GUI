@@ -872,3 +872,53 @@ def test_export_and_report_headless_actionable_warnings():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_alignment_and_anchor_headless_actionable_warnings():
+    from DeepSlice.gui.main_window import DeepSliceMainWindow
+    import pandas as pd
+    import numpy as np
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        warning_calls = []
+        orig_actionable = win._actionable_warning
+
+        def mock_warning(*args, **kwargs):
+            warning_calls.append((args, kwargs))
+            return orig_actionable(*args, **kwargs)
+
+        win._actionable_warning = mock_warning
+
+        # 1. Start prediction worker without images loaded
+        win.state.image_paths = []
+        win._run_alignment()
+        assert len(warning_calls) == 1
+        args, kwargs = warning_calls[-1]
+        assert kwargs.get("title") == "Cannot Run Alignment"
+        assert "No images loaded" in kwargs.get("message")
+        actions = kwargs.get("actions") or []
+        assert any("Ingestion Page" in a[0] for a in actions)
+
+        # 2. Anchor alignment with depth payload mismatch
+        win.state.predictions = pd.DataFrame({
+            "Filenames": ["s1.png", "s2.png"],
+            "ox": [0.0, 0.0],
+            "oy": [100.0, 200.0],
+            "oz": [0.0, 0.0],
+            "bad": [False, False],
+        })
+        win._anchor_depth_targets = {0: 105.0, 1: 195.0}
+        # mock linearity_payload to return mismatched length
+        orig_lin = win.state.linearity_payload
+        win.state.linearity_payload = lambda: {"y": np.array([100.0])}
+        win._apply_anchor_interpolation()
+        assert len(warning_calls) == 2
+        args, kwargs = warning_calls[-1]
+        assert kwargs.get("title") == "Anchor Alignment"
+        assert "Depth payload does not match" in kwargs.get("message")
+        win.state.linearity_payload = orig_lin
+    finally:
+        win.close()
+        win.deleteLater()

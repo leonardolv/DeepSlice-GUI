@@ -17,7 +17,14 @@ here.
 ## In Progress
 
 
+
 ## Completed
+
+### 2026-11-05 UTC - Replace Naked QMessageBox in Alignment and Anchor Workflows with Accessible Actionable Warnings
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Replaced naked modal `QMessageBox.warning` in `_run_alignment` and `_apply_anchor_interpolation` with `self._actionable_warning`; added actionable `("Go to Ingestion Page", ...)` guidance button when prediction is triggered with zero images; added offscreen headless checks for `QMessageBox.question` confirmation prompts; updated curation confidence details dialog to use accessible non-blocking warning.
+- `tests/test_ui_accessibility_and_startup.py`: Added `test_alignment_and_anchor_headless_actionable_warnings` verifying actionable warnings and navigation callbacks under headless offscreen execution.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (31 passed in 8.52s, 0 errors).
 
 ### 2026-11-04 UTC - DeepSliceMainWindow Root Accessibility Metadata, Object Names, and Public Ergonomic Property Helpers
 Status: **done** (Antigravity)

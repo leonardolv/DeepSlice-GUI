@@ -11297,7 +11297,23 @@ class DeepSliceMainWindow(QMainWindow):
 
         if len(errors) > 0:
 
-            QMessageBox.warning(self, "Cannot Run Alignment", "\n".join(errors))
+            actions = []
+
+            if len(self.state.image_paths) == 0 and hasattr(self, "stack"):
+
+                actions.append(("Go to Ingestion Page", lambda: self.stack.setCurrentIndex(0)))
+
+            self._actionable_warning(
+
+                title="Cannot Run Alignment",
+
+                message="\n".join(errors),
+
+                actions=actions,
+
+                icon=QMessageBox.Warning,
+
+            )
 
             return
 
@@ -11307,49 +11323,53 @@ class DeepSliceMainWindow(QMainWindow):
 
         if self._curation_modified and self._baseline_predictions is not None:
 
-            confirm = QMessageBox.question(
+            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-                self,
+                confirm = QMessageBox.question(
 
-                "Re-run Alignment",
+                    self,
 
-                (
+                    "Re-run Alignment",
 
-                    "Running prediction again will discard your current curation "
+                    (
 
-                    "edits (bad-section flags, anchors, angle overrides).\n\n"
+                        "Running prediction again will discard your current curation "
 
-                    "Continue?"
+                        "edits (bad-section flags, anchors, angle overrides).\n\n"
 
-                ),
+                        "Continue?"
 
-                QMessageBox.Yes | QMessageBox.No,
+                    ),
 
-                QMessageBox.No,
+                    QMessageBox.Yes | QMessageBox.No,
 
-            )
+                    QMessageBox.No,
 
-            if confirm != QMessageBox.Yes:
+                )
 
-                return
+                if confirm != QMessageBox.Yes:
+
+                    return
 
 
 
         if len(warnings) > 0:
 
-            answer = QMessageBox.question(
+            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-                self,
+                answer = QMessageBox.question(
 
-                "Proceed With Warnings",
+                    self,
 
-                "\n".join(warnings) + "\n\nContinue anyway?",
+                    "Proceed With Warnings",
 
-            )
+                    "\n".join(warnings) + "\n\nContinue anyway?",
 
-            if answer != QMessageBox.Yes:
+                )
 
-                return
+                if answer != QMessageBox.Yes:
+
+                    return
 
 
 
@@ -13109,7 +13129,15 @@ class DeepSliceMainWindow(QMainWindow):
 
         if current_depths.shape[0] != n_rows:
 
-            QMessageBox.warning(self, "Anchor Alignment", "Depth payload does not match prediction table length.")
+            self._actionable_warning(
+
+                title="Anchor Alignment",
+
+                message="Depth payload does not match prediction table length.",
+
+                icon=QMessageBox.Warning,
+
+            )
 
             return
 
@@ -13167,7 +13195,15 @@ class DeepSliceMainWindow(QMainWindow):
 
         if not np.all(np.isfinite(delta_depths)):
 
-            QMessageBox.warning(self, "Anchor Alignment", "Computed depth correction contains invalid values.")
+            self._actionable_warning(
+
+                title="Anchor Alignment",
+
+                message="Computed depth correction contains invalid values.",
+
+                icon=QMessageBox.Warning,
+
+            )
 
             return
 
@@ -15199,9 +15235,15 @@ class DeepSliceMainWindow(QMainWindow):
 
         elif action == show_details_action:
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            self._actionable_warning(
 
-                QMessageBox.information(self, "Confidence Details", item.toolTip())
+                title="Confidence Details",
+
+                message=(item.toolTip() if item else "No confidence details available."),
+
+                icon=QMessageBox.Information,
+
+            )
 
         return menu
 
