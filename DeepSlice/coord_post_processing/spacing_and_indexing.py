@@ -251,6 +251,13 @@ def space_according_to_index(
             if not suppress:
                 _logger.info("Predicted section thickness: %.3f um", section_thickness * voxel_size)
         else:
+            # A user-specified thickness is a magnitude. The depth of a series
+            # cut caudal-to-rostral falls as the section number rises, so the
+            # spacing must carry the direction of indexing or the sections get
+            # laid out in reverse order.
+            section_thickness = abs(section_thickness)
+            if determine_direction_of_indexing(depths) == "caudal-rostro":
+                section_thickness = -section_thickness
             if not suppress:
                 _logger.info("Specified section thickness: %.3f um", section_thickness * voxel_size)
 
