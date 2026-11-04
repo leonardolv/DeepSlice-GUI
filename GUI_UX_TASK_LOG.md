@@ -4,9 +4,20 @@
 
 ## In Progress
 
-
-
 ## Completed
+
+### Task: Replace naked QMessageBox.warning calls with accessible _actionable_warning and action callbacks in export and reporting
+- **Completed**: 2026-11-04
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Replaced naked modal `QMessageBox.warning` calls in `_export_predictions`, `_generate_report`, and `_preview_report` with `self._actionable_warning`.
+    - Added actionable `actions=[("Run Prediction", self._start_prediction_worker)]` callbacks so users are immediately guided to run predictions instead of hitting a dead end.
+    - Added actionable `actions=[("Choose Directory...", self._browse_output_directory)]` callback for non-writable export directories.
+    - Guaranteed non-blocking headless execution under offscreen test runners.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added `test_export_and_report_headless_actionable_warnings` asserting non-blocking behavior, warning titles, messages, and actionable prediction callbacks.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (30 passed in 9.92s, 0 errors).
+- **Status**: Completed
 
 ### Task: PreferencesDialog get_values/set_values helpers, form layout bindings, and label object names
 - **Completed**: 2026-10-26

@@ -821,3 +821,45 @@ def test_thumbnail_and_curation_context_menus_accessibility_and_actions():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_export_and_report_headless_actionable_warnings():
+    """Verify _export_predictions, _generate_report, and _preview_report trigger actionable warnings headlessly."""
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        win.state.predictions = None
+        warning_calls = []
+
+        orig_actionable = win._actionable_warning
+        def mock_warning(*args, **kwargs):
+            warning_calls.append((args, kwargs))
+            return orig_actionable(*args, **kwargs)
+
+        win._actionable_warning = mock_warning
+
+        # 1. Export predictions without predictions
+        win._export_predictions()
+        assert len(warning_calls) == 1
+        args, kwargs = warning_calls[-1]
+        assert kwargs.get("title") == "Export"
+        assert "No predictions available" in kwargs.get("message")
+        actions = kwargs.get("actions") or []
+        assert any("Run Prediction" in a[0] for a in actions)
+
+        # 2. Generate report without predictions
+        win._generate_report()
+        assert len(warning_calls) == 2
+        args, kwargs = warning_calls[-1]
+        assert kwargs.get("title") == "Report"
+        assert "No predictions available" in kwargs.get("message")
+
+        # 3. Preview report without predictions
+        win._preview_report()
+        assert len(warning_calls) == 3
+        args, kwargs = warning_calls[-1]
+        assert kwargs.get("title") == "Report Preview"
+        assert "No predictions available" in kwargs.get("message")
+    finally:
+        win.close()
+        win.deleteLater()

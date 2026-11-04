@@ -16,9 +16,13 @@ here.
 
 ## In Progress
 
-
-
 ## Completed
+
+### 2026-11-04 UTC - Replace Naked QMessageBox.warning with Accessible _actionable_warning and Action Callbacks
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Replaced naked modal `QMessageBox.warning` in `_export_predictions`, `_generate_report`, and `_preview_report` with `self._actionable_warning`; added actionable `actions=[("Run Prediction", self._start_prediction_worker)]` callbacks guiding users directly into running predictions, and `actions=[("Choose Directory...", self._browse_output_directory)]` for unwritable directories; ensured non-blocking headless execution under offscreen test runners.
+- `tests/test_ui_accessibility_and_startup.py`: Added `test_export_and_report_headless_actionable_warnings` asserting non-blocking behavior, warning titles, messages, and actionable prediction callbacks.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (30 passed in 9.92s, 0 errors).
 ### 2026-10-30 UTC - A user-specified section thickness reversed caudal-to-rostral series
 Status: **done** (Claude)
 

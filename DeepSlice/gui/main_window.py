@@ -15914,7 +15914,11 @@ class DeepSliceMainWindow(QMainWindow):
 
         if self.state.predictions is None:
 
-            QMessageBox.warning(self, "Export", "No predictions available")
+            self._actionable_warning(
+                title="Export",
+                message="No predictions available to export.",
+                actions=[("Run Prediction", self._start_prediction_worker)],
+            )
 
             return
 
@@ -16096,7 +16100,11 @@ class DeepSliceMainWindow(QMainWindow):
 
         if self.state.predictions is None:
 
-            QMessageBox.warning(self, "Report", "No predictions available")
+            self._actionable_warning(
+                title="Report",
+                message="No predictions available to generate report.",
+                actions=[("Run Prediction", self._start_prediction_worker)],
+            )
 
             return
 
@@ -16126,14 +16134,10 @@ class DeepSliceMainWindow(QMainWindow):
 
         if not self._is_output_dir_writable(output_dir):
 
-            QMessageBox.warning(
-
-                self,
-
-                "Report",
-
-                "Output directory is not writable. Please choose another location.",
-
+            self._actionable_warning(
+                title="Report",
+                message="Output directory is not writable. Please choose another location.",
+                actions=[("Choose Directory...", self._browse_output_directory)],
             )
 
             return
@@ -16230,7 +16234,11 @@ class DeepSliceMainWindow(QMainWindow):
 
         if self.state.predictions is None:
 
-            QMessageBox.warning(self, "Report Preview", "No predictions available")
+            self._actionable_warning(
+                title="Report Preview",
+                message="No predictions available to preview report.",
+                actions=[("Run Prediction", self._start_prediction_worker)],
+            )
 
             return
 
