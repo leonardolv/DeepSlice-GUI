@@ -47,7 +47,7 @@ def test_given_thickness_matches_inferred_for_reversed_series():
 
 
 def test_all_bad_sections_raise_a_clear_error():
-    with pytest.raises(ValueError, match="every section is flagged as bad"):
+    with pytest.raises(ValueError, match="every section is marked as bad"):
         si.ideal_spacing(
             np.array([1, 2, 3]), np.array([10.0, 20.0, 30.0]), 10.0, [True, True, True]
         )

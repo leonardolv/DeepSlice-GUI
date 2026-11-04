@@ -116,11 +116,6 @@ def ideal_spacing(
     :return: the ideal spacing
     :rtype: float
     """
-    if bad_sections is not None and np.all(np.asarray(bad_sections, dtype=bool)):
-        raise ValueError(
-            "Cannot space sections: every section is flagged as bad. "
-            "Unflag at least one section."
-        )
     # unaligned voxel position of section numbers (evenly spaced depths)
     index_spaced_depth = section_numbers * average_thickness
     # average distance between the depths and the evenly spaced depths
