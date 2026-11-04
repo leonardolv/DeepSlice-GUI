@@ -19,6 +19,15 @@ here.
 
 
 ## Completed
+### 2026-11-04 UTC - Spacing with every section marked bad raised a bare ZeroDivisionError
+Status: **done** (Claude)
+
+**Root cause.** `ideal_spacing` weights depths with `np.average`; when every section is flagged bad (reachable with a user-specified `section_thickness`, which skips the thickness check) all weights are 0 and numpy raised an unhelpful `ZeroDivisionError: Weights sum to zero`.
+
+**Fix.** Explicit `ValueError` telling the user to unmark at least one section.
+
+**Validation.** New `tests/test_ideal_spacing_all_bad.py` (all-bad case fails before the fix); related pure-logic tests pass. The Qt/GUI test modules cannot be collected in this sandbox (no PySide6), so the full suite was not run. PR: see GitHub (branch `claude/bold-cray-1dilav`).
+
 ### 2026-10-28 UTC - Auto bad-section detection flagged every section of a perfectly linear series
 Status: **done** (Claude)
 
