@@ -218,7 +218,7 @@ from . import reporting
 
 from .flow_layout import FlowLayout
 
-from .state import DeepSliceAppState, SUPPORTED_IMAGE_FORMATS
+from .state import DeepSliceAppState, SUPPORTED_IMAGE_FORMATS, write_json_atomic
 
 from .workers import FunctionWorker
 
@@ -16816,10 +16816,7 @@ class DeepSliceMainWindow(QMainWindow):
                 for index, depth in self._anchor_depth_targets.items()
 
             }
-
-            with open(filename, "w", encoding="utf-8") as file_handle:
-
-                json.dump(payload, file_handle, indent=2)
+            write_json_atomic(filename, payload, indent=2)
 
         except Exception as exc:
 
