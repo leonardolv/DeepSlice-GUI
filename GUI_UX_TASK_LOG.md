@@ -7,6 +7,17 @@
 
 ## Completed
 
+### Task: DeepSliceMainWindow page step helpers, bad section queries, and species selection
+- **Completed**: 2026-11-05
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added public ergonomic workflow helpers: `next_page()`, `previous_page()`, `select_species(species)`.
+    - Added status and export property helpers: `bad_section_count`, `has_bad_sections`, `export_format`, and `export_basename`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_main_window_extended_ergonomics_and_species_selection` asserting forward/backward step execution, target species programmatic selection, bad section count and flag states, and export properties.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (34 passed in 12.28s, 0 errors).
+- **Status**: Completed
+
 ### Task: DeepSliceMainWindow page navigation properties, workflow state queries, and helper dialog coverage
 - **Completed**: 2026-11-05
 - **Changes**:

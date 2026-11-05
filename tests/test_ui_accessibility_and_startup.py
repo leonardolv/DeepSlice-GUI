@@ -1020,3 +1020,47 @@ def test_main_window_extended_navigation_and_helper_dialogs(qapp):
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_main_window_extended_ergonomics_and_species_selection():
+    """Assert next_page, previous_page, bad section queries, export properties, and species selection."""
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Step forward and backward
+        assert win.current_page_index == 0
+        assert win.can_navigate_backward is False
+        assert win.can_navigate_forward is True
+
+        adv = win.next_page()
+        assert adv is True
+        assert win.current_page_index == 1
+
+        prev = win.previous_page()
+        assert prev is True
+        assert win.current_page_index == 0
+
+        # Species selection helper
+        assert win.select_species("rat") is True
+        assert win.selected_species == "rat"
+        assert win.rat_radio.isChecked()
+
+        assert win.select_species("mouse") is True
+        assert win.selected_species == "mouse"
+        assert win.mouse_radio.isChecked()
+
+        assert win.select_species("invalid_species") is False
+
+        # Bad section queries
+        assert win.bad_section_count == 0
+        assert win.has_bad_sections is False
+        win.state.bad_sections = ["sec1.png", "sec2.png"]
+        assert win.bad_section_count == 2
+        assert win.has_bad_sections is True
+
+        # Export properties
+        assert isinstance(win.export_format, str)
+        assert isinstance(win.export_basename, str)
+    finally:
+        win.close()
+        win.deleteLater()

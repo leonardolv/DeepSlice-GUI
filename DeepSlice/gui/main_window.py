@@ -1674,6 +1674,61 @@ class DeepSliceMainWindow(QMainWindow):
             return True
         return False
 
+    def next_page(self) -> bool:
+        """Advance forward to the next workflow page if available."""
+        if self.can_navigate_forward:
+            return self.go_to_page(self.current_page_index + 1)
+        return False
+
+    def previous_page(self) -> bool:
+        """Navigate backward to the previous workflow page if available."""
+        if self.can_navigate_backward:
+            return self.go_to_page(self.current_page_index - 1)
+        return False
+
+    @property
+    def bad_section_count(self) -> int:
+        """Return the count of flagged bad/excluded sections."""
+        if hasattr(self, "state") and getattr(self.state, "bad_sections", None) is not None:
+            return len(self.state.bad_sections)
+        return 0
+
+    @property
+    def has_bad_sections(self) -> bool:
+        """Return True if any section has been flagged as bad/excluded."""
+        return self.bad_section_count > 0
+
+    @property
+    def export_format(self) -> str:
+        """Return the currently selected primary export format."""
+        if hasattr(self, "output_format_combo"):
+            return str(self.output_format_combo.currentText())
+        return ""
+
+    @property
+    def export_basename(self) -> str:
+        """Return the configured base filename for exports."""
+        if hasattr(self, "output_basename_edit"):
+            return str(self.output_basename_edit.text()).strip()
+        return ""
+
+    def select_species(self, species: str) -> bool:
+        """Programmatically select the workflow species ('mouse' or 'rat')."""
+        target_sp = str(species).strip().lower()
+        if target_sp == "mouse":
+            if hasattr(self, "mouse_radio"):
+                self.mouse_radio.setChecked(True)
+            if hasattr(self, "state"):
+                self.state.species = "mouse"
+            return True
+        elif target_sp == "rat":
+            if hasattr(self, "rat_radio"):
+                self.rat_radio.setChecked(True)
+            if hasattr(self, "state"):
+                self.state.species = "rat"
+            return True
+        return False
+
     def _notify_startup_progress(self, message: str, percent: int):
 
         callback = self._startup_progress_callback
