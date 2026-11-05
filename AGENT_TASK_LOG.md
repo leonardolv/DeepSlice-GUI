@@ -19,6 +19,12 @@ here.
 
 ## Completed
 
+### 2026-11-05 UTC - DeepSliceMainWindow Page Navigation Properties, Workflow State Queries, and Helper Dialog Coverage
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added public ergonomic properties and navigation helpers: `page_count`, `can_navigate_forward`, `can_navigate_backward`, `has_images`, `has_anchors`, `active_theme`, and `go_to_page(page_index)` for programmatic testing and inspection.
+- `tests/test_ui_accessibility_and_startup.py`: Added unit test `test_main_window_extended_navigation_and_helper_dialogs` asserting navigation properties, step boundaries, programmatic transitions, and headless execution across all helper dialogs (shortcuts, onboarding, what-is-new, naming, orientation, direction, ensemble, and export format).
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (33 passed in 10.95s, 0 errors).
+
 ### 2026-11-05 UTC - Guard Confirmation Modals with Offscreen Headless Safety in Session Lifecycle and Quality Gates
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added headless offscreen guards around `QMessageBox.question` confirmation prompts in `_reset_session`, `closeEvent`, `_on_quality_gate_error`, `_on_quality_gate_finished`, `_on_prediction_failed` partial recovery, and `_export_predictions` low-confidence warning to prevent blocking modal popups during automated headless runs.

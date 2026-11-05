@@ -1637,6 +1637,43 @@ class DeepSliceMainWindow(QMainWindow):
         """Return whether the current session has unsaved modifications."""
         return self.state.is_dirty if hasattr(self, "state") else False
 
+    @property
+    def page_count(self) -> int:
+        """Return total number of workflow pages."""
+        return int(self.stack.count()) if hasattr(self, "stack") else 0
+
+    @property
+    def can_navigate_forward(self) -> bool:
+        """Return True if subsequent workflow steps exist."""
+        return self.current_page_index < self.page_count - 1
+
+    @property
+    def can_navigate_backward(self) -> bool:
+        """Return True if preceding workflow steps exist."""
+        return self.current_page_index > 0
+
+    @property
+    def has_images(self) -> bool:
+        """Return True if at least one section image is loaded."""
+        return self.loaded_image_count > 0
+
+    @property
+    def has_anchors(self) -> bool:
+        """Return True if any user anchor points are configured."""
+        return bool(hasattr(self, "state") and getattr(self.state, "anchors", None))
+
+    @property
+    def active_theme(self) -> str:
+        """Return the currently configured theme ('dark' or 'light')."""
+        return str(getattr(self, "_current_theme", "dark"))
+
+    def go_to_page(self, page_index: int) -> bool:
+        """Navigate programmatically to a workflow step by index."""
+        if hasattr(self, "stack") and 0 <= page_index < self.page_count:
+            self.stack.setCurrentIndex(page_index)
+            return True
+        return False
+
     def _notify_startup_progress(self, message: str, percent: int):
 
         callback = self._startup_progress_callback

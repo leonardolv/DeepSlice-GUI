@@ -959,3 +959,64 @@ def test_headless_session_reset_and_quality_gate_confirmations(qapp):
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_main_window_extended_navigation_and_helper_dialogs(qapp):
+    win = DeepSliceMainWindow()
+    win.show()
+    try:
+        # Navigation properties
+        assert win.page_count >= 5
+        assert win.can_navigate_backward is False
+        assert win.can_navigate_forward is True
+        assert win.has_images is False
+        assert win.has_anchors is False
+        assert win.active_theme in ("dark", "light")
+
+        # Programmatic page navigation
+        assert win.go_to_page(1) is True
+        assert win.current_page_index == 1
+        assert win.can_navigate_backward is True
+
+        assert win.go_to_page(0) is True
+        assert win.current_page_index == 0
+
+        # Out-of-bounds navigation is safely refused
+        assert win.go_to_page(999) is False
+        assert win.go_to_page(-1) is False
+
+        # Headless helper dialog assertions
+        shortcuts_box = win._show_shortcuts_help()
+        assert shortcuts_box.objectName() == "shortcutsDialog"
+        assert shortcuts_box.accessibleName() == "Keyboard Shortcuts Help Dialog"
+
+        onboarding_box = win._show_onboarding_dialog()
+        assert onboarding_box.objectName() == "onboardingDialog"
+        assert onboarding_box.accessibleName() == "Onboarding Walkthrough Dialog"
+
+        whats_new_box = win._show_whats_new_dialog("1.0.0")
+        assert whats_new_box.objectName() == "whatsNewDialog"
+        assert whats_new_box.accessibleName() == "What's New Highlights Dialog"
+
+        naming_box = win._show_naming_helper()
+        assert naming_box.objectName() == "namingHelperDialog"
+        assert naming_box.accessibleName() == "Naming Convention Help Dialog"
+
+        orientation_box = win._show_orientation_guide()
+        assert orientation_box.objectName() == "orientationGuideDialog"
+        assert orientation_box.accessibleName() == "Orientation Guide Dialog"
+
+        direction_box = win._show_direction_guide()
+        assert direction_box.objectName() == "directionGuideDialog"
+        assert direction_box.accessibleName() == "Direction Guide Dialog"
+
+        ensemble_box = win._show_ensemble_explanation()
+        assert ensemble_box.objectName() == "ensembleExplanationDialog"
+        assert ensemble_box.accessibleName() == "Ensemble Prediction Help Dialog"
+
+        export_help_box = win._show_export_format_help()
+        assert export_help_box.objectName() == "exportFormatHelpDialog"
+        assert export_help_box.accessibleName() == "Export Format Documentation Dialog"
+    finally:
+        win.close()
+        win.deleteLater()

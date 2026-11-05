@@ -7,6 +7,16 @@
 
 ## Completed
 
+### Task: DeepSliceMainWindow page navigation properties, workflow state queries, and helper dialog coverage
+- **Completed**: 2026-11-05
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added public ergonomic properties and navigation helpers: `page_count`, `can_navigate_forward`, `can_navigate_backward`, `has_images`, `has_anchors`, `active_theme`, and `go_to_page()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_main_window_extended_navigation_and_helper_dialogs` asserting navigation properties, page bounds, and headless execution across all helper dialogs.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (33 passed in 10.95s, 0 errors).
+- **Status**: Completed
+
 ### Task: Guard confirmation modals with offscreen headless safety in session lifecycle and quality gates
 - **Completed**: 2026-11-05
 - **Changes**:
