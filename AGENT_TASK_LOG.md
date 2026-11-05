@@ -119,6 +119,17 @@ Status: **done** (Antigravity)
 - `tests/test_ui_accessibility_and_startup.py`: Expanded `test_preferences_dialog_accessibility_and_reset_to_defaults` to test combobox cursor shapes, headless dialog acceptance, and settings persistence.
 - Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -v` (18 passed in 5.41s, 0 errors).
 
+## Completed
+
+### 2026-10-26 UTC - Tutorial and GUI help rewritten against the current code
+Status: **done** (claude/wonderful-euler-g1d38y, draft PR)
+
+**What was stale.** `docs/DeepSlice-Tutorial.html` told users to `pip install "tensorflow<3.0"` (conflicts with the `tensorflow<2.16` pin in `setup.py`), used one author's local `cd` path, said Python 3.10+/Windows-only, called the clear button "Clear" (it is "Clear All"), omitted the input quality gate, the `reportlab`/`nibabel` extras, New Session/Theme, Ctrl+E/Ctrl+,/J/K/F/A/D shortcuts, anchors, Auto-Flag/Interpolate buttons and the Recent-sessions menu, and its sidebar README link was relative to the wrong folder. `docs/gui_help.html` lacked the same items.
+
+**Changes.** Tutorial: new 10-step Quick Start with a worked example dataset, an "input quality gate" section (default on, what it scans, the Quality Gate Warning dialog, thresholds, skip path), concrete examples (filenames, duplicate index, thickness, anchors), full Review & fix and Export walkthroughs with exact labels, a keyboard-shortcut reference table, expanded troubleshooting. `gui_help.html`: same facts condensed, link to the tutorial; F1 anchors (`#ingestion` ... `#export`) unchanged. Every label/shortcut was checked against `DeepSlice/gui/main_window.py` and `state.py`.
+
+**Validation.** HTML parsed with `html.parser` (tags balanced, no duplicate ids, every `#anchor` and local link resolves). No test references the docs; PySide6 is not installed in this sandbox, so no Qt tests were run. No code changed.
+
 
 
 ### 2026-10-26 UTC - Thumbnail and Curation Context Menus Object Names, Accessibility, Actions, and Headless Non-Blocking Guards
