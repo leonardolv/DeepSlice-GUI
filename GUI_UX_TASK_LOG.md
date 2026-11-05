@@ -7,6 +7,16 @@
 
 ## Completed
 
+### Task: Guard confirmation modals with offscreen headless safety in session lifecycle and quality gates
+- **Completed**: 2026-11-05
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added headless offscreen guards around `QMessageBox.question` confirmation prompts across `_reset_session`, `closeEvent`, `_on_quality_gate_error`, `_on_quality_gate_finished`, partial prediction recovery, and low-confidence exports.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_headless_session_reset_and_quality_gate_confirmations` asserting non-blocking session resets, quality gate errors, quality warnings, and window closing under headless execution.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (32 passed in 11.28s, 0 errors).
+- **Status**: Completed
+
 ### Task: Replace naked QMessageBox calls in alignment and anchor workflows with accessible actionable warnings
 - **Completed**: 2026-11-05
 - **Changes**:

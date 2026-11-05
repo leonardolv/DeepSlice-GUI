@@ -922,3 +922,40 @@ def test_alignment_and_anchor_headless_actionable_warnings():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_headless_session_reset_and_quality_gate_confirmations(qapp):
+    win = DeepSliceMainWindow()
+    win.show()
+    try:
+        # 1. Session reset when dirty does not block headlessly
+        win.state.is_dirty = True
+        win._reset_session()
+        assert not win.state.is_dirty
+
+        # 2. Quality gate failure does not block headlessly
+        worker_started = []
+        win._start_prediction_worker = lambda: worker_started.append(True)
+        win._on_quality_gate_error("Sample failure")
+        assert len(worker_started) == 1
+
+        # 3. Quality gate warnings do not block headlessly
+        win._build_quality_gate_warnings = lambda rep: ["Low resolution detected", "Blur detected"]
+        win._on_quality_gate_finished({"has_issues": True})
+        assert len(worker_started) == 2
+
+        # 4. closeEvent accepts when dirty under headless runner
+        win.state.is_dirty = True
+        class MockCloseEvent:
+            def __init__(self):
+                self.accepted = False
+            def accept(self):
+                self.accepted = True
+            def ignore(self):
+                self.accepted = False
+        event = MockCloseEvent()
+        win.closeEvent(event)
+        assert event.accepted
+    finally:
+        win.close()
+        win.deleteLater()

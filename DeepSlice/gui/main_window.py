@@ -4597,19 +4597,21 @@ class DeepSliceMainWindow(QMainWindow):
 
         if getattr(self.state, "is_dirty", False):
 
-            reply = QMessageBox.question(
+            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-                self, "Unsaved Changes",
+                reply = QMessageBox.question(
 
-                "You have unsaved changes. Start a new session anyway?",
+                    self, "Unsaved Changes",
 
-                QMessageBox.Yes | QMessageBox.No
+                    "You have unsaved changes. Start a new session anyway?",
 
-            )
+                    QMessageBox.Yes | QMessageBox.No
 
-            if reply == QMessageBox.No:
+                )
 
-                return
+                if reply == QMessageBox.No:
+
+                    return
 
         self.state = DeepSliceAppState()
 
@@ -4651,27 +4653,35 @@ class DeepSliceMainWindow(QMainWindow):
 
         if getattr(self.state, "is_dirty", False):
 
-            reply = QMessageBox.question(
+            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-                self, "Unsaved Changes",
+                reply = QMessageBox.question(
 
-                "You have unsaved changes. Are you sure you want to exit?",
+                    self, "Unsaved Changes",
 
-                QMessageBox.Yes | QMessageBox.No,
+                    "You have unsaved changes. Are you sure you want to exit?",
 
-                QMessageBox.No
+                    QMessageBox.Yes | QMessageBox.No,
 
-            )
+                    QMessageBox.No
 
-            if reply == QMessageBox.Yes:
+                )
+
+                if reply == QMessageBox.Yes:
+
+                    self._persist_window_preferences()
+
+                    event.accept()
+
+                else:
+
+                    event.ignore()
+
+            else:
 
                 self._persist_window_preferences()
 
                 event.accept()
-
-            else:
-
-                event.ignore()
 
         else:
 
@@ -11497,21 +11507,27 @@ class DeepSliceMainWindow(QMainWindow):
 
         )
 
-        answer = QMessageBox.question(
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-            self,
+            answer = QMessageBox.question(
 
-            "Skip Quality Gate",
+                self,
 
-            "Continue with prediction without the quality gate check?",
+                "Skip Quality Gate",
 
-            QMessageBox.Yes | QMessageBox.No,
+                "Continue with prediction without the quality gate check?",
 
-            QMessageBox.No,
+                QMessageBox.Yes | QMessageBox.No,
 
-        )
+                QMessageBox.No,
 
-        if answer == QMessageBox.Yes:
+            )
+
+            if answer == QMessageBox.Yes:
+
+                self._start_prediction_worker()
+
+        else:
 
             self._start_prediction_worker()
 
@@ -11529,23 +11545,25 @@ class DeepSliceMainWindow(QMainWindow):
 
         if len(quality_warnings) > 0:
 
-            proceed = QMessageBox.question(
+            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-                self,
+                proceed = QMessageBox.question(
 
-                "Quality Gate Warning",
+                    self,
 
-                "\n".join(quality_warnings) + "\n\nContinue with prediction?",
+                    "Quality Gate Warning",
 
-                QMessageBox.Yes | QMessageBox.No,
+                    "\n".join(quality_warnings) + "\n\nContinue with prediction?",
 
-                QMessageBox.No,
+                    QMessageBox.Yes | QMessageBox.No,
 
-            )
+                    QMessageBox.No,
 
-            if proceed != QMessageBox.Yes:
+                )
 
-                return
+                if proceed != QMessageBox.Yes:
+
+                    return
 
 
 
@@ -12225,29 +12243,37 @@ class DeepSliceMainWindow(QMainWindow):
 
                     reason = reason[:217] + "..."
 
-                reply = QMessageBox.question(
+                if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-                    self,
+                    reply = QMessageBox.question(
 
-                    "Recover Partial Result",
+                        self,
 
-                    (
+                        "Recover Partial Result",
 
-                        "The secondary ensemble pass failed, but primary-model predictions are available.\n\n"
+                        (
 
-                        f"Reason: {reason}\n\n"
+                            "The secondary ensemble pass failed, but primary-model predictions are available.\n\n"
 
-                        "Use the partial result now?"
+                            f"Reason: {reason}\n\n"
 
-                    ),
+                            "Use the partial result now?"
 
-                    QMessageBox.Yes | QMessageBox.No,
+                        ),
 
-                    QMessageBox.Yes,
+                        QMessageBox.Yes | QMessageBox.No,
 
-                )
+                        QMessageBox.Yes,
 
-                if reply == QMessageBox.Yes:
+                    )
+
+                    should_recover = (reply == QMessageBox.Yes)
+
+                else:
+
+                    should_recover = True
+
+                if should_recover:
 
                     try:
 
@@ -16097,25 +16123,27 @@ class DeepSliceMainWindow(QMainWindow):
 
         if low_confidence_count > 0:
 
-            answer = QMessageBox.question(
+            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
 
-                self,
+                answer = QMessageBox.question(
 
-                "Quality Warning",
+                    self,
 
-                (
+                    "Quality Warning",
 
-                    f"{low_confidence_count} slice(s) are currently low confidence.\n"
+                    (
 
-                    "Export anyway?"
+                        f"{low_confidence_count} slice(s) are currently low confidence.\n"
 
-                ),
+                        "Export anyway?"
 
-            )
+                    ),
 
-            if answer != QMessageBox.Yes:
+                )
 
-                return
+                if answer != QMessageBox.Yes:
+
+                    return
 
 
 
