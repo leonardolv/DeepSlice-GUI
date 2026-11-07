@@ -7,6 +7,20 @@
 
 ## Completed
 
+### Task: ThumbnailListWidget and FlagListWidget accessibility and curation ergonomics helpers
+- **Completed**: 2026-11-07
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added explicit object name (`thumbnailListWidget`), accessible description, and tooltip to `ThumbnailListWidget`.
+    - Added public query and selection helpers: `item_count()`, `has_items()`, `selected_index()`, `select_index()`, `item_texts()`, and `selected_text()`.
+    - Added explicit `__init__` on `FlagListWidget` setting object name (`flagListWidget`), accessible name, description, and spacebar tooltip.
+    - Added checklist queries and item manipulation helpers: `item_count()`, `has_items()`, `checked_count()`, `unchecked_count()`, `is_item_checked()`, `set_item_checked()`, `toggle_item()`, `checked_texts()`, `selected_index()`, `select_index()`, and `trigger_toggle_current()`.
+    - Added public count properties `thumbnail_count`, `curation_slice_count`, `curation_flagged_count` and action triggers `trigger_apply_bad_section_flags()`, `trigger_apply_manual_order()`, `trigger_curation_select_all()`, and `trigger_curation_deselect_all()` to `DeepSliceMainWindow`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_thumbnail_and_flag_list_widget_and_main_window_curation_ergonomics` validating accessibility metadata, item texts, selection, checkbox toggles, and curation triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (36 passed in 14.04s, 0 errors).
+- **Status**: Completed
+
 ### Task: DropArea, ToastOverlay, and SliceGraphicsView accessibility and ergonomics helpers
 - **Completed**: 2026-11-07
 - **Changes**:

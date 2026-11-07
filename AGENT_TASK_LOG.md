@@ -19,6 +19,12 @@ here.
 
 ## Completed
 
+### 2026-11-07 - ThumbnailListWidget and FlagListWidget Accessibility and Curation Ergonomics Helpers
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added explicit object name (`thumbnailListWidget`), accessible description, and tooltip to `ThumbnailListWidget`; added public query and selection helpers `item_count()`, `has_items()`, `selected_index()`, `select_index(index)`, `item_texts()`, and `selected_text()`. Added explicit `__init__` on `FlagListWidget` configuring object name (`flagListWidget`), accessible name, description, and spacebar tooltip; added checklist queries and item manipulation helpers `item_count()`, `has_items()`, `checked_count()`, `unchecked_count()`, `is_item_checked(row)`, `set_item_checked(row, checked)`, `toggle_item(row)`, `checked_texts()`, `selected_index()`, `select_index(row)`, and `trigger_toggle_current()`. Added public count properties `thumbnail_count`, `curation_slice_count`, `curation_flagged_count` and action triggers `trigger_apply_bad_section_flags()`, `trigger_apply_manual_order()`, `trigger_curation_select_all()`, `trigger_curation_deselect_all()` to `DeepSliceMainWindow`.
+- `tests/test_ui_accessibility_and_startup.py`: Added unit test `test_thumbnail_and_flag_list_widget_and_main_window_curation_ergonomics` validating accessibility metadata, item text queries, row selection, check state toggles, and MainWindow curation count/trigger properties.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (36 passed in 14.04s, 0 errors).
+
 ### 2026-11-07 - DropArea, ToastOverlay, and SliceGraphicsView Accessibility and Ergonomics Helpers
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added accessible descriptions and explicit child label attributes (`icon_label`, `title_label`, `subtitle_label`) to `DropArea`; added text query helpers `title_text()` and `subtitle_text()`; configured accessible name, description, and child label metadata (`ToastMessageLabel`) on `ToastOverlay` with `message_text()` and `is_active()` query helpers; configured accessibility metadata on `SliceGraphicsView` (`setObjectName("sliceGraphicsView")`, `setAccessibleName("Slice Interactive Canvas")`, description) and added query helpers `zoom_level()`, `is_loupe_enabled()`, `has_sync_partner()`, `is_mouse_tracking_active()`.

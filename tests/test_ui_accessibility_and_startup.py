@@ -1116,3 +1116,106 @@ def test_drop_area_toast_overlay_and_slice_view_ergonomics():
         assert view.is_loupe_enabled() is True
     finally:
         view.deleteLater()
+
+
+def test_thumbnail_and_flag_list_widget_and_main_window_curation_ergonomics():
+    """Assert ThumbnailListWidget and FlagListWidget accessibility and DeepSliceMainWindow curation triggers."""
+    from PySide6.QtWidgets import QApplication, QListWidgetItem
+    from PySide6.QtCore import Qt
+    from DeepSlice.gui.main_window import DeepSliceMainWindow, ThumbnailListWidget, FlagListWidget
+
+    app = QApplication.instance() or QApplication([])
+
+    # 1. ThumbnailListWidget
+    thumb = ThumbnailListWidget()
+    try:
+        assert thumb.objectName() == "thumbnailListWidget"
+        assert thumb.accessibleName() == "Thumbnail Sections List"
+        assert "thumbnail list" in thumb.accessibleDescription().lower()
+        assert thumb.item_count() == 0
+        assert thumb.has_items() is False
+        assert thumb.selected_index() == -1
+        assert thumb.selected_text() == ""
+
+        thumb.addItem("slide_001.png")
+        thumb.addItem("slide_002.png")
+        assert thumb.item_count() == 2
+        assert thumb.has_items() is True
+        assert thumb.item_texts() == ["slide_001.png", "slide_002.png"]
+
+        assert thumb.select_index(1) is True
+        assert thumb.selected_index() == 1
+        assert thumb.selected_text() == "slide_002.png"
+        assert thumb.select_index(999) is False
+    finally:
+        thumb.deleteLater()
+
+    # 2. FlagListWidget
+    flags = FlagListWidget()
+    try:
+        assert flags.objectName() == "flagListWidget"
+        assert flags.accessibleName() == "Flag Sections List"
+        assert "checklist" in flags.accessibleDescription().lower()
+        assert flags.item_count() == 0
+        assert flags.has_items() is False
+        assert flags.checked_count() == 0
+        assert flags.unchecked_count() == 0
+
+        it1 = QListWidgetItem("sec_01.png")
+        it1.setFlags(it1.flags() | Qt.ItemIsUserCheckable)
+        it1.setCheckState(Qt.Unchecked)
+        flags.addItem(it1)
+
+        it2 = QListWidgetItem("sec_02.png")
+        it2.setFlags(it2.flags() | Qt.ItemIsUserCheckable)
+        it2.setCheckState(Qt.Checked)
+        flags.addItem(it2)
+
+        assert flags.item_count() == 2
+        assert flags.has_items() is True
+        assert flags.checked_count() == 1
+        assert flags.unchecked_count() == 1
+        assert flags.is_item_checked(0) is False
+        assert flags.is_item_checked(1) is True
+        assert flags.checked_texts() == ["sec_02.png"]
+
+        assert flags.set_item_checked(0, True) is True
+        assert flags.is_item_checked(0) is True
+        assert flags.checked_count() == 2
+
+        assert flags.toggle_item(1) is True
+        assert flags.is_item_checked(1) is False
+        assert flags.checked_count() == 1
+
+        assert flags.select_index(0) is True
+        assert flags.selected_index() == 0
+        assert flags.trigger_toggle_current() is True
+        assert flags.is_item_checked(0) is False
+    finally:
+        flags.deleteLater()
+
+    # 3. DeepSliceMainWindow curation queries and triggers
+    win = DeepSliceMainWindow()
+    try:
+        assert win.thumbnail_count == 0
+        assert win.curation_slice_count == 0
+        assert win.curation_flagged_count == 0
+
+        win.thumbnail_list.addItem("test_section.png")
+        assert win.thumbnail_count == 1
+
+        item = QListWidgetItem("test_slice.png")
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+        item.setCheckState(Qt.Unchecked)
+        win.slice_flag_list.addItem(item)
+        assert win.curation_slice_count == 1
+        assert win.curation_flagged_count == 0
+
+        # Triggers
+        assert isinstance(win.trigger_curation_select_all(), bool)
+        assert isinstance(win.trigger_curation_deselect_all(), bool)
+        assert isinstance(win.trigger_apply_bad_section_flags(), bool)
+        assert isinstance(win.trigger_apply_manual_order(), bool)
+    finally:
+        win.close()
+        win.deleteLater()

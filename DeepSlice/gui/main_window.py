@@ -342,11 +342,47 @@ class ThumbnailListWidget(QListWidget):
 
         super().__init__(parent)
 
+        self.setObjectName("thumbnailListWidget")
+
         self.setAcceptDrops(True)
 
         self.setAccessibleName("Thumbnail Sections List")
 
-        self.setToolTip("List of section thumbnails and their alignment status")
+        self.setAccessibleDescription(
+            "Scrollable thumbnail list of histological sections supporting drag-and-drop ingestion and fullscreen inspection"
+        )
+
+        self.setToolTip("List of section thumbnails and their alignment status (double-click to preview)")
+
+
+
+    def item_count(self) -> int:
+        """Return the number of items in the thumbnail list."""
+        return int(self.count())
+
+    def has_items(self) -> bool:
+        """Return True if the thumbnail list contains at least one item."""
+        return self.count() > 0
+
+    def selected_index(self) -> int:
+        """Return the index of the currently selected thumbnail, or -1 if none."""
+        return int(self.currentRow())
+
+    def select_index(self, index: int) -> bool:
+        """Select the thumbnail item at the specified index."""
+        if 0 <= index < self.count():
+            self.setCurrentRow(index)
+            return True
+        return False
+
+    def item_texts(self) -> list[str]:
+        """Return a list of display texts for all thumbnail items."""
+        return [self.item(i).text() for i in range(self.count())]
+
+    def selected_text(self) -> str:
+        """Return the display text of the currently selected thumbnail item."""
+        item = self.currentItem()
+        return item.text() if item is not None else ""
 
 
 
@@ -401,6 +437,86 @@ class ThumbnailListWidget(QListWidget):
 
 
 class FlagListWidget(QListWidget):
+
+    def __init__(self, parent=None):
+
+        super().__init__(parent)
+
+        self.setObjectName("flagListWidget")
+
+        self.setAccessibleName("Flag Sections List")
+
+        self.setAccessibleDescription(
+            "Interactive checklist of section items supporting spacebar toggling and manual reordering"
+        )
+
+        self.setToolTip("Press Space or click checkbox to toggle bad section flag for selected section")
+
+
+
+    def item_count(self) -> int:
+        """Return the total number of items in the flag list."""
+        return int(self.count())
+
+    def has_items(self) -> bool:
+        """Return True if the flag list contains at least one item."""
+        return self.count() > 0
+
+    def checked_count(self) -> int:
+        """Return the count of items currently marked as checked."""
+        return sum(1 for i in range(self.count()) if self.item(i).checkState() == Qt.Checked)
+
+    def unchecked_count(self) -> int:
+        """Return the count of items currently marked as unchecked."""
+        return sum(1 for i in range(self.count()) if self.item(i).checkState() == Qt.Unchecked)
+
+    def is_item_checked(self, row: int) -> bool:
+        """Return True if the item at the specified row index is checked."""
+        item = self.item(row)
+        return item is not None and item.checkState() == Qt.Checked
+
+    def set_item_checked(self, row: int, checked: bool) -> bool:
+        """Set the check state of the item at the specified row index."""
+        item = self.item(row)
+        if item is not None and (item.flags() & Qt.ItemIsUserCheckable):
+            item.setCheckState(Qt.Checked if checked else Qt.Unchecked)
+            return True
+        return False
+
+    def toggle_item(self, row: int) -> bool:
+        """Toggle the check state of the item at the specified row index."""
+        item = self.item(row)
+        if item is not None and (item.flags() & Qt.ItemIsUserCheckable):
+            new_state = Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+            item.setCheckState(new_state)
+            return True
+        return False
+
+    def checked_texts(self) -> list[str]:
+        """Return the display texts of all currently checked items."""
+        return [self.item(i).text() for i in range(self.count()) if self.item(i).checkState() == Qt.Checked]
+
+    def selected_index(self) -> int:
+        """Return the index of the currently active/selected item, or -1 if none."""
+        return int(self.currentRow())
+
+    def select_index(self, row: int) -> bool:
+        """Select the item at the specified row index."""
+        if 0 <= row < self.count():
+            self.setCurrentRow(row)
+            return True
+        return False
+
+    def trigger_toggle_current(self) -> bool:
+        """Toggle the check state of the currently selected item."""
+        item = self.currentItem()
+        if item is not None and (item.flags() & Qt.ItemIsUserCheckable):
+            new_state = Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+            item.setCheckState(new_state)
+            return True
+        return False
+
+
 
     def keyPressEvent(self, event):
 
@@ -1759,6 +1875,55 @@ class DeepSliceMainWindow(QMainWindow):
         if hasattr(self, "output_basename_edit"):
             return str(self.output_basename_edit.text()).strip()
         return ""
+
+    @property
+    def thumbnail_count(self) -> int:
+        """Return the total number of items currently in the thumbnail list."""
+        if hasattr(self, "thumbnail_list") and self.thumbnail_list is not None:
+            return self.thumbnail_list.item_count()
+        return 0
+
+    @property
+    def curation_slice_count(self) -> int:
+        """Return the number of items in the curation slice list."""
+        if hasattr(self, "slice_flag_list") and self.slice_flag_list is not None:
+            return self.slice_flag_list.item_count()
+        return 0
+
+    @property
+    def curation_flagged_count(self) -> int:
+        """Return the number of slices marked with bad section flags in the curation list."""
+        if hasattr(self, "slice_flag_list") and self.slice_flag_list is not None:
+            return self.slice_flag_list.checked_count()
+        return 0
+
+    def trigger_apply_bad_section_flags(self) -> bool:
+        """Trigger the 'Apply Bad Section Flags' button action if enabled."""
+        if hasattr(self, "apply_bad_sections_button") and self.apply_bad_sections_button.isEnabled():
+            self.apply_bad_sections_button.click()
+            return True
+        return False
+
+    def trigger_apply_manual_order(self) -> bool:
+        """Trigger the 'Apply Manual Reordering' button action if enabled."""
+        if hasattr(self, "apply_manual_order_button") and self.apply_manual_order_button.isEnabled():
+            self.apply_manual_order_button.click()
+            return True
+        return False
+
+    def trigger_curation_select_all(self) -> bool:
+        """Trigger the curation 'Select All' button action if enabled."""
+        if hasattr(self, "curation_select_all_btn") and self.curation_select_all_btn.isEnabled():
+            self.curation_select_all_btn.click()
+            return True
+        return False
+
+    def trigger_curation_deselect_all(self) -> bool:
+        """Trigger the curation 'Deselect All' button action if enabled."""
+        if hasattr(self, "curation_deselect_all_btn") and self.curation_deselect_all_btn.isEnabled():
+            self.curation_deselect_all_btn.click()
+            return True
+        return False
 
     def select_species(self, species: str) -> bool:
         """Programmatically select the workflow species ('mouse' or 'rat')."""
