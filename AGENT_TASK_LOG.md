@@ -19,6 +19,13 @@ here.
 
 ## Completed
 
+### 2026-11-07 - DropArea, ToastOverlay, and SliceGraphicsView Accessibility and Ergonomics Helpers
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added accessible descriptions and explicit child label attributes (`icon_label`, `title_label`, `subtitle_label`) to `DropArea`; added text query helpers `title_text()` and `subtitle_text()`; configured accessible name, description, and child label metadata (`ToastMessageLabel`) on `ToastOverlay` with `message_text()` and `is_active()` query helpers; configured accessibility metadata on `SliceGraphicsView` (`setObjectName("sliceGraphicsView")`, `setAccessibleName("Slice Interactive Canvas")`, description) and added query helpers `zoom_level()`, `is_loupe_enabled()`, `has_sync_partner()`, `is_mouse_tracking_active()`.
+- `tests/test_ui_accessibility_and_startup.py`: Added unit test `test_drop_area_toast_overlay_and_slice_view_ergonomics` validating accessibility metadata, label object names, text readouts, loupe toggling, and query helper state.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (35 passed in 24.92s, 0 errors).
+
+
 ### 2026-11-05 - DeepSliceMainWindow Page Step Helpers, Bad Section Queries, and Species Selection
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added public ergonomic workflow helpers (`next_page`, `previous_page`, `select_species`) and status/export properties (`bad_section_count`, `has_bad_sections`, `export_format`, `export_basename`).

@@ -242,6 +242,8 @@ class DropArea(QFrame):
 
         self.setAccessibleName("Image and Folder Ingestion Drop Area")
 
+        self.setAccessibleDescription("Drop area supporting image files and folder drops for automatic section ingestion")
+
         self.setToolTip("Drag and drop images (JPG, PNG, TIFF) or folders here to ingest them")
 
         self.setMinimumHeight(80)
@@ -256,31 +258,39 @@ class DropArea(QFrame):
 
 
 
-        icon = QLabel("[ ]")
+        self.icon_label = QLabel("[ ]")
 
-        icon.setObjectName("DropIcon")
+        self.icon_label.setObjectName("DropIcon")
 
-        icon.setAlignment(Qt.AlignCenter)
-
-
-
-        title = QLabel("Drag and Drop Images or Folders")
-
-        title.setObjectName("DropTitle")
-
-        subtitle = QLabel("Supports JPG, PNG, TIFF. Folder drops recurse into subfolders.")
-
-        subtitle.setWordWrap(True)
-
-        subtitle.setObjectName("DropSubtitle")
+        self.icon_label.setAlignment(Qt.AlignCenter)
 
 
 
-        layout.addWidget(icon)
+        self.title_label = QLabel("Drag and Drop Images or Folders")
 
-        layout.addWidget(title)
+        self.title_label.setObjectName("DropTitle")
 
-        layout.addWidget(subtitle)
+        self.subtitle_label = QLabel("Supports JPG, PNG, TIFF. Folder drops recurse into subfolders.")
+
+        self.subtitle_label.setWordWrap(True)
+
+        self.subtitle_label.setObjectName("DropSubtitle")
+
+
+
+        layout.addWidget(self.icon_label)
+
+        layout.addWidget(self.title_label)
+
+        layout.addWidget(self.subtitle_label)
+
+    def title_text(self) -> str:
+        """Return the header title text of the drop area."""
+        return self.title_label.text()
+
+    def subtitle_text(self) -> str:
+        """Return the explanatory subtitle text of the drop area."""
+        return self.subtitle_label.text()
 
 
 
@@ -426,6 +436,10 @@ class ToastOverlay(QFrame):
 
         self.setObjectName("ToastOverlay")
 
+        self.setAccessibleName("Notification Toast")
+
+        self.setAccessibleDescription("Animated notification toast displaying operational status messages")
+
         # Allow clicks so users can dismiss long messages early instead of
 
         # waiting for the timer to expire. Setting WA_TransparentForMouseEvents
@@ -447,6 +461,10 @@ class ToastOverlay(QFrame):
 
 
         self.message_label = QLabel("")
+
+        self.message_label.setObjectName("ToastMessageLabel")
+
+        self.message_label.setAccessibleName("Toast Message")
 
         self.message_label.setWordWrap(True)
 
@@ -493,6 +511,14 @@ class ToastOverlay(QFrame):
         self._fade_out.setEasingCurve(QEasingCurve.InCubic)
 
         self._fade_out.finished.connect(self.hide)
+
+    def message_text(self) -> str:
+        """Return the current message text displayed by the toast."""
+        return self.message_label.text()
+
+    def is_active(self) -> bool:
+        """Return True if the toast is currently visible."""
+        return self.isVisible() and self._opacity_effect.opacity() > 0.0
 
 
 
@@ -628,6 +654,12 @@ class SliceGraphicsView(QGraphicsView):
 
         super().__init__(parent)
 
+        self.setObjectName("sliceGraphicsView")
+
+        self.setAccessibleName("Slice Interactive Canvas")
+
+        self.setAccessibleDescription("Interactive viewport for inspecting whole slice images with synchronized atlas pan and zoom")
+
         self._scene = QGraphicsScene(self)
 
         self.setScene(self._scene)
@@ -667,6 +699,22 @@ class SliceGraphicsView(QGraphicsView):
     def set_loupe_enabled(self, enabled: bool):
 
         self._loupe_enabled = bool(enabled)
+
+    def zoom_level(self) -> int:
+        """Return the current zoom step index."""
+        return int(self._zoom)
+
+    def is_loupe_enabled(self) -> bool:
+        """Return True if the inspection loupe lens is active."""
+        return bool(self._loupe_enabled)
+
+    def has_sync_partner(self) -> bool:
+        """Return True if this view is linked to a partner slice/atlas view."""
+        return self._sync_partner is not None
+
+    def is_mouse_tracking_active(self) -> bool:
+        """Return True if mouse tracking is enabled for pointer coordinate feedback."""
+        return self.hasMouseTracking()
 
 
 

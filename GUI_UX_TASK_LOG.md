@@ -7,6 +7,20 @@
 
 ## Completed
 
+### Task: DropArea, ToastOverlay, and SliceGraphicsView accessibility and ergonomics helpers
+- **Completed**: 2026-11-07
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added accessible descriptions and explicit child label attributes (`icon_label`, `title_label`, `subtitle_label`) to `DropArea`.
+    - Added text query helpers `title_text()` and `subtitle_text()`.
+    - Configured accessible name, description, and child label metadata (`ToastMessageLabel`) on `ToastOverlay` with `message_text()` and `is_active()` query helpers.
+    - Configured accessibility metadata on `SliceGraphicsView` (`setObjectName("sliceGraphicsView")`, `setAccessibleName("Slice Interactive Canvas")`, accessible description) and added query helpers `zoom_level()`, `is_loupe_enabled()`, `has_sync_partner()`, and `is_mouse_tracking_active()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_drop_area_toast_overlay_and_slice_view_ergonomics` validating accessibility metadata, label object names, text readouts, loupe toggling, and query helper state.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (35 passed in 24.92s, 0 errors).
+- **Status**: Completed
+
+
 ### Task: DeepSliceMainWindow page step helpers, bad section queries, and species selection
 - **Completed**: 2026-11-05
 - **Changes**:

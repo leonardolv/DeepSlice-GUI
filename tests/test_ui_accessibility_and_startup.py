@@ -1064,3 +1064,55 @@ def test_main_window_extended_ergonomics_and_species_selection():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_drop_area_toast_overlay_and_slice_view_ergonomics():
+    """Assert DropArea, ToastOverlay, and SliceGraphicsView accessibility and ergonomics helpers."""
+    from DeepSlice.gui.main_window import DropArea, ToastOverlay, SliceGraphicsView
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance() or QApplication([])
+
+    # 1. DropArea
+    drop = DropArea()
+    try:
+        assert drop.objectName() == "DropArea"
+        assert drop.accessibleName() == "Image and Folder Ingestion Drop Area"
+        assert len(drop.accessibleDescription()) > 0
+        assert "Drag and Drop" in drop.title_text()
+        assert "Supports JPG" in drop.subtitle_text()
+        assert drop.title_label is not None
+        assert drop.subtitle_label is not None
+        assert drop.icon_label is not None
+    finally:
+        drop.deleteLater()
+
+    # 2. ToastOverlay
+    toast = ToastOverlay()
+    try:
+        assert toast.objectName() == "ToastOverlay"
+        assert toast.accessibleName() == "Notification Toast"
+        assert len(toast.accessibleDescription()) > 0
+        assert toast.message_label.objectName() == "ToastMessageLabel"
+        assert toast.message_label.accessibleName() == "Toast Message"
+        assert toast.message_text() == ""
+        toast.show_message("Predictions loaded successfully", timeout_ms=2000, level="success")
+        assert toast.message_text() == "Predictions loaded successfully"
+    finally:
+        toast.deleteLater()
+
+    # 3. SliceGraphicsView
+    view = SliceGraphicsView()
+    try:
+        assert view.objectName() == "sliceGraphicsView"
+        assert view.accessibleName() == "Slice Interactive Canvas"
+        assert len(view.accessibleDescription()) > 0
+        assert view.zoom_level() == 0
+        assert view.is_loupe_enabled() is False
+        assert view.has_sync_partner() is False
+        assert view.is_mouse_tracking_active() is True
+
+        view.set_loupe_enabled(True)
+        assert view.is_loupe_enabled() is True
+    finally:
+        view.deleteLater()
