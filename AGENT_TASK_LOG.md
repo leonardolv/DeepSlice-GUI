@@ -19,6 +19,12 @@ here.
 
 ## Completed
 
+### 2026-11-07 UTC - set_global_seed no longer swallows TensorFlow/Keras seeding failures
+Status: **done** (Claude)
+- Root cause: `training_utils.set_global_seed` wrapped both TF seeding calls in bare `except Exception: pass`, so a failure to seed (not just TF being absent) silently produced non-reproducible training while the function still returned the seed.
+- Fix: only `ImportError` (TF optional) is silent; any other failure logs a warning naming the seed and error. Added two tests in `tests/test_training_utils.py` (warning logged on Keras failure; silent when TF missing); the first failed before the fix.
+- Validation: `pytest tests/test_training_utils.py tests/test_training_pipeline.py` 47 passed. Full suite: 3 pre-existing failures in `test_neural_network_utils.py` caused by scikit-image missing in this sandbox (unrelated). Ruff findings (67) are pre-existing, none introduced.
+
 ### 2026-11-05 - DeepSliceMainWindow Page Step Helpers, Bad Section Queries, and Species Selection
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added public ergonomic workflow helpers (`next_page`, `previous_page`, `select_species`) and status/export properties (`bad_section_count`, `has_bad_sections`, `export_format`, `export_basename`).

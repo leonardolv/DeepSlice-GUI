@@ -150,3 +150,37 @@ def test_mixed_precision_failure_is_logged_not_silent(tmp_path, monkeypatch, cap
         callbacks, _ = build_training_callbacks(str(tmp_path), use_mixed_precision=True)
     assert len(callbacks) == 5
     assert "mixed precision" in caplog.text
+
+
+def _fake_tf(set_random_seed):
+    import types
+
+    tf = types.ModuleType("tensorflow")
+    tf.random = types.SimpleNamespace(set_seed=lambda seed: None)
+    tf.keras = types.SimpleNamespace(
+        utils=types.SimpleNamespace(set_random_seed=set_random_seed)
+    )
+    return tf
+
+
+def test_set_global_seed_logs_when_keras_seeding_fails(monkeypatch, caplog):
+    import logging
+    import sys
+
+    def boom(seed):
+        raise RuntimeError("keras seeding broke")
+
+    monkeypatch.setitem(sys.modules, "tensorflow", _fake_tf(boom))
+    with caplog.at_level(logging.WARNING, logger="DeepSlice.training.training_utils"):
+        assert set_global_seed(7) == 7
+    assert "keras seeding broke" in caplog.text
+
+
+def test_set_global_seed_silent_when_tensorflow_missing(monkeypatch, caplog):
+    import logging
+    import sys
+
+    monkeypatch.setitem(sys.modules, "tensorflow", None)  # import raises ImportError
+    with caplog.at_level(logging.WARNING, logger="DeepSlice.training.training_utils"):
+        assert set_global_seed(7) == 7
+    assert caplog.text == ""
