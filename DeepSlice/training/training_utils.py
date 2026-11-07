@@ -22,15 +22,20 @@ def set_global_seed(seed: int) -> int:
 
     try:
         import tensorflow as tf
-
-        tf.random.set_seed(seed)
-        try:
-            tf.keras.utils.set_random_seed(seed)
-        except Exception:
-            pass
-    except Exception:
+    except ImportError:
         # TensorFlow is optional for utility usage in data preparation scripts.
-        pass
+        tf = None
+
+    if tf is not None:
+        try:
+            tf.random.set_seed(seed)
+            tf.keras.utils.set_random_seed(seed)
+        except Exception as exc:
+            logger.warning(
+                "Could not seed TensorFlow/Keras (seed=%s); runs may not be reproducible: %s",
+                seed,
+                exc,
+            )
 
     return seed
 
