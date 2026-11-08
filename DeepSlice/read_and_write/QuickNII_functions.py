@@ -7,6 +7,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pandas as pd
 
+from .atomic_io import write_file_atomic, write_json_atomic
+
 _logger = logging.getLogger(__name__)
 
 
@@ -75,7 +77,10 @@ def write_QuickNII_XML(df: pd.DataFrame, filename: str, aligner: str) -> None:
         )
 
     tree = ET.ElementTree(root)
-    tree.write(filename + ".xml", encoding="utf-8", xml_declaration=True)
+    write_file_atomic(
+        filename + ".xml",
+        lambda tmp: tree.write(tmp, encoding="utf-8", xml_declaration=True),
+    )
 
 
 
@@ -134,6 +139,8 @@ def write_QUINT_JSON(
     def serialize_markers(marker_value):
         if marker_value is None:
             return []
+        if isinstance(marker_value, np.ndarray):
+            return marker_value.tolist()
         if isinstance(marker_value, (list, tuple)):
             return list(marker_value)
         if isinstance(marker_value, float) and np.isnan(marker_value):
@@ -160,8 +167,7 @@ def write_QUINT_JSON(
         "slices": alignment_metadata,
     }
     _logger.info("Saving QUINT JSON to %s.json", filename)
-    with open(filename + ".json", "w") as f:
-        json.dump(QUINT_json, f)
+    write_json_atomic(filename + ".json", QUINT_json)
 
 
 def read_QUINT_JSON(filename: str) -> pd.DataFrame:
