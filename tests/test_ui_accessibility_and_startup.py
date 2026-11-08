@@ -1386,3 +1386,80 @@ def test_configuration_page_accessibility_properties_and_ergonomics():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_export_page_accessibility_properties_and_ergonomics(qtbot, tmp_path):
+    """Verify Export Page control object names, pointer affordances, public properties, and ergonomic helpers."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    try:
+        win.go_to_page(4)
+
+        # Explicit object names
+        assert win.output_dir_line_edit.objectName() == "outputDirEdit"
+        assert win.browse_output_dir_btn.objectName() == "browseOutputDirBtn"
+        assert win.output_basename_line_edit.objectName() == "outputBasenameEdit"
+        assert win.output_format_combobox.objectName() == "outputFormatCombo"
+        assert win.output_format_help_btn.objectName() == "outputFormatHelpBtn"
+        assert win.export_size_estimate_lbl.objectName() == "exportSizeEstimateLabel"
+        assert win.export_btn.objectName() == "exportBtn"
+        assert win.open_export_dir_btn.objectName() == "openExportDirBtn"
+        assert win.copy_export_path_btn.objectName() == "copyExportPathBtn"
+        assert win.report_btn.objectName() == "reportBtn"
+        assert win.preview_report_btn.objectName() == "previewReportBtn"
+        assert win.pdf_content_group_box.objectName() == "pdfContentGroup"
+        assert win.pdf_include_stats_check.objectName() == "pdfIncludeStatsCheck"
+        assert win.pdf_include_plot_check.objectName() == "pdfIncludePlotCheck"
+        assert win.pdf_include_images_check.objectName() == "pdfIncludeImagesCheck"
+        assert win.pdf_include_angles_check.objectName() == "pdfIncludeAnglesCheck"
+        assert win.quicknii_path_line_edit.objectName() == "quickniiPathEdit"
+        assert win.quicknii_browse_btn.objectName() == "quickniiBrowseBtn"
+        assert win.open_quicknii_btn.objectName() == "openQuickniiBtn"
+        assert win.export_summary_label.objectName() == "exportSummaryLabel"
+        assert win.export_deviation_label.objectName() == "exportDeviationLabel"
+
+        # Cursor affordances
+        assert win.browse_output_dir_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.output_format_help_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.export_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.open_export_dir_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.copy_export_path_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.report_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.preview_report_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.quicknii_browse_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.open_quicknii_btn.cursor().shape() == Qt.PointingHandCursor
+
+        # Ergonomic queries and setters
+        win.set_export_output_dir(str(tmp_path))
+        assert win.export_output_dir() == str(tmp_path)
+
+        win.set_export_base_filename("CohortStudy_Export")
+        assert win.export_base_filename() == "CohortStudy_Export"
+
+        win.set_export_format_name("Legacy XML")
+        assert "Legacy XML" in win.export_format_name()
+
+        win.set_pdf_stats_included(False)
+        assert win.is_pdf_stats_included() is False
+        win.set_pdf_stats_included(True)
+        assert win.is_pdf_stats_included() is True
+
+        win.set_pdf_plot_included(False)
+        assert win.is_pdf_plot_included() is False
+
+        win.set_pdf_images_included(True)
+        assert win.is_pdf_images_included() is True
+
+        win.set_pdf_angles_included(False)
+        assert win.is_pdf_angles_included() is False
+
+        assert "Processed" in win.export_summary_text()
+        assert "angular deviation" in win.export_deviation_text()
+
+        # Action triggers
+        assert isinstance(win.trigger_export_format_help(), bool)
+        assert isinstance(win.trigger_copy_export_path(), bool)
+        assert isinstance(win.trigger_preview_report(), bool)
+    finally:
+        win.close()
+        win.deleteLater()

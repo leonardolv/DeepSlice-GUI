@@ -2192,6 +2192,198 @@ class DeepSliceMainWindow(QMainWindow):
             return True
         return False
 
+    # Export Page public widget properties
+    @property
+    def output_dir_line_edit(self) -> QLineEdit:
+        return self.output_dir_edit
+
+    @property
+    def browse_output_dir_btn(self) -> QPushButton:
+        return self.browse_output_dir_button
+
+    @property
+    def output_basename_line_edit(self) -> QLineEdit:
+        return self.output_basename_edit
+
+    @property
+    def output_format_combobox(self) -> QComboBox:
+        return self.output_format_combo
+
+    @property
+    def output_format_help_btn(self) -> QToolButton:
+        return self.output_format_help_button
+
+    @property
+    def export_size_estimate_lbl(self) -> QLabel:
+        return self.export_size_estimate_label
+
+    @property
+    def export_btn(self) -> QPushButton:
+        return self.export_button
+
+    @property
+    def open_export_dir_btn(self) -> QToolButton:
+        return self.open_export_dir_button
+
+    @property
+    def copy_export_path_btn(self) -> QToolButton:
+        return self.copy_export_path_button
+
+    @property
+    def report_btn(self) -> QPushButton:
+        return self.report_button
+
+    @property
+    def preview_report_btn(self) -> QToolButton:
+        return self.preview_report_button
+
+    @property
+    def pdf_content_group_box(self) -> QGroupBox:
+        return self.pdf_content_group
+
+    @property
+    def pdf_include_stats_check(self) -> QCheckBox:
+        return self.pdf_include_stats
+
+    @property
+    def pdf_include_plot_check(self) -> QCheckBox:
+        return self.pdf_include_plot
+
+    @property
+    def pdf_include_images_check(self) -> QCheckBox:
+        return self.pdf_include_images
+
+    @property
+    def pdf_include_angles_check(self) -> QCheckBox:
+        return self.pdf_include_angles
+
+    @property
+    def quicknii_path_line_edit(self) -> QLineEdit:
+        return self.quicknii_path_edit
+
+    @property
+    def quicknii_browse_btn(self) -> QPushButton:
+        return self.quicknii_browse_button
+
+    @property
+    def open_quicknii_btn(self) -> QPushButton:
+        return self.open_quicknii_button
+
+    @property
+    def export_summary_label(self) -> QLabel:
+        return self.summary_label
+
+    @property
+    def export_deviation_label(self) -> QLabel:
+        return self.deviation_label
+
+    # Export Page ergonomic query and action helpers
+    def export_output_dir(self) -> str:
+        """Return the current export output directory."""
+        if hasattr(self, "output_dir_edit"):
+            return str(self.output_dir_edit.text())
+        return ""
+
+    def set_export_output_dir(self, path: str) -> None:
+        """Set the export output directory."""
+        if hasattr(self, "output_dir_edit"):
+            self.output_dir_edit.setText(path)
+
+    def export_base_filename(self) -> str:
+        """Return the current export base filename."""
+        if hasattr(self, "output_basename_edit"):
+            return str(self.output_basename_edit.text())
+        return ""
+
+    def set_export_base_filename(self, name: str) -> None:
+        """Set the export base filename."""
+        if hasattr(self, "output_basename_edit"):
+            self.output_basename_edit.setText(name)
+
+    def export_format_name(self) -> str:
+        """Return the selected primary export format name."""
+        if hasattr(self, "output_format_combo"):
+            return str(self.output_format_combo.currentText())
+        return ""
+
+    def set_export_format_name(self, format_name: str) -> None:
+        """Select export format by name."""
+        if hasattr(self, "output_format_combo"):
+            idx = self.output_format_combo.findText(format_name)
+            if idx >= 0:
+                self.output_format_combo.setCurrentIndex(idx)
+            else:
+                self.output_format_combo.setCurrentText(format_name)
+
+    def is_pdf_stats_included(self) -> bool:
+        """Return True if PDF summary stats checkbox is checked."""
+        return bool(hasattr(self, "pdf_include_stats") and self.pdf_include_stats.isChecked())
+
+    def set_pdf_stats_included(self, enabled: bool) -> None:
+        """Enable or disable PDF summary stats checkbox."""
+        if hasattr(self, "pdf_include_stats"):
+            self.pdf_include_stats.setChecked(enabled)
+
+    def is_pdf_plot_included(self) -> bool:
+        """Return True if PDF linearity plot checkbox is checked."""
+        return bool(hasattr(self, "pdf_include_plot") and self.pdf_include_plot.isChecked())
+
+    def set_pdf_plot_included(self, enabled: bool) -> None:
+        """Enable or disable PDF linearity plot checkbox."""
+        if hasattr(self, "pdf_include_plot"):
+            self.pdf_include_plot.setChecked(enabled)
+
+    def is_pdf_images_included(self) -> bool:
+        """Return True if PDF sample images checkbox is checked."""
+        return bool(hasattr(self, "pdf_include_images") and self.pdf_include_images.isChecked())
+
+    def set_pdf_images_included(self, enabled: bool) -> None:
+        """Enable or disable PDF sample images checkbox."""
+        if hasattr(self, "pdf_include_images"):
+            self.pdf_include_images.setChecked(enabled)
+
+    def is_pdf_angles_included(self) -> bool:
+        """Return True if PDF angle metrics checkbox is checked."""
+        return bool(hasattr(self, "pdf_include_angles") and self.pdf_include_angles.isChecked())
+
+    def set_pdf_angles_included(self, enabled: bool) -> None:
+        """Enable or disable PDF angle metrics checkbox."""
+        if hasattr(self, "pdf_include_angles"):
+            self.pdf_include_angles.setChecked(enabled)
+
+    def export_summary_text(self) -> str:
+        """Return current export section count summary text."""
+        if hasattr(self, "summary_label"):
+            return str(self.summary_label.text())
+        return ""
+
+    def export_deviation_text(self) -> str:
+        """Return current export mean angular deviation text."""
+        if hasattr(self, "deviation_label"):
+            return str(self.deviation_label.text())
+        return ""
+
+    def trigger_export_format_help(self) -> bool:
+        """Trigger export format documentation help button."""
+        if hasattr(self, "output_format_help_button") and self.output_format_help_button.isEnabled():
+            self.output_format_help_button.click()
+            return True
+        return False
+
+    def trigger_copy_export_path(self) -> bool:
+        """Trigger copy export file path button."""
+        if hasattr(self, "copy_export_path_button") and self.copy_export_path_button.isEnabled():
+            self.copy_export_path_button.click()
+            return True
+        return False
+
+    def trigger_preview_report(self) -> bool:
+        """Trigger preview PDF report button."""
+        if hasattr(self, "preview_report_button") and self.preview_report_button.isEnabled():
+            self.preview_report_button.click()
+            return True
+        return False
+
 
     def _notify_startup_progress(self, message: str, percent: int):
 
@@ -9407,7 +9599,7 @@ class DeepSliceMainWindow(QMainWindow):
         output_dir_row = QHBoxLayout()
 
         self.output_dir_edit = QLineEdit()
-
+        self.output_dir_edit.setObjectName("outputDirEdit")
         self.output_dir_edit.setAccessibleName("Export Output Directory")
 
         self.output_dir_edit.setToolTip("Directory where exported files and reports will be saved")
@@ -9417,7 +9609,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.output_dir_edit.textChanged.connect(self._persist_export_path)
 
         self.browse_output_dir_button = QPushButton("Browse")
-
+        self.browse_output_dir_button.setObjectName("browseOutputDirBtn")
         self.browse_output_dir_button.setAccessibleName("Browse Export Output Directory")
 
         self.browse_output_dir_button.setToolTip("Select output directory for exports")
@@ -9433,13 +9625,13 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.output_basename_edit = QLineEdit("DeepSliceResults")
-
+        self.output_basename_edit.setObjectName("outputBasenameEdit")
         self.output_basename_edit.setAccessibleName("Export Base Filename")
 
         self.output_basename_edit.setToolTip("Base filename prefix for exported files")
 
         self.output_format_combo = QComboBox()
-
+        self.output_format_combo.setObjectName("outputFormatCombo")
         self.output_format_combo.setAccessibleName("Export Format")
 
         self.output_format_combo.setToolTip("Select export format (QuickNII/VisuAlign JSON or Legacy XML)")
@@ -9457,7 +9649,7 @@ class DeepSliceMainWindow(QMainWindow):
         )
 
         self.output_format_help_button = QToolButton()
-
+        self.output_format_help_button.setObjectName("outputFormatHelpBtn")
         self.output_format_help_button.setText("?")
 
         self.output_format_help_button.setAccessibleName("Export Format Documentation Help")
@@ -9477,7 +9669,7 @@ class DeepSliceMainWindow(QMainWindow):
         
 
         self.export_size_estimate_label = QLabel("~0 MB")
-
+        self.export_size_estimate_label.setObjectName("exportSizeEstimateLabel")
         self.export_size_estimate_label.setAccessibleName("Estimated Export File Size")
 
         self.output_format_combo.currentIndexChanged.connect(self._update_export_size_estimate)
@@ -9497,7 +9689,7 @@ class DeepSliceMainWindow(QMainWindow):
         export_actions_layout = QHBoxLayout()
 
         self.export_button = QPushButton("Export Predictions")
-
+        self.export_button.setObjectName("exportBtn")
         self.export_button.setAccessibleName("Export Predictions Button")
 
         self.export_button.setToolTip("Export alignment predictions in selected format")
@@ -9509,7 +9701,7 @@ class DeepSliceMainWindow(QMainWindow):
         
 
         self.open_export_dir_button = QToolButton()
-
+        self.open_export_dir_button.setObjectName("openExportDirBtn")
         self.open_export_dir_button.setText("Open Folder")
 
         self.open_export_dir_button.setAccessibleName("Open Export Folder")
@@ -9523,7 +9715,7 @@ class DeepSliceMainWindow(QMainWindow):
         
 
         self.copy_export_path_button = QToolButton()
-
+        self.copy_export_path_button.setObjectName("copyExportPathBtn")
         self.copy_export_path_button.setText("Copy Path")
 
         self.copy_export_path_button.setAccessibleName("Copy Export File Path")
@@ -9545,7 +9737,7 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.report_button = QPushButton("Generate Report (PDF)")
-
+        self.report_button.setObjectName("reportBtn")
         self.report_button.setAccessibleName("Generate PDF Report Button")
 
         self.report_button.setToolTip("Generate comprehensive PDF summary report")
@@ -9557,7 +9749,7 @@ class DeepSliceMainWindow(QMainWindow):
         
 
         self.preview_report_button = QToolButton()
-
+        self.preview_report_button.setObjectName("previewReportBtn")
         self.preview_report_button.setText("Preview Report")
 
         self.preview_report_button.setAccessibleName("Preview PDF Report Button")
@@ -9579,13 +9771,13 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.pdf_content_group = QGroupBox("PDF Contents")
-
+        self.pdf_content_group.setObjectName("pdfContentGroup")
         self.pdf_content_group.setAccessibleName("PDF Report Contents Configuration")
 
         pdf_content_layout = QHBoxLayout(self.pdf_content_group)
 
         self.pdf_include_stats = QCheckBox("Summary Stats")
-
+        self.pdf_include_stats.setObjectName("pdfIncludeStatsCheck")
         self.pdf_include_stats.setAccessibleName("Include Summary Stats in Report")
 
         self.pdf_include_stats.setToolTip("Include section count and coverage statistics in PDF report")
@@ -9595,7 +9787,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.pdf_include_stats.setChecked(True)
 
         self.pdf_include_plot = QCheckBox("Linearity Plot")
-
+        self.pdf_include_plot.setObjectName("pdfIncludePlotCheck")
         self.pdf_include_plot.setAccessibleName("Include Linearity Plot in Report")
 
         self.pdf_include_plot.setToolTip("Include spacing linearity chart in PDF report")
@@ -9605,7 +9797,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.pdf_include_plot.setChecked(True)
 
         self.pdf_include_images = QCheckBox("Sample Images")
-
+        self.pdf_include_images.setObjectName("pdfIncludeImagesCheck")
         self.pdf_include_images.setAccessibleName("Include Sample Images in Report")
 
         self.pdf_include_images.setToolTip("Include sample registered section thumbnails in PDF report")
@@ -9615,7 +9807,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.pdf_include_images.setChecked(False)
 
         self.pdf_include_angles = QCheckBox("Angle Metrics")
-
+        self.pdf_include_angles.setObjectName("pdfIncludeAnglesCheck")
         self.pdf_include_angles.setAccessibleName("Include Angle Metrics in Report")
 
         self.pdf_include_angles.setToolTip("Include cutting angle breakdown in PDF report")
@@ -9637,7 +9829,7 @@ class DeepSliceMainWindow(QMainWindow):
         quicknii_row = QHBoxLayout()
 
         self.quicknii_path_edit = QLineEdit()
-
+        self.quicknii_path_edit.setObjectName("quickniiPathEdit")
         self.quicknii_path_edit.setAccessibleName("QuickNII Executable Path")
 
         self.quicknii_path_edit.setPlaceholderText("Optional path to QuickNII executable")
@@ -9647,7 +9839,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.quicknii_path_edit.textChanged.connect(self._persist_quicknii_path)
 
         self.quicknii_browse_button = QPushButton("Browse")
-
+        self.quicknii_browse_button.setObjectName("quickniiBrowseBtn")
         self.quicknii_browse_button.setAccessibleName("Browse QuickNII Executable")
 
         self.quicknii_browse_button.setToolTip("Browse for QuickNII executable")
@@ -9663,7 +9855,7 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.open_quicknii_button = QPushButton("Open in QuickNII")
-
+        self.open_quicknii_button.setObjectName("openQuickniiBtn")
         self.open_quicknii_button.setAccessibleName("Open in QuickNII Button")
 
         self.open_quicknii_button.setToolTip("Launch exported series in QuickNII")
@@ -9675,11 +9867,11 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.summary_label = QLabel("Processed: 0 | Excluded: 0")
-
+        self.summary_label.setObjectName("exportSummaryLabel")
         self.summary_label.setAccessibleName("Export Processed Section Count Summary")
 
         self.deviation_label = QLabel("Mean angular deviation: 0.00 deg")
-
+        self.deviation_label.setObjectName("exportDeviationLabel")
         self.deviation_label.setAccessibleName("Mean Angular Deviation Metric")
 
         self.markers_label = QLabel("")
