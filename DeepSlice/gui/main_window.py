@@ -2810,6 +2810,659 @@ class DeepSliceMainWindow(QMainWindow):
             return True
         return False
 
+    # --- Curation / Review Page Public Widget Properties ---
+
+    @property
+    def curation_prev_btn(self) -> QToolButton:
+        """Return the previous slice navigation button on Curation page."""
+        return self.curation_prev_button
+
+    @property
+    def curation_next_btn(self) -> QToolButton:
+        """Return the next slice navigation button on Curation page."""
+        return self.curation_next_button
+
+    @property
+    def curation_select_all_button(self) -> QToolButton:
+        """Return the select all bad section flags button."""
+        return self.curation_select_all_btn
+
+    @property
+    def curation_deselect_all_button(self) -> QToolButton:
+        """Return the deselect all bad section flags button."""
+        return self.curation_deselect_all_btn
+
+    @property
+    def confidence_filter_combobox(self) -> QComboBox:
+        """Return the confidence tier filter dropdown."""
+        return self.confidence_filter_combo
+
+    @property
+    def slice_flag_list_widget(self) -> FlagListWidget:
+        """Return the curation slice flag list widget."""
+        return self.slice_flag_list
+
+    @property
+    def apply_bad_sections_btn(self) -> QPushButton:
+        """Return the apply bad section flags button."""
+        return self.apply_bad_sections_button
+
+    @property
+    def apply_manual_order_btn(self) -> QPushButton:
+        """Return the apply manual reordering button."""
+        return self.apply_manual_order_button
+
+    @property
+    def move_slice_up_btn(self) -> QToolButton:
+        """Return the move selected slice up button."""
+        return self.move_slice_up_button
+
+    @property
+    def move_slice_down_btn(self) -> QToolButton:
+        """Return the move selected slice down button."""
+        return self.move_slice_down_button
+
+    @property
+    def detect_outliers_btn(self) -> QPushButton:
+        """Return the detect outliers button."""
+        return self.detect_outliers_button
+
+    @property
+    def reset_flags_btn(self) -> QPushButton:
+        """Return the reset all flags button."""
+        return self.reset_flags_button
+
+    @property
+    def auto_flag_low_conf_btn(self) -> QPushButton:
+        """Return the auto-flag low confidence button."""
+        return self.auto_flag_low_conf_button
+
+    @property
+    def interpolate_bad_depth_btn(self) -> QPushButton:
+        """Return the interpolate flagged depths button."""
+        return self.interpolate_bad_depth_button
+
+    @property
+    def toggle_current_flag_btn(self) -> QToolButton:
+        """Return the toggle current section flag button."""
+        return self.toggle_current_flag_button
+
+    @property
+    def slice_note_line_edit(self) -> QLineEdit:
+        """Return the per-slice note line edit."""
+        return self.slice_note_edit
+
+    @property
+    def save_slice_note_btn(self) -> QPushButton:
+        """Return the save slice note button."""
+        return self.save_slice_note_button
+
+    @property
+    def curation_queue_lbl(self) -> QLabel:
+        """Return the review queue status label."""
+        return self.curation_queue_label
+
+    @property
+    def controls_group_box(self) -> QGroupBox:
+        """Return the propagation/curation collapsible group box."""
+        return self.controls_group
+
+    @property
+    def normalize_angles_btn(self) -> QPushButton:
+        """Return the normalize angles button."""
+        return self.normalize_angles_button
+
+    @property
+    def enforce_order_btn(self) -> QPushButton:
+        """Return the enforce index order button."""
+        return self.enforce_order_button
+
+    @property
+    def enforce_spacing_btn(self) -> QPushButton:
+        """Return the enforce index spacing button."""
+        return self.enforce_spacing_button
+
+    @property
+    def ml_angle_spin_box(self) -> QDoubleSpinBox:
+        """Return the mediolateral angle spin box."""
+        return self.ml_spin
+
+    @property
+    def dv_angle_spin_box(self) -> QDoubleSpinBox:
+        """Return the dorsoventral angle spin box."""
+        return self.dv_spin
+
+    @property
+    def apply_manual_angles_btn(self) -> QPushButton:
+        """Return the apply manual angles button."""
+        return self.apply_manual_angles_button
+
+    @property
+    def undo_curation_btn(self) -> QPushButton:
+        """Return the undo curation button."""
+        return self.undo_button
+
+    @property
+    def redo_curation_btn(self) -> QPushButton:
+        """Return the redo curation button."""
+        return self.redo_button
+
+    @property
+    def anchor_group_box(self) -> QGroupBox:
+        """Return the anchor alignment collapsible group box."""
+        return self.anchor_group
+
+    @property
+    def anchor_summary_lbl(self) -> QLabel:
+        """Return the anchor alignment summary label."""
+        return self.anchor_summary_label
+
+    @property
+    def anchor_depth_spin_box(self) -> QDoubleSpinBox:
+        """Return the target AP depth spin box."""
+        return self.anchor_depth_spin
+
+    @property
+    def set_anchor_btn(self) -> QToolButton:
+        """Return the set/update anchor button."""
+        return self.set_anchor_button
+
+    @property
+    def remove_anchor_btn(self) -> QToolButton:
+        """Return the remove anchor button."""
+        return self.remove_anchor_button
+
+    @property
+    def apply_anchor_interpolation_btn(self) -> QPushButton:
+        """Return the distribute between anchors button."""
+        return self.apply_anchor_interpolation_button
+
+    @property
+    def clear_anchor_btn(self) -> QToolButton:
+        """Return the clear all anchors button."""
+        return self.clear_anchor_button
+
+    @property
+    def anchor_list_widget(self) -> QListWidget:
+        """Return the defined anchors list widget."""
+        return self.anchor_list
+
+    @property
+    def linearity_figure_canvas(self) -> FigureCanvas:
+        """Return the linearity plot figure canvas."""
+        return self.linearity_canvas
+
+    @property
+    def zoom_fit_plot_btn(self) -> QToolButton:
+        """Return the fit linearity plot zoom button."""
+        return self.zoom_fit_button
+
+    @property
+    def zoom_in_plot_btn(self) -> QToolButton:
+        """Return the zoom in linearity plot button."""
+        return self.zoom_in_button
+
+    @property
+    def zoom_out_plot_btn(self) -> QToolButton:
+        """Return the zoom out linearity plot button."""
+        return self.zoom_out_button
+
+    @property
+    def hist_figure_canvas(self) -> FigureCanvas:
+        """Return the slice distribution histogram canvas."""
+        return self.hist_canvas
+
+    @property
+    def enable_atlas_preview_check(self) -> QCheckBox:
+        """Return the atlas volume preview checkbox."""
+        return self.enable_atlas_preview_checkbox
+
+    @property
+    def atlas_volume_combobox(self) -> QComboBox:
+        """Return the atlas reference volume combo box."""
+        return self.atlas_volume_combo
+
+    @property
+    def enable_blend_overlay_check(self) -> QCheckBox:
+        """Return the blend atlas on histology checkbox."""
+        return self.enable_blend_overlay_checkbox
+
+    @property
+    def blend_opacity_slider(self) -> QSlider:
+        """Return the atlas blend opacity slider."""
+        return self.blend_slider
+
+    @property
+    def blend_percent_lbl(self) -> QLabel:
+        """Return the blend opacity percentage label."""
+        return self.blend_percent_label
+
+    @property
+    def atlas_slice_info_lbl(self) -> QLabel:
+        """Return the atlas slice info readout label."""
+        return self.atlas_slice_info_label
+
+    @property
+    def before_after_check(self) -> QCheckBox:
+        """Return the before/after overlay comparison checkbox."""
+        return self.before_after_toggle
+
+    @property
+    def loupe_check(self) -> QCheckBox:
+        """Return the magnification loupe checkbox."""
+        return self.loupe_toggle
+
+    @property
+    def atlas_coords_lbl(self) -> QLabel:
+        """Return the atlas coordinates readout label."""
+        return self.atlas_coords_label
+
+    @property
+    def atlas_flip_x_check(self) -> QCheckBox:
+        """Return the horizontal atlas flip checkbox."""
+        return self.atlas_flip_x_checkbox
+
+    @property
+    def atlas_flip_y_check(self) -> QCheckBox:
+        """Return the vertical atlas flip checkbox."""
+        return self.atlas_flip_y_checkbox
+
+    @property
+    def atlas_rotate_combobox(self) -> QComboBox:
+        """Return the atlas rotation orientation combo box."""
+        return self.atlas_rotate_combo
+
+    @property
+    def atlas_scale_slider_widget(self) -> QSlider:
+        """Return the atlas magnification scale slider."""
+        return self.atlas_scale_slider
+
+    @property
+    def atlas_scale_lbl(self) -> QLabel:
+        """Return the atlas scale percentage readout label."""
+        return self.atlas_scale_label
+
+    @property
+    def atlas_offset_x_slider_widget(self) -> QSlider:
+        """Return the atlas horizontal offset slider."""
+        return self.atlas_offset_x_slider
+
+    @property
+    def atlas_offset_x_lbl(self) -> QLabel:
+        """Return the atlas horizontal offset readout label."""
+        return self.atlas_offset_x_label
+
+    @property
+    def atlas_offset_y_slider_widget(self) -> QSlider:
+        """Return the atlas vertical offset slider."""
+        return self.atlas_offset_y_slider
+
+    @property
+    def atlas_offset_y_lbl(self) -> QLabel:
+        """Return the atlas vertical offset readout label."""
+        return self.atlas_offset_y_label
+
+    @property
+    def confidence_panel_toggle_btn(self) -> QToolButton:
+        """Return the confidence overlay preview toggle button."""
+        return self.confidence_panel_toggle
+
+    @property
+    def confidence_panel_frame(self) -> QFrame:
+        """Return the confidence overlay preview container frame."""
+        return self.confidence_panel
+
+    @property
+    def confidence_overlay_slice_viewer(self) -> SliceGraphicsView:
+        """Return the confidence overlay graphics viewer."""
+        return self.confidence_overlay_viewer
+
+    @property
+    def curation_slice_viewer(self) -> SliceGraphicsView:
+        """Return the primary curation histology slice graphics viewer."""
+        return self.curation_viewer
+
+    @property
+    def atlas_slice_viewer(self) -> SliceGraphicsView:
+        """Return the reference atlas slice graphics viewer."""
+        return self.atlas_viewer
+
+    # --- Curation / Review Page Ergonomic Query, Setter, and Action Helpers ---
+
+    def curation_confidence_filter(self) -> str:
+        """Return current confidence filter combo text."""
+        if hasattr(self, "confidence_filter_combo"):
+            return str(self.confidence_filter_combo.currentText())
+        return ""
+
+    def set_curation_confidence_filter(self, filter_name: str) -> None:
+        """Set confidence filter dropdown text."""
+        if hasattr(self, "confidence_filter_combo"):
+            idx = self.confidence_filter_combo.findText(filter_name)
+            if idx >= 0:
+                self.confidence_filter_combo.setCurrentIndex(idx)
+            else:
+                self.confidence_filter_combo.setCurrentText(filter_name)
+
+    def slice_note_text(self) -> str:
+        """Return current slice note text."""
+        if hasattr(self, "slice_note_edit"):
+            return str(self.slice_note_edit.text())
+        return ""
+
+    def set_slice_note_text(self, text: str) -> None:
+        """Set slice note line edit text."""
+        if hasattr(self, "slice_note_edit"):
+            self.slice_note_edit.setText(text)
+
+    def manual_ml_angle(self) -> float:
+        """Return current manual mediolateral angle value."""
+        if hasattr(self, "ml_spin"):
+            return float(self.ml_spin.value())
+        return 0.0
+
+    def set_manual_ml_angle(self, angle: float) -> None:
+        """Set manual mediolateral angle value."""
+        if hasattr(self, "ml_spin"):
+            self.ml_spin.setValue(angle)
+
+    def manual_dv_angle(self) -> float:
+        """Return current manual dorsoventral angle value."""
+        if hasattr(self, "dv_spin"):
+            return float(self.dv_spin.value())
+        return 0.0
+
+    def set_manual_dv_angle(self, angle: float) -> None:
+        """Set manual dorsoventral angle value."""
+        if hasattr(self, "dv_spin"):
+            self.dv_spin.setValue(angle)
+
+    def anchor_depth(self) -> float:
+        """Return target anchor AP depth value."""
+        if hasattr(self, "anchor_depth_spin"):
+            return float(self.anchor_depth_spin.value())
+        return 0.0
+
+    def set_anchor_depth(self, depth: float) -> None:
+        """Set target anchor AP depth value."""
+        if hasattr(self, "anchor_depth_spin"):
+            self.anchor_depth_spin.setValue(depth)
+
+    def anchor_count(self) -> int:
+        """Return the number of defined anchor points in anchor list."""
+        if hasattr(self, "anchor_list"):
+            return int(self.anchor_list.count())
+        return 0
+
+    def is_atlas_preview_enabled(self) -> bool:
+        """Return True if atlas volume preview is checked."""
+        return bool(hasattr(self, "enable_atlas_preview_checkbox") and self.enable_atlas_preview_checkbox.isChecked())
+
+    def set_atlas_preview_enabled(self, enabled: bool) -> None:
+        """Enable or disable atlas volume preview."""
+        if hasattr(self, "enable_atlas_preview_checkbox"):
+            self.enable_atlas_preview_checkbox.setChecked(enabled)
+
+    def is_blend_overlay_enabled(self) -> bool:
+        """Return True if blend atlas on histology is checked."""
+        return bool(hasattr(self, "enable_blend_overlay_checkbox") and self.enable_blend_overlay_checkbox.isChecked())
+
+    def set_blend_overlay_enabled(self, enabled: bool) -> None:
+        """Enable or disable blend atlas on histology."""
+        if hasattr(self, "enable_blend_overlay_checkbox"):
+            self.enable_blend_overlay_checkbox.setChecked(enabled)
+
+    def blend_opacity(self) -> int:
+        """Return current atlas blend opacity value."""
+        if hasattr(self, "blend_slider"):
+            return int(self.blend_slider.value())
+        return 0
+
+    def set_blend_opacity(self, opacity: int) -> None:
+        """Set atlas blend opacity value."""
+        if hasattr(self, "blend_slider"):
+            self.blend_slider.setValue(opacity)
+
+    def is_before_after_overlay_enabled(self) -> bool:
+        """Return True if before/after comparison overlay is checked."""
+        return bool(hasattr(self, "before_after_toggle") and self.before_after_toggle.isChecked())
+
+    def set_before_after_overlay_enabled(self, enabled: bool) -> None:
+        """Enable or disable before/after comparison overlay."""
+        if hasattr(self, "before_after_toggle"):
+            self.before_after_toggle.setChecked(enabled)
+
+    def is_loupe_enabled(self) -> bool:
+        """Return True if magnification loupe is checked."""
+        return bool(hasattr(self, "loupe_toggle") and self.loupe_toggle.isChecked())
+
+    def set_loupe_enabled(self, enabled: bool) -> None:
+        """Enable or disable magnification loupe."""
+        if hasattr(self, "loupe_toggle"):
+            self.loupe_toggle.setChecked(enabled)
+
+    def is_atlas_flip_x_enabled(self) -> bool:
+        """Return True if horizontal atlas flip is checked."""
+        return bool(hasattr(self, "atlas_flip_x_checkbox") and self.atlas_flip_x_checkbox.isChecked())
+
+    def set_atlas_flip_x_enabled(self, enabled: bool) -> None:
+        """Enable or disable horizontal atlas flip."""
+        if hasattr(self, "atlas_flip_x_checkbox"):
+            self.atlas_flip_x_checkbox.setChecked(enabled)
+
+    def is_atlas_flip_y_enabled(self) -> bool:
+        """Return True if vertical atlas flip is checked."""
+        return bool(hasattr(self, "atlas_flip_y_checkbox") and self.atlas_flip_y_checkbox.isChecked())
+
+    def set_atlas_flip_y_enabled(self, enabled: bool) -> None:
+        """Enable or disable vertical atlas flip."""
+        if hasattr(self, "atlas_flip_y_checkbox"):
+            self.atlas_flip_y_checkbox.setChecked(enabled)
+
+    def atlas_scale_percent(self) -> int:
+        """Return current atlas magnification scale percentage."""
+        if hasattr(self, "atlas_scale_slider"):
+            return int(self.atlas_scale_slider.value())
+        return 100
+
+    def set_atlas_scale_percent(self, val: int) -> None:
+        """Set atlas magnification scale percentage."""
+        if hasattr(self, "atlas_scale_slider"):
+            self.atlas_scale_slider.setValue(val)
+
+    def atlas_offset_x(self) -> int:
+        """Return current atlas horizontal offset percentage."""
+        if hasattr(self, "atlas_offset_x_slider"):
+            return int(self.atlas_offset_x_slider.value())
+        return 0
+
+    def set_atlas_offset_x(self, val: int) -> None:
+        """Set atlas horizontal offset percentage."""
+        if hasattr(self, "atlas_offset_x_slider"):
+            self.atlas_offset_x_slider.setValue(val)
+
+    def atlas_offset_y(self) -> int:
+        """Return current atlas vertical offset percentage."""
+        if hasattr(self, "atlas_offset_y_slider"):
+            return int(self.atlas_offset_y_slider.value())
+        return 0
+
+    def set_atlas_offset_y(self, val: int) -> None:
+        """Set atlas vertical offset percentage."""
+        if hasattr(self, "atlas_offset_y_slider"):
+            self.atlas_offset_y_slider.setValue(val)
+
+    def is_confidence_panel_expanded(self) -> bool:
+        """Return True if confidence overlay preview panel is expanded."""
+        return bool(hasattr(self, "confidence_panel_toggle") and self.confidence_panel_toggle.isChecked())
+
+    def set_confidence_panel_expanded(self, expanded: bool) -> None:
+        """Expand or collapse confidence overlay preview panel."""
+        if hasattr(self, "confidence_panel_toggle"):
+            self.confidence_panel_toggle.setChecked(expanded)
+
+    def trigger_curation_prev_slice(self) -> bool:
+        """Trigger navigation to previous slice on curation page."""
+        if hasattr(self, "curation_prev_button") and self.curation_prev_button.isEnabled():
+            self.curation_prev_button.click()
+            return True
+        return False
+
+    def trigger_curation_next_slice(self) -> bool:
+        """Trigger navigation to next slice on curation page."""
+        if hasattr(self, "curation_next_button") and self.curation_next_button.isEnabled():
+            self.curation_next_button.click()
+            return True
+        return False
+
+    def trigger_move_slice_up(self) -> bool:
+        """Trigger move selected slice up button."""
+        if hasattr(self, "move_slice_up_button") and self.move_slice_up_button.isEnabled():
+            self.move_slice_up_button.click()
+            return True
+        return False
+
+    def trigger_move_slice_down(self) -> bool:
+        """Trigger move selected slice down button."""
+        if hasattr(self, "move_slice_down_button") and self.move_slice_down_button.isEnabled():
+            self.move_slice_down_button.click()
+            return True
+        return False
+
+    def trigger_detect_outliers(self) -> bool:
+        """Trigger detect outliers button action."""
+        if hasattr(self, "detect_outliers_button") and self.detect_outliers_button.isEnabled():
+            self.detect_outliers_button.click()
+            return True
+        return False
+
+    def trigger_reset_flags(self) -> bool:
+        """Trigger reset all flags button action."""
+        if hasattr(self, "reset_flags_button") and self.reset_flags_button.isEnabled():
+            self.reset_flags_button.click()
+            return True
+        return False
+
+    def trigger_auto_flag_low_conf(self) -> bool:
+        """Trigger auto-flag low confidence sections button."""
+        if hasattr(self, "auto_flag_low_conf_button") and self.auto_flag_low_conf_button.isEnabled():
+            self.auto_flag_low_conf_button.click()
+            return True
+        return False
+
+    def trigger_interpolate_bad_depth(self) -> bool:
+        """Trigger interpolate flagged depths button."""
+        if hasattr(self, "interpolate_bad_depth_button") and self.interpolate_bad_depth_button.isEnabled():
+            self.interpolate_bad_depth_button.click()
+            return True
+        return False
+
+    def trigger_toggle_current_flag(self) -> bool:
+        """Trigger toggle flag for the currently active slice."""
+        if hasattr(self, "toggle_current_flag_button") and self.toggle_current_flag_button.isEnabled():
+            self.toggle_current_flag_button.click()
+            return True
+        return False
+
+    def trigger_save_slice_note(self) -> bool:
+        """Trigger save slice note button."""
+        if hasattr(self, "save_slice_note_button") and self.save_slice_note_button.isEnabled():
+            self.save_slice_note_button.click()
+            return True
+        return False
+
+    def trigger_normalize_angles(self) -> bool:
+        """Trigger normalize angles button action."""
+        if hasattr(self, "normalize_angles_button") and self.normalize_angles_button.isEnabled():
+            self.normalize_angles_button.click()
+            return True
+        return False
+
+    def trigger_enforce_order(self) -> bool:
+        """Trigger enforce index order button action."""
+        if hasattr(self, "enforce_order_button") and self.enforce_order_button.isEnabled():
+            self.enforce_order_button.click()
+            return True
+        return False
+
+    def trigger_enforce_spacing(self) -> bool:
+        """Trigger enforce index spacing button action."""
+        if hasattr(self, "enforce_spacing_button") and self.enforce_spacing_button.isEnabled():
+            self.enforce_spacing_button.click()
+            return True
+        return False
+
+    def trigger_apply_manual_angles(self) -> bool:
+        """Trigger apply manual angles button action."""
+        if hasattr(self, "apply_manual_angles_button") and self.apply_manual_angles_button.isEnabled():
+            self.apply_manual_angles_button.click()
+            return True
+        return False
+
+    def trigger_undo(self) -> bool:
+        """Trigger undo curation action button."""
+        if hasattr(self, "undo_button") and self.undo_button.isEnabled():
+            self.undo_button.click()
+            return True
+        return False
+
+    def trigger_redo(self) -> bool:
+        """Trigger redo curation action button."""
+        if hasattr(self, "redo_button") and self.redo_button.isEnabled():
+            self.redo_button.click()
+            return True
+        return False
+
+    def trigger_set_anchor(self) -> bool:
+        """Trigger set/update anchor for current slice."""
+        if hasattr(self, "set_anchor_button") and self.set_anchor_button.isEnabled():
+            self.set_anchor_button.click()
+            return True
+        return False
+
+    def trigger_remove_anchor(self) -> bool:
+        """Trigger remove anchor for current slice."""
+        if hasattr(self, "remove_anchor_button") and self.remove_anchor_button.isEnabled():
+            self.remove_anchor_button.click()
+            return True
+        return False
+
+    def trigger_apply_anchor_interpolation(self) -> bool:
+        """Trigger apply anchor interpolation button."""
+        if hasattr(self, "apply_anchor_interpolation_button") and self.apply_anchor_interpolation_button.isEnabled():
+            self.apply_anchor_interpolation_button.click()
+            return True
+        return False
+
+    def trigger_clear_anchors(self) -> bool:
+        """Trigger clear all anchors button."""
+        if hasattr(self, "clear_anchor_button") and self.clear_anchor_button.isEnabled():
+            self.clear_anchor_button.click()
+            return True
+        return False
+
+    def trigger_plot_zoom_fit(self) -> bool:
+        """Trigger fit linearity plot zoom button."""
+        if hasattr(self, "zoom_fit_button") and self.zoom_fit_button.isEnabled():
+            self.zoom_fit_button.click()
+            return True
+        return False
+
+    def trigger_plot_zoom_in(self) -> bool:
+        """Trigger linearity plot zoom in button."""
+        if hasattr(self, "zoom_in_button") and self.zoom_in_button.isEnabled():
+            self.zoom_in_button.click()
+            return True
+        return False
+
+    def trigger_plot_zoom_out(self) -> bool:
+        """Trigger linearity plot zoom out button."""
+        if hasattr(self, "zoom_out_button") and self.zoom_out_button.isEnabled():
+            self.zoom_out_button.click()
+            return True
+        return False
+
+
 
 
     def _notify_startup_progress(self, message: str, percent: int):
@@ -8835,7 +9488,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.curation_prev_button.setText("Prev")
 
-        self.curation_prev_button.setObjectName("curation_prev_button")
+        self.curation_prev_button.setObjectName("curationPrevBtn")
+        self.curation_prev_button.setAccessibleDescription("Navigate to previous histological section in curation queue")
 
         self.curation_prev_button.setAccessibleName("Previous Section")
 
@@ -8851,7 +9505,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.curation_next_button.setText("Next")
 
-        self.curation_next_button.setObjectName("curation_next_button")
+        self.curation_next_button.setObjectName("curationNextBtn")
+        self.curation_next_button.setAccessibleDescription("Navigate to next histological section in curation queue")
 
         self.curation_next_button.setAccessibleName("Next Section")
 
@@ -8867,7 +9522,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.curation_select_all_btn.setText("Select All")
 
-        self.curation_select_all_btn.setObjectName("curation_select_all_btn")
+        self.curation_select_all_btn.setObjectName("curationSelectAllBtn")
+        self.curation_select_all_btn.setAccessibleDescription("Flag all sections as bad or excluded from alignment")
 
         self.curation_select_all_btn.setAccessibleName("Select All Bad Section Flags")
 
@@ -8883,7 +9539,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.curation_deselect_all_btn.setText("Deselect All")
 
-        self.curation_deselect_all_btn.setObjectName("curation_deselect_all_btn")
+        self.curation_deselect_all_btn.setObjectName("curationDeselectAllBtn")
+        self.curation_deselect_all_btn.setAccessibleDescription("Clear bad section flags from all sections")
 
         self.curation_deselect_all_btn.setAccessibleName("Deselect All Bad Section Flags")
 
@@ -8897,7 +9554,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.confidence_filter_combo = QComboBox()
 
-        self.confidence_filter_combo.setObjectName("confidence_filter_combo")
+        self.confidence_filter_combo.setObjectName("confidenceFilterCombo")
+        self.confidence_filter_combo.setAccessibleDescription("Filter displayed slices by prediction confidence tier")
 
         self.confidence_filter_combo.setAccessibleName("Filter Slices by Confidence")
 
@@ -8931,7 +9589,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.slice_flag_list = FlagListWidget()
 
-        self.slice_flag_list.setObjectName("slice_flag_list")
+        self.slice_flag_list.setObjectName("sliceFlagList")
+        self.slice_flag_list.setAccessibleDescription("Curated list of sections with exclusion flags and confidence indicators")
 
         self.slice_flag_list.setAccessibleName("Curated Slices List")
 
@@ -8951,7 +9610,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.apply_bad_sections_button = QPushButton("Apply Bad Section Flags")
 
-        self.apply_bad_sections_button.setObjectName("apply_bad_sections_button")
+        self.apply_bad_sections_button.setObjectName("applyBadSectionsBtn")
+        self.apply_bad_sections_button.setAccessibleDescription("Exclude flagged bad sections from alignment calculations")
 
         self.apply_bad_sections_button.setAccessibleName("Apply Bad Section Flags")
 
@@ -8965,7 +9625,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.apply_manual_order_button = QPushButton("Apply Manual Reordering")
 
-        self.apply_manual_order_button.setObjectName("apply_manual_order_button")
+        self.apply_manual_order_button.setObjectName("applyManualOrderBtn")
+        self.apply_manual_order_button.setAccessibleDescription("Apply current manual section ordering to alignment pipeline")
 
         self.apply_manual_order_button.setAccessibleName("Apply Manual Reordering")
 
@@ -8981,7 +9642,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.move_slice_up_button.setText("Move Up")
 
-        self.move_slice_up_button.setObjectName("move_slice_up_button")
+        self.move_slice_up_button.setObjectName("moveSliceUpBtn")
+        self.move_slice_up_button.setAccessibleDescription("Move selected section earlier in the sequence")
 
         self.move_slice_up_button.setAccessibleName("Move Selected Slice Up")
 
@@ -8997,7 +9659,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.move_slice_down_button.setText("Move Down")
 
-        self.move_slice_down_button.setObjectName("move_slice_down_button")
+        self.move_slice_down_button.setObjectName("moveSliceDownBtn")
+        self.move_slice_down_button.setAccessibleDescription("Move selected section later in the sequence")
 
         self.move_slice_down_button.setAccessibleName("Move Selected Slice Down")
 
@@ -9011,7 +9674,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.detect_outliers_button = QPushButton("Detect Outliers")
 
-        self.detect_outliers_button.setObjectName("detect_outliers_button")
+        self.detect_outliers_button.setObjectName("detectOutliersBtn")
+        self.detect_outliers_button.setAccessibleDescription("Identify statistical outliers in slice angle and spacing predictions")
 
         self.detect_outliers_button.setAccessibleName("Detect Alignment Outliers")
 
@@ -9025,7 +9689,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.reset_flags_button = QPushButton("Reset All Flags")
 
-        self.reset_flags_button.setObjectName("reset_flags_button")
+        self.reset_flags_button.setObjectName("resetFlagsBtn")
+        self.reset_flags_button.setAccessibleDescription("Clear all section exclusion flags back to default state")
 
         self.reset_flags_button.setAccessibleName("Reset All Flags")
 
@@ -9039,7 +9704,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.auto_flag_low_conf_button = QPushButton("Auto-Flag Low Confidence")
 
-        self.auto_flag_low_conf_button.setObjectName("auto_flag_low_conf_button")
+        self.auto_flag_low_conf_button.setObjectName("autoFlagLowConfBtn")
+        self.auto_flag_low_conf_button.setAccessibleDescription("Automatically flag sections with confidence scores below review threshold")
 
         self.auto_flag_low_conf_button.setAccessibleName("Auto-Flag Low Confidence Sections")
 
@@ -9053,7 +9719,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.interpolate_bad_depth_button = QPushButton("Interpolate Flagged Depths")
 
-        self.interpolate_bad_depth_button.setObjectName("interpolate_bad_depth_button")
+        self.interpolate_bad_depth_button.setObjectName("interpolateBadDepthBtn")
+        self.interpolate_bad_depth_button.setAccessibleDescription("Linearly interpolate AP depths for flagged sections from neighboring confident slices")
 
         self.interpolate_bad_depth_button.setAccessibleName("Interpolate Flagged Depths")
 
@@ -9069,7 +9736,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.toggle_current_flag_button.setText("Toggle Current")
 
-        self.toggle_current_flag_button.setObjectName("toggle_current_flag_button")
+        self.toggle_current_flag_button.setObjectName("toggleCurrentFlagBtn")
+        self.toggle_current_flag_button.setAccessibleDescription("Toggle exclusion flag for the currently active slice")
 
         self.toggle_current_flag_button.setAccessibleName("Toggle Current Section Flag")
 
@@ -9083,7 +9751,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.slice_note_edit = QLineEdit()
 
-        self.slice_note_edit.setObjectName("slice_note_edit")
+        self.slice_note_edit.setObjectName("sliceNoteEdit")
+        self.slice_note_edit.setAccessibleDescription("Enter optional curation or anatomical notes for the active slice")
 
         self.slice_note_edit.setAccessibleName("Per-Slice Atlas Note")
 
@@ -9095,7 +9764,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.save_slice_note_button = QPushButton("Save Slice Note")
 
-        self.save_slice_note_button.setObjectName("save_slice_note_button")
+        self.save_slice_note_button.setObjectName("saveSliceNoteBtn")
+        self.save_slice_note_button.setAccessibleDescription("Save annotation note to the active slice metadata")
 
         self.save_slice_note_button.setAccessibleName("Save Slice Note")
 
@@ -9109,7 +9779,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.curation_queue_label = QLabel("Review queue: 0 slices")
 
-        self.curation_queue_label.setObjectName("HintText")
+        self.curation_queue_label.setObjectName("curationQueueLabel")
+        self.curation_queue_label.setAccessibleDescription("Status readout showing number of slices pending curation review")
 
         self.curation_queue_label.setAccessibleName("Review Queue Status")
 
@@ -9117,7 +9788,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.controls_group = QGroupBox("Propagation / Curation")
 
-        self.controls_group.setObjectName("controls_group")
+        self.controls_group.setObjectName("controlsGroupBox")
+        self.controls_group.setAccessibleName("Propagation and Curation Controls")
+        self.controls_group.setAccessibleDescription("Collapsible panel for angle propagation, index ordering, and spacing controls")
 
         self.controls_group.setCheckable(True)
 
@@ -9131,7 +9804,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.normalize_angles_button = QPushButton("Normalize Angles")
 
-        self.normalize_angles_button.setObjectName("normalize_angles_button")
+        self.normalize_angles_button.setObjectName("normalizeAnglesBtn")
+        self.normalize_angles_button.setAccessibleDescription("Applies Gaussian-weighted DV and ML mean-angle propagation")
 
         self.normalize_angles_button.setAccessibleName("Normalize Angles")
 
@@ -9149,7 +9823,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.enforce_order_button = QPushButton("Enforce Index Order")
 
-        self.enforce_order_button.setObjectName("enforce_order_button")
+        self.enforce_order_button.setObjectName("enforceOrderBtn")
+        self.enforce_order_button.setAccessibleDescription("Reorders Oy values to match index ordering while preserving measured spacing")
 
         self.enforce_order_button.setAccessibleName("Enforce Index Order")
 
@@ -9167,7 +9842,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.enforce_spacing_button = QPushButton("Enforce Index Spacing")
 
-        self.enforce_spacing_button.setObjectName("enforce_spacing_button")
+        self.enforce_spacing_button.setObjectName("enforceSpacingBtn")
+        self.enforce_spacing_button.setAccessibleDescription("Recalculates Oy values to be evenly spaced based on section thickness")
 
         self.enforce_spacing_button.setAccessibleName("Enforce Index Spacing")
 
@@ -9185,7 +9861,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.ml_spin = QDoubleSpinBox()
 
-        self.ml_spin.setObjectName("ml_spin")
+        self.ml_spin.setObjectName("mlSpin")
+        self.ml_spin.setAccessibleDescription("Specify manual Mediolateral angle in degrees")
 
         self.ml_spin.setAccessibleName("Mediolateral (ML) Angle")
 
@@ -9201,7 +9878,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.dv_spin = QDoubleSpinBox()
 
-        self.dv_spin.setObjectName("dv_spin")
+        self.dv_spin.setObjectName("dvSpin")
+        self.dv_spin.setAccessibleDescription("Specify manual Dorsoventral angle in degrees")
 
         self.dv_spin.setAccessibleName("Dorsoventral (DV) Angle")
 
@@ -9217,7 +9895,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.apply_manual_angles_button = QPushButton("Apply Manual Angles")
 
-        self.apply_manual_angles_button.setObjectName("apply_manual_angles_button")
+        self.apply_manual_angles_button.setObjectName("applyManualAnglesBtn")
+        self.apply_manual_angles_button.setAccessibleDescription("Directly overrides dataset ML and DV angles in degrees")
 
         self.apply_manual_angles_button.setAccessibleName("Apply Manual Angles")
 
@@ -9235,7 +9914,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.undo_button = QPushButton("Undo (0)")
 
-        self.undo_button.setObjectName("undo_button")
+        self.undo_button.setObjectName("undoBtn")
+        self.undo_button.setAccessibleDescription("Undo last curation modification")
 
         self.undo_button.setAccessibleName("Undo Curation Action")
 
@@ -9249,7 +9929,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.redo_button = QPushButton("Redo (0)")
 
-        self.redo_button.setObjectName("redo_button")
+        self.redo_button.setObjectName("redoBtn")
+        self.redo_button.setAccessibleDescription("Redo last undone curation modification")
 
         self.redo_button.setAccessibleName("Redo Curation Action")
 
@@ -9285,7 +9966,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.anchor_group = QGroupBox("Anchor Alignment")
 
-        self.anchor_group.setObjectName("anchor_group")
+        self.anchor_group.setObjectName("anchorGroupBox")
+        self.anchor_group.setAccessibleName("Anchor Alignment Controls")
+        self.anchor_group.setAccessibleDescription("Collapsible panel for stereotaxic anchor registration and depth interpolation")
 
         self.anchor_group.setCheckable(True)
 
@@ -9300,6 +9983,9 @@ class DeepSliceMainWindow(QMainWindow):
             "Set 3 or more known slices as anchors, then interpolate all other AP depths between anchors."
 
         )
+        self.anchor_summary_label.setObjectName("anchorSummaryLabel")
+        self.anchor_summary_label.setAccessibleName("Anchor Alignment Summary")
+        self.anchor_summary_label.setAccessibleDescription("Explanation of multi-point anchor registration and depth interpolation")
 
         self.anchor_summary_label.setWordWrap(True)
 
@@ -9307,7 +9993,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.anchor_depth_spin = QDoubleSpinBox()
 
-        self.anchor_depth_spin.setObjectName("anchor_depth_spin")
+        self.anchor_depth_spin.setObjectName("anchorDepthSpin")
+        self.anchor_depth_spin.setAccessibleDescription("Reference stereotaxic AP depth coordinate for selected slice")
 
         self.anchor_depth_spin.setAccessibleName("Target AP Depth")
 
@@ -9327,7 +10014,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.set_anchor_button.setText("Set/Update Anchor")
 
-        self.set_anchor_button.setObjectName("set_anchor_button")
+        self.set_anchor_button.setObjectName("setAnchorBtn")
+        self.set_anchor_button.setAccessibleDescription("Set or update reference anchor depth for active slice")
 
         self.set_anchor_button.setAccessibleName("Set or Update Anchor")
 
@@ -9343,7 +10031,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.remove_anchor_button.setText("Remove Anchor")
 
-        self.remove_anchor_button.setObjectName("remove_anchor_button")
+        self.remove_anchor_button.setObjectName("removeAnchorBtn")
+        self.remove_anchor_button.setAccessibleDescription("Remove reference anchor coordinate from active slice")
 
         self.remove_anchor_button.setAccessibleName("Remove Anchor")
 
@@ -9357,7 +10046,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.apply_anchor_interpolation_button = QPushButton("Distribute Between Anchors")
 
-        self.apply_anchor_interpolation_button.setObjectName("apply_anchor_interpolation_button")
+        self.apply_anchor_interpolation_button.setObjectName("applyAnchorInterpolationBtn")
+        self.apply_anchor_interpolation_button.setAccessibleDescription("Linearly interpolate intermediate slices between defined anchors")
 
         self.apply_anchor_interpolation_button.setAccessibleName("Distribute Between Anchors")
 
@@ -9373,7 +10063,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.clear_anchor_button.setText("Clear")
 
-        self.clear_anchor_button.setObjectName("clear_anchor_button")
+        self.clear_anchor_button.setObjectName("clearAnchorBtn")
+        self.clear_anchor_button.setAccessibleDescription("Remove all stereotaxic anchor coordinates")
 
         self.clear_anchor_button.setAccessibleName("Clear All Anchors")
 
@@ -9397,7 +10088,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.anchor_list = QListWidget()
 
-        self.anchor_list.setObjectName("anchor_list")
+        self.anchor_list.setObjectName("anchorList")
+        self.anchor_list.setAccessibleDescription("List of slices currently designated as stereotaxic alignment anchors")
 
         self.anchor_list.setAccessibleName("Defined Anchors List")
 
@@ -9522,6 +10214,9 @@ class DeepSliceMainWindow(QMainWindow):
         self.linearity_figure = Figure(figsize=(5.2, 2.2), facecolor=self._plot_palette()["figure"])
 
         self.linearity_canvas = FigureCanvas(self.linearity_figure)
+        self.linearity_canvas.setObjectName("linearityCanvas")
+        self.linearity_canvas.setAccessibleName("Linearity Plot Canvas")
+        self.linearity_canvas.setAccessibleDescription("Interactive scatter plot depicting AP depth linearity against section indices")
 
         self.linearity_axis = self.linearity_figure.add_subplot(111)
 
@@ -9539,7 +10234,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.zoom_fit_button.setText("Fit")
 
-        self.zoom_fit_button.setObjectName("zoom_fit_button")
+        self.zoom_fit_button.setObjectName("zoomFitBtn")
+        self.zoom_fit_button.setAccessibleDescription("Fit linearity plot view to dataset extents")
 
         self.zoom_fit_button.setAccessibleName("Fit Linearity Plot")
 
@@ -9555,7 +10251,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.zoom_in_button.setText("+")
 
-        self.zoom_in_button.setObjectName("zoom_in_button")
+        self.zoom_in_button.setObjectName("zoomInBtn")
+        self.zoom_in_button.setAccessibleDescription("Zoom in on linearity plot")
 
         self.zoom_in_button.setAccessibleName("Zoom In Plot")
 
@@ -9571,7 +10268,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.zoom_out_button.setText("-")
 
-        self.zoom_out_button.setObjectName("zoom_out_button")
+        self.zoom_out_button.setObjectName("zoomOutBtn")
+        self.zoom_out_button.setAccessibleDescription("Zoom out on linearity plot")
 
         self.zoom_out_button.setAccessibleName("Zoom Out Plot")
 
@@ -9598,6 +10296,9 @@ class DeepSliceMainWindow(QMainWindow):
         self.hist_figure = Figure(figsize=(5.2, 1.0), facecolor=self._plot_palette()["figure"])
 
         self.hist_canvas = FigureCanvas(self.hist_figure)
+        self.hist_canvas.setObjectName("histCanvas")
+        self.hist_canvas.setAccessibleName("Spacing Distribution Histogram Canvas")
+        self.hist_canvas.setAccessibleDescription("Histogram showing spacing distribution across consecutive histological sections")
 
         self.hist_axis = self.hist_figure.add_subplot(111)
 
@@ -9611,7 +10312,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.enable_atlas_preview_checkbox = QCheckBox("Atlas volume preview")
 
-        self.enable_atlas_preview_checkbox.setObjectName("enable_atlas_preview_checkbox")
+        self.enable_atlas_preview_checkbox.setObjectName("enableAtlasPreviewCheck")
+        self.enable_atlas_preview_checkbox.setAccessibleDescription("Toggle volumetric coronal slice rendering from 3D reference atlas")
 
         self.enable_atlas_preview_checkbox.setAccessibleName("Enable Atlas Preview")
 
@@ -9625,7 +10327,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_volume_combo = QComboBox()
 
-        self.atlas_volume_combo.setObjectName("atlas_volume_combo")
+        self.atlas_volume_combo.setObjectName("atlasVolumeCombo")
+        self.atlas_volume_combo.setAccessibleDescription("Select reference atlas volume template")
 
         self.atlas_volume_combo.setAccessibleName("Atlas Reference Volume")
 
@@ -9639,7 +10342,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.enable_blend_overlay_checkbox = QCheckBox("Blend atlas on histology")
 
-        self.enable_blend_overlay_checkbox.setObjectName("enable_blend_overlay_checkbox")
+        self.enable_blend_overlay_checkbox.setObjectName("enableBlendOverlayCheck")
+        self.enable_blend_overlay_checkbox.setAccessibleDescription("Overlay semi-transparent atlas boundaries directly on histological section")
 
         self.enable_blend_overlay_checkbox.setAccessibleName("Blend Atlas on Histology")
 
@@ -9653,7 +10357,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.blend_slider = QSlider(Qt.Horizontal)
 
-        self.blend_slider.setObjectName("blend_slider")
+        self.blend_slider.setObjectName("blendSlider")
+        self.blend_slider.setAccessibleDescription("Adjust blend opacity percentage for atlas overlay")
 
         self.blend_slider.setAccessibleName("Atlas Blend Opacity")
 
@@ -9669,17 +10374,22 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.blend_percent_label = QLabel("Blend: 35%")
 
-        self.blend_percent_label.setObjectName("blend_percent_label")
+        self.blend_percent_label.setObjectName("blendPercentLabel")
+        self.blend_percent_label.setAccessibleName("Blend Percentage Readout")
+        self.blend_percent_label.setAccessibleDescription("Current atlas blend overlay opacity percentage")
 
         self.atlas_slice_info_label = QLabel("Atlas: disabled")
 
-        self.atlas_slice_info_label.setObjectName("atlas_slice_info_label")
+        self.atlas_slice_info_label.setObjectName("atlasSliceInfoLabel")
+        self.atlas_slice_info_label.setAccessibleName("Atlas Slice Status Readout")
+        self.atlas_slice_info_label.setAccessibleDescription("Current status of coronal reference atlas volume slice")
 
 
 
         self.before_after_toggle = QCheckBox("Before/After Overlay")
 
-        self.before_after_toggle.setObjectName("before_after_toggle")
+        self.before_after_toggle.setObjectName("beforeAfterToggle")
+        self.before_after_toggle.setAccessibleDescription("Compare unadjusted deep learning predictions with curated alignment")
 
         self.before_after_toggle.setAccessibleName("Before/After Overlay")
 
@@ -9693,7 +10403,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.loupe_toggle = QCheckBox("Loupe")
 
-        self.loupe_toggle.setObjectName("loupe_toggle")
+        self.loupe_toggle.setObjectName("loupeToggle")
+        self.loupe_toggle.setAccessibleDescription("Enable interactive zoom loupe under mouse pointer")
 
         self.loupe_toggle.setAccessibleName("Magnification Loupe")
 
@@ -9707,7 +10418,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_coords_label = QLabel("Atlas coords: -")
 
-        self.atlas_coords_label.setObjectName("atlas_coords_label")
+        self.atlas_coords_label.setObjectName("atlasCoordsLabel")
+        self.atlas_coords_label.setAccessibleName("Atlas Coordinates Readout")
+        self.atlas_coords_label.setAccessibleDescription("Current stereotaxic AP, ML, and DV atlas coordinates under cursor")
 
 
 
@@ -9737,7 +10450,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_flip_x_checkbox = QCheckBox("Flip X")
 
-        self.atlas_flip_x_checkbox.setObjectName("atlas_flip_x_checkbox")
+        self.atlas_flip_x_checkbox.setObjectName("atlasFlipXCheck")
+        self.atlas_flip_x_checkbox.setAccessibleDescription("Flip atlas slice horizontally along mediolateral axis")
 
         self.atlas_flip_x_checkbox.setAccessibleName("Flip Atlas Horizontally")
 
@@ -9751,7 +10465,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_flip_y_checkbox = QCheckBox("Flip Y")
 
-        self.atlas_flip_y_checkbox.setObjectName("atlas_flip_y_checkbox")
+        self.atlas_flip_y_checkbox.setObjectName("atlasFlipYCheck")
+        self.atlas_flip_y_checkbox.setAccessibleDescription("Flip atlas slice vertically along dorsoventral axis")
 
         self.atlas_flip_y_checkbox.setAccessibleName("Flip Atlas Vertically")
 
@@ -9765,7 +10480,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_rotate_combo = QComboBox()
 
-        self.atlas_rotate_combo.setObjectName("atlas_rotate_combo")
+        self.atlas_rotate_combo.setObjectName("atlasRotateCombo")
+        self.atlas_rotate_combo.setAccessibleDescription("Select reference atlas rotational orientation")
 
         self.atlas_rotate_combo.setAccessibleName("Rotate Atlas")
 
@@ -9791,7 +10507,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_scale_slider = QSlider(Qt.Horizontal)
 
-        self.atlas_scale_slider.setObjectName("atlas_scale_slider")
+        self.atlas_scale_slider.setObjectName("atlasScaleSlider")
+        self.atlas_scale_slider.setAccessibleDescription("Adjust magnification scale of reference atlas overlay")
 
         self.atlas_scale_slider.setAccessibleName("Atlas Scale Slider")
 
@@ -9807,7 +10524,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_scale_label = QLabel("Scale: 100%")
 
-        self.atlas_scale_label.setObjectName("atlas_scale_label")
+        self.atlas_scale_label.setObjectName("atlasScaleLabel")
+        self.atlas_scale_label.setAccessibleName("Atlas Scale Readout")
+        self.atlas_scale_label.setAccessibleDescription("Current reference atlas magnification scale percentage")
 
 
 
@@ -9827,7 +10546,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_offset_x_slider = QSlider(Qt.Horizontal)
 
-        self.atlas_offset_x_slider.setObjectName("atlas_offset_x_slider")
+        self.atlas_offset_x_slider.setObjectName("atlasOffsetXSlider")
+        self.atlas_offset_x_slider.setAccessibleDescription("Shift atlas overlay horizontally")
 
         self.atlas_offset_x_slider.setAccessibleName("Atlas Horizontal Offset")
 
@@ -9843,13 +10563,16 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_offset_x_label = QLabel("Offset X: 0%")
 
-        self.atlas_offset_x_label.setObjectName("atlas_offset_x_label")
+        self.atlas_offset_x_label.setObjectName("atlasOffsetXLabel")
+        self.atlas_offset_x_label.setAccessibleName("Atlas Horizontal Offset Readout")
+        self.atlas_offset_x_label.setAccessibleDescription("Current horizontal shift percentage for atlas overlay")
 
 
 
         self.atlas_offset_y_slider = QSlider(Qt.Horizontal)
 
-        self.atlas_offset_y_slider.setObjectName("atlas_offset_y_slider")
+        self.atlas_offset_y_slider.setObjectName("atlasOffsetYSlider")
+        self.atlas_offset_y_slider.setAccessibleDescription("Shift atlas overlay vertically")
 
         self.atlas_offset_y_slider.setAccessibleName("Atlas Vertical Offset")
 
@@ -9865,7 +10588,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.atlas_offset_y_label = QLabel("Offset Y: 0%")
 
-        self.atlas_offset_y_label.setObjectName("atlas_offset_y_label")
+        self.atlas_offset_y_label.setObjectName("atlasOffsetYLabel")
+        self.atlas_offset_y_label.setAccessibleName("Atlas Vertical Offset Readout")
+        self.atlas_offset_y_label.setAccessibleDescription("Current vertical shift percentage for atlas overlay")
 
 
 
@@ -9887,7 +10612,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.confidence_panel_toggle.setText("Confidence Overlay Preview")
 
-        self.confidence_panel_toggle.setObjectName("confidence_panel_toggle")
+        self.confidence_panel_toggle.setObjectName("confidencePanelToggle")
+        self.confidence_panel_toggle.setAccessibleDescription("Show or hide slice prediction confidence heatmap panel")
 
         self.confidence_panel_toggle.setAccessibleName("Toggle Confidence Overlay Preview")
 
@@ -9908,6 +10634,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.confidence_panel = QFrame()
+        self.confidence_panel.setObjectName("confidencePanel")
+        self.confidence_panel.setAccessibleName("Confidence Preview Panel")
 
         confidence_panel_layout = QVBoxLayout(self.confidence_panel)
 
@@ -9916,6 +10644,9 @@ class DeepSliceMainWindow(QMainWindow):
         confidence_panel_layout.setSpacing(4)
 
         self.confidence_overlay_viewer = SliceGraphicsView()
+        self.confidence_overlay_viewer.setObjectName("confidenceOverlayViewer")
+        self.confidence_overlay_viewer.setAccessibleName("Confidence Overlay Viewer")
+        self.confidence_overlay_viewer.setAccessibleDescription("Heatmap overlay depicting slice prediction confidence and atlas agreement")
 
         self.confidence_overlay_viewer.setMinimumHeight(180)
 
@@ -9942,8 +10673,14 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.curation_viewer = SliceGraphicsView()
+        self.curation_viewer.setObjectName("curationViewer")
+        self.curation_viewer.setAccessibleName("Curation Slice Viewer")
+        self.curation_viewer.setAccessibleDescription("Histology slice image view with interactive pan and zoom")
 
         self.atlas_viewer = SliceGraphicsView()
+        self.atlas_viewer.setObjectName("atlasViewer")
+        self.atlas_viewer.setAccessibleName("Reference Atlas Viewer")
+        self.atlas_viewer.setAccessibleDescription("Reference coronal atlas slice synchronized with histology view")
 
         self.atlas_viewer.clear_with_text("Enable atlas preview to load atlas slices")
 

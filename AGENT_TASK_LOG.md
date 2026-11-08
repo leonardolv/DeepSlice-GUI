@@ -18,13 +18,24 @@ here.
 
 ## Completed
 
+### Task: Curation Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across Curation Page controls: `curationPrevBtn`, `curationNextBtn`, `curationSelectAllBtn`, `curationDeselectAllBtn`, `confidenceFilterCombo`, `sliceFlagList`, `applyBadSectionsBtn`, `applyManualOrderBtn`, `moveSliceUpBtn`, `moveSliceDownBtn`, `detectOutliersBtn`, `resetFlagsBtn`, `autoFlagLowConfBtn`, `interpolateBadDepthBtn`, `toggleCurrentFlagBtn`, `sliceNoteEdit`, `saveSliceNoteBtn`, `curationQueueLabel`, `controlsGroupBox`, `normalizeAnglesBtn`, `enforceOrderBtn`, `enforceSpacingBtn`, `mlSpin`, `dvSpin`, `applyManualAnglesBtn`, `undoBtn`, `redoBtn`, `anchorGroupBox`, `anchorSummaryLabel`, `anchorDepthSpin`, `setAnchorBtn`, `removeAnchorBtn`, `applyAnchorInterpolationBtn`, `clearAnchorBtn`, `anchorList`, `linearityCanvas`, `zoomFitBtn`, `zoomInBtn`, `zoomOutBtn`, `histCanvas`, `enableAtlasPreviewCheck`, `atlasVolumeCombo`, `enableBlendOverlayCheck`, `blendSlider`, `blendPercentLabel`, `atlasSliceInfoLabel`, `beforeAfterToggle`, `loupeToggle`, `atlasCoordsLabel`, `atlasFlipXCheck`, `atlasFlipYCheck`, `atlasRotateCombo`, `atlasScaleSlider`, `atlasScaleLabel`, `atlasOffsetXSlider`, `atlasOffsetXLabel`, `atlasOffsetYSlider`, `atlasOffsetYLabel`, `confidencePanelToggle`, `confidencePanel`, `confidenceOverlayViewer`, `curationViewer`, `atlasViewer`.
+    - Standardized accessible names, descriptions, tooltips, and pointing hand cursor affordances across left panel list navigation, outlier detection, angle propagation, anchor alignment, linearity plot zoom toolbar, volume selection, blend overlays, and synchronized slice/atlas viewers.
+    - Exposed 65 public widget properties on `DeepSliceMainWindow` and added 46 ergonomic state queries, setters, and action triggers.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_curation_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, properties, and ergonomic setters, getters, and action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (41 passed in 10.73s, 0 errors).
+- **Status**: Completed
+
 ### 2026-11-08 - Atomic QUINT JSON / QuickNII XML export (Claude Sonnet 5.5)
 Status: **done** (PR left open for review, not merged, per coordinator)
 - Root cause: `write_QUINT_JSON` opened the target with `"w"` and streamed `json.dump`, so a serialisation error (reproduced with an ndarray in `markers`) left truncated invalid JSON over the user's previous alignment; `write_QuickNII_XML` had the same truncate-first shape.
 - Fix: new `DeepSlice/read_and_write/atomic_io.py` (`write_json_atomic` moved there, re-exported from `gui/state.py`; new `write_file_atomic`); both exporters use it; ndarray markers are converted with `tolist()`.
 - Validation: `tests/test_quint_export_atomic.py` (3 tests, all red before the fix); full suite 564 passed, 9 skipped; ruff clean on new files.
 - PR: https://github.com/leonardolv/DeepSlice-GUI/pull/64 (draft, not merged)
-
 
 ### Task: Ingestion Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
 - **Completed**: 2026-11-08

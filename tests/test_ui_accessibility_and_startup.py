@@ -1667,3 +1667,240 @@ def test_ingestion_page_accessibility_properties_and_ergonomics(qtbot):
         win.close()
         win.deleteLater()
 
+
+
+def test_curation_page_accessibility_properties_and_ergonomics(qtbot):
+    """Verify accessibility metadata, cursor shapes, properties, and ergonomic helpers on Curation Page."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        win.go_to_page(3)
+        assert win.current_page_index == 3
+
+        # Object names and accessible names on left panel
+        assert win.curation_prev_btn.objectName() == "curationPrevBtn"
+        assert win.curation_prev_btn.accessibleName() == "Previous Section"
+        assert "previous histological section" in win.curation_prev_btn.accessibleDescription()
+        assert win.curation_prev_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_next_btn.objectName() == "curationNextBtn"
+        assert win.curation_next_btn.accessibleName() == "Next Section"
+        assert "next histological section" in win.curation_next_btn.accessibleDescription()
+        assert win.curation_next_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_select_all_button.objectName() == "curationSelectAllBtn"
+        assert win.curation_select_all_button.accessibleName() == "Select All Bad Section Flags"
+        assert win.curation_select_all_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_deselect_all_button.objectName() == "curationDeselectAllBtn"
+        assert win.curation_deselect_all_button.accessibleName() == "Deselect All Bad Section Flags"
+        assert win.curation_deselect_all_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.confidence_filter_combobox.objectName() == "confidenceFilterCombo"
+        assert win.confidence_filter_combobox.accessibleName() == "Filter Slices by Confidence"
+        assert win.confidence_filter_combobox.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.slice_flag_list_widget.objectName() == "sliceFlagList"
+        assert win.slice_flag_list_widget.accessibleName() == "Curated Slices List"
+
+        assert win.apply_bad_sections_btn.objectName() == "applyBadSectionsBtn"
+        assert win.apply_bad_sections_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.apply_manual_order_btn.objectName() == "applyManualOrderBtn"
+        assert win.apply_manual_order_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.move_slice_up_btn.objectName() == "moveSliceUpBtn"
+        assert win.move_slice_up_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.move_slice_down_btn.objectName() == "moveSliceDownBtn"
+        assert win.move_slice_down_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.detect_outliers_btn.objectName() == "detectOutliersBtn"
+        assert win.detect_outliers_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.reset_flags_btn.objectName() == "resetFlagsBtn"
+        assert win.reset_flags_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.auto_flag_low_conf_btn.objectName() == "autoFlagLowConfBtn"
+        assert win.auto_flag_low_conf_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.interpolate_bad_depth_btn.objectName() == "interpolateBadDepthBtn"
+        assert win.interpolate_bad_depth_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.toggle_current_flag_btn.objectName() == "toggleCurrentFlagBtn"
+        assert win.toggle_current_flag_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.slice_note_line_edit.objectName() == "sliceNoteEdit"
+        assert win.save_slice_note_btn.objectName() == "saveSliceNoteBtn"
+        assert win.save_slice_note_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_queue_lbl.objectName() == "curationQueueLabel"
+
+        assert win.controls_group_box.objectName() == "controlsGroupBox"
+        assert win.normalize_angles_btn.objectName() == "normalizeAnglesBtn"
+        assert win.normalize_angles_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.enforce_order_btn.objectName() == "enforceOrderBtn"
+        assert win.enforce_order_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.enforce_spacing_btn.objectName() == "enforceSpacingBtn"
+        assert win.enforce_spacing_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.ml_angle_spin_box.objectName() == "mlSpin"
+        assert win.dv_angle_spin_box.objectName() == "dvSpin"
+        assert win.apply_manual_angles_btn.objectName() == "applyManualAnglesBtn"
+        assert win.apply_manual_angles_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.undo_curation_btn.objectName() == "undoBtn"
+        assert win.undo_curation_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.redo_curation_btn.objectName() == "redoBtn"
+        assert win.redo_curation_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.anchor_group_box.objectName() == "anchorGroupBox"
+        assert win.anchor_summary_lbl.objectName() == "anchorSummaryLabel"
+        assert win.anchor_depth_spin_box.objectName() == "anchorDepthSpin"
+        assert win.set_anchor_btn.objectName() == "setAnchorBtn"
+        assert win.set_anchor_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.remove_anchor_btn.objectName() == "removeAnchorBtn"
+        assert win.remove_anchor_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.apply_anchor_interpolation_btn.objectName() == "applyAnchorInterpolationBtn"
+        assert win.apply_anchor_interpolation_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.clear_anchor_btn.objectName() == "clearAnchorBtn"
+        assert win.clear_anchor_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.anchor_list_widget.objectName() == "anchorList"
+
+        # Right panel controls
+        assert win.linearity_figure_canvas.objectName() == "linearityCanvas"
+        assert win.zoom_fit_plot_btn.objectName() == "zoomFitBtn"
+        assert win.zoom_fit_plot_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.zoom_in_plot_btn.objectName() == "zoomInBtn"
+        assert win.zoom_in_plot_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.zoom_out_plot_btn.objectName() == "zoomOutBtn"
+        assert win.zoom_out_plot_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.hist_figure_canvas.objectName() == "histCanvas"
+
+        assert win.enable_atlas_preview_check.objectName() == "enableAtlasPreviewCheck"
+        assert win.enable_atlas_preview_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_volume_combobox.objectName() == "atlasVolumeCombo"
+        assert win.enable_blend_overlay_check.objectName() == "enableBlendOverlayCheck"
+        assert win.enable_blend_overlay_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.blend_opacity_slider.objectName() == "blendSlider"
+        assert win.blend_percent_lbl.objectName() == "blendPercentLabel"
+        assert win.atlas_slice_info_lbl.objectName() == "atlasSliceInfoLabel"
+        assert win.before_after_check.objectName() == "beforeAfterToggle"
+        assert win.before_after_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.loupe_check.objectName() == "loupeToggle"
+        assert win.loupe_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_coords_lbl.objectName() == "atlasCoordsLabel"
+
+        assert win.atlas_flip_x_check.objectName() == "atlasFlipXCheck"
+        assert win.atlas_flip_x_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_flip_y_check.objectName() == "atlasFlipYCheck"
+        assert win.atlas_flip_y_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_rotate_combobox.objectName() == "atlasRotateCombo"
+        assert win.atlas_rotate_combobox.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_scale_slider_widget.objectName() == "atlasScaleSlider"
+        assert win.atlas_scale_lbl.objectName() == "atlasScaleLabel"
+        assert win.atlas_offset_x_slider_widget.objectName() == "atlasOffsetXSlider"
+        assert win.atlas_offset_x_lbl.objectName() == "atlasOffsetXLabel"
+        assert win.atlas_offset_y_slider_widget.objectName() == "atlasOffsetYSlider"
+        assert win.atlas_offset_y_lbl.objectName() == "atlasOffsetYLabel"
+
+        assert win.confidence_panel_toggle_btn.objectName() == "confidencePanelToggle"
+        assert win.confidence_panel_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.confidence_panel_frame.objectName() == "confidencePanel"
+        assert win.confidence_overlay_slice_viewer.objectName() == "confidenceOverlayViewer"
+        assert win.curation_slice_viewer.objectName() == "curationViewer"
+        assert win.atlas_slice_viewer.objectName() == "atlasViewer"
+
+        # Ergonomic state queries and setters
+        assert "All Confidences" in win.curation_confidence_filter()
+        win.set_curation_confidence_filter("High Only")
+        assert "High Only" in win.curation_confidence_filter()
+        win.set_curation_confidence_filter("All Confidences")
+
+        win.set_slice_note_text("Lesion area noted")
+        assert win.slice_note_text() == "Lesion area noted"
+
+        win.set_manual_ml_angle(1.5)
+        assert win.manual_ml_angle() == 1.5
+
+        win.set_manual_dv_angle(-2.0)
+        assert win.manual_dv_angle() == -2.0
+
+        win.set_anchor_depth(120.5)
+        assert win.anchor_depth() == 120.5
+
+        assert win.anchor_count() == 0
+
+        assert win.is_atlas_preview_enabled() is False
+        win.set_atlas_preview_enabled(True)
+        assert win.is_atlas_preview_enabled() is True
+        win.set_atlas_preview_enabled(False)
+
+        assert win.is_blend_overlay_enabled() is False
+        win.set_blend_overlay_enabled(True)
+        assert win.is_blend_overlay_enabled() is True
+        win.set_blend_overlay_enabled(False)
+
+        win.set_blend_opacity(50)
+        assert win.blend_opacity() == 50
+
+        assert win.is_before_after_overlay_enabled() is False
+        win.set_before_after_overlay_enabled(True)
+        assert win.is_before_after_overlay_enabled() is True
+        win.set_before_after_overlay_enabled(False)
+
+        assert win.is_loupe_enabled() is False
+        win.set_loupe_enabled(True)
+        assert win.is_loupe_enabled() is True
+        win.set_loupe_enabled(False)
+
+        assert win.is_atlas_flip_x_enabled() is False
+        win.set_atlas_flip_x_enabled(True)
+        assert win.is_atlas_flip_x_enabled() is True
+        win.set_atlas_flip_x_enabled(False)
+
+        assert win.is_atlas_flip_y_enabled() is False
+        win.set_atlas_flip_y_enabled(True)
+        assert win.is_atlas_flip_y_enabled() is True
+        win.set_atlas_flip_y_enabled(False)
+
+        win.set_atlas_scale_percent(120)
+        assert win.atlas_scale_percent() == 120
+
+        win.set_atlas_offset_x(10)
+        assert win.atlas_offset_x() == 10
+
+        win.set_atlas_offset_y(-5)
+        assert win.atlas_offset_y() == -5
+
+        assert win.is_confidence_panel_expanded() is False
+        win.set_confidence_panel_expanded(True)
+        assert win.is_confidence_panel_expanded() is True
+        win.set_confidence_panel_expanded(False)
+
+        # Triggers
+        assert isinstance(win.trigger_curation_prev_slice(), bool)
+        assert isinstance(win.trigger_curation_next_slice(), bool)
+        assert isinstance(win.trigger_move_slice_up(), bool)
+        assert isinstance(win.trigger_move_slice_down(), bool)
+        assert isinstance(win.trigger_detect_outliers(), bool)
+        assert isinstance(win.trigger_reset_flags(), bool)
+        assert isinstance(win.trigger_auto_flag_low_conf(), bool)
+        assert isinstance(win.trigger_interpolate_bad_depth(), bool)
+        assert isinstance(win.trigger_toggle_current_flag(), bool)
+        assert isinstance(win.trigger_save_slice_note(), bool)
+        assert isinstance(win.trigger_normalize_angles(), bool)
+        assert isinstance(win.trigger_enforce_order(), bool)
+        assert isinstance(win.trigger_enforce_spacing(), bool)
+        assert isinstance(win.trigger_apply_manual_angles(), bool)
+        assert isinstance(win.trigger_undo(), bool)
+        assert isinstance(win.trigger_redo(), bool)
+        assert isinstance(win.trigger_set_anchor(), bool)
+        assert isinstance(win.trigger_remove_anchor(), bool)
+        assert isinstance(win.trigger_apply_anchor_interpolation(), bool)
+        assert isinstance(win.trigger_clear_anchors(), bool)
+        assert isinstance(win.trigger_plot_zoom_fit(), bool)
+        assert isinstance(win.trigger_plot_zoom_in(), bool)
+        assert isinstance(win.trigger_plot_zoom_out(), bool)
+    finally:
+        win.close()
+        win.deleteLater()
