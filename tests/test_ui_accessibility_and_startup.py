@@ -1463,3 +1463,99 @@ def test_export_page_accessibility_properties_and_ergonomics(qtbot, tmp_path):
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_prediction_page_accessibility_properties_and_ergonomics(qtbot):
+    """Verify accessibility metadata, cursor shapes, properties, and ergonomic helpers on Prediction Page."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        # Navigate to Prediction Page (Step index 2)
+        win.go_to_page(2)
+
+        # Explicit object names and accessible names
+        assert win.run_alignment_btn.objectName() == "runAlignmentBtn"
+        assert win.run_alignment_btn.accessibleName() == "Run Alignment"
+        assert win.cancel_alignment_btn.objectName() == "cancelAlignmentBtn"
+        assert win.cancel_alignment_btn.accessibleName() == "Cancel Alignment"
+
+        assert win.prediction_phase_lbl.objectName() == "predictionPhaseLabel"
+        assert win.prediction_phase_lbl.accessibleName() == "Prediction Phase Status"
+        assert win.prediction_progress_lbl.objectName() == "predictionProgressLabel"
+        assert win.prediction_progress_lbl.accessibleName() == "Prediction Progress Status"
+        assert win.prediction_elapsed_lbl.objectName() == "predictionElapsedLabel"
+        assert win.prediction_elapsed_lbl.accessibleName() == "Elapsed Alignment Time"
+        assert win.prediction_eta_lbl.objectName() == "predictionEtaLabel"
+        assert win.prediction_eta_lbl.accessibleName() == "Estimated Time Remaining"
+
+        assert win.prediction_progress_bar_widget.objectName() == "predictionProgressBar"
+        assert win.predicted_thickness_lbl.objectName() == "predictedThicknessLabel"
+        assert win.predicted_thickness_lbl.accessibleName() == "Estimated Section Thickness"
+        assert win.accept_predicted_thickness_btn.objectName() == "acceptPredictedThicknessBtn"
+        assert win.prediction_direction_lbl.objectName() == "predictionDirectionLabel"
+        assert win.prediction_direction_lbl.accessibleName() == "Detected Indexing Direction"
+
+        assert win.console_toggle_btn.objectName() == "consoleToggle"
+        assert win.console_autoscroll_toggle_btn.objectName() == "consoleAutoscrollToggle"
+        assert win.clear_console_btn.objectName() == "clearConsoleButton"
+        assert win.copy_console_btn.objectName() == "copyConsoleButton"
+        assert win.console_output_widget.objectName() == "consoleOutput"
+        assert win.run_blocker_lbl.objectName() == "WarningText"
+
+        assert win.prediction_slice_selector_combo.objectName() == "predictionSliceSelector"
+        assert win.prediction_compare_check.objectName() == "predictionCompareCheck"
+        assert win.prediction_atlas_info_lbl.objectName() == "predictionAtlasInfoLabel"
+        assert win.preprocessing_preview_info_lbl.objectName() == "preprocessingPreviewInfoLabel"
+        assert win.preprocessing_preview_lbl.objectName() == "preprocessingPreviewLabel"
+        assert win.prediction_slice_viewer.objectName() == "predictionSliceViewer"
+        assert win.prediction_atlas_viewer_widget.objectName() == "predictionAtlasViewer"
+
+        # Cursor affordances
+        assert win.run_alignment_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.cancel_alignment_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.accept_predicted_thickness_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.console_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.console_autoscroll_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.clear_console_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.copy_console_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.prediction_slice_selector_combo.cursor().shape() == Qt.PointingHandCursor
+        assert win.prediction_compare_check.cursor().shape() == Qt.PointingHandCursor
+
+        # State readouts
+        assert "idle" in win.prediction_phase_text().lower()
+        assert "0" in win.prediction_progress_text()
+        assert "00:00" in win.prediction_elapsed_text()
+        assert "--:--" in win.prediction_eta_text()
+        assert win.prediction_progress_value() == 0
+        assert "-" in win.predicted_thickness_text()
+        assert "-" in win.prediction_direction_text()
+        assert isinstance(win.is_run_alignment_enabled(), bool)
+        assert win.is_cancel_alignment_enabled() is False
+        assert win.is_accept_predicted_thickness_enabled() is False
+
+        # Console controls and ergonomics
+        assert win.is_console_visible() is False
+        win.set_console_visible(True)
+        assert win.is_console_visible() is True
+        win.set_console_visible(False)
+        assert win.is_console_visible() is False
+
+        assert win.is_console_autoscroll_enabled() is True
+        win.set_console_autoscroll_enabled(False)
+        assert win.is_console_autoscroll_enabled() is False
+        win.set_console_autoscroll_enabled(True)
+        assert win.is_console_autoscroll_enabled() is True
+
+        assert isinstance(win.console_text(), str)
+        assert win.trigger_clear_console() is True
+        assert win.trigger_copy_console() is True
+
+        # Preview controls
+        assert win.prediction_slice_count() >= 0
+        assert isinstance(win.prediction_slice_texts(), list)
+        assert win.is_atlas_comparison_checked() is True
+        assert isinstance(win.trigger_accept_predicted_thickness(), bool)
+    finally:
+        win.close()
+        win.deleteLater()

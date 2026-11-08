@@ -4,6 +4,19 @@
 
 ## Completed
 
+### Task: Prediction Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across Prediction Page controls: `run_alignment_button` (`runAlignmentBtn`), `cancel_alignment_button` (`cancelAlignmentBtn`), `prediction_phase_label` (`predictionPhaseLabel`), `prediction_progress_label` (`predictionProgressLabel`), `prediction_elapsed_label` (`predictionElapsedLabel`), `prediction_eta_label` (`predictionEtaLabel`), `prediction_progress_bar` (`predictionProgressBar`), `predicted_thickness_label` (`predictedThicknessLabel`), `accept_predicted_thickness_button` (`acceptPredictedThicknessBtn`), `prediction_direction_label` (`predictionDirectionLabel`), `console_toggle` (`consoleToggle`), `console_autoscroll_toggle` (`consoleAutoscrollToggle`), `clear_console_button` (`clearConsoleButton`), `copy_console_button` (`copyConsoleButton`), `console_output` (`consoleOutput`), `run_blocker_label` (`WarningText`), `prediction_slice_selector` (`predictionSliceSelector`), `prediction_compare_checkbox` (`predictionCompareCheck`), `prediction_atlas_info_label` (`predictionAtlasInfoLabel`), `preprocessing_preview_info_label` (`preprocessingPreviewInfoLabel`), `preprocessing_preview_label` (`preprocessingPreviewLabel`), `prediction_viewer` (`predictionSliceViewer`), `prediction_atlas_viewer` (`predictionAtlasViewer`).
+    - Standardized accessible names, descriptions, tooltips, and pointing hand cursor affordances across execution, preview, and console controls.
+    - Exposed 23 public widget properties on `DeepSliceMainWindow`: `run_alignment_btn`, `cancel_alignment_btn`, `prediction_phase_lbl`, `prediction_progress_lbl`, `prediction_elapsed_lbl`, `prediction_eta_lbl`, `prediction_progress_bar_widget`, `predicted_thickness_lbl`, `accept_predicted_thickness_btn`, `prediction_direction_lbl`, `console_toggle_btn`, `console_autoscroll_toggle_btn`, `clear_console_btn`, `copy_console_btn`, `console_output_widget`, `run_blocker_lbl`, `prediction_slice_selector_combo`, `prediction_compare_check`, `prediction_atlas_info_lbl`, `preprocessing_preview_info_lbl`, `preprocessing_preview_lbl`, `prediction_slice_viewer`, `prediction_atlas_viewer_widget`.
+    - Added 22 ergonomic state queries and triggers: `prediction_phase_text()`, `prediction_progress_text()`, `prediction_elapsed_text()`, `prediction_eta_text()`, `prediction_progress_value()`, `predicted_thickness_text()`, `prediction_direction_text()`, `is_run_alignment_enabled()`, `is_cancel_alignment_enabled()`, `is_accept_predicted_thickness_enabled()`, `is_console_visible()`, `set_console_visible(visible)`, `is_console_autoscroll_enabled()`, `set_console_autoscroll_enabled(enabled)`, `console_text()`, `trigger_clear_console()`, `trigger_copy_console()`, `prediction_slice_count()`, `prediction_slice_texts()`, `selected_prediction_slice_index()`, `select_prediction_slice_index(index)`, `is_atlas_comparison_checked()`, `trigger_accept_predicted_thickness()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_prediction_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, properties, and ergonomic setters, getters, and action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (39 passed in 12.12s, 0 errors).
+- **Status**: Completed
+
 ### Task: Export Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
 - **Completed**: 2026-11-08
 - **Changes**:

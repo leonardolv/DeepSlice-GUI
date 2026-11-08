@@ -2384,6 +2384,234 @@ class DeepSliceMainWindow(QMainWindow):
             return True
         return False
 
+    # --- Prediction Page Public Widget Properties ---
+
+    @property
+    def run_alignment_btn(self) -> QPushButton:
+        """Return the run alignment execution button."""
+        return self.run_alignment_button
+
+    @property
+    def cancel_alignment_btn(self) -> QPushButton:
+        """Return the cancel alignment button."""
+        return self.cancel_alignment_button
+
+    @property
+    def prediction_phase_lbl(self) -> QLabel:
+        """Return the prediction phase status label."""
+        return self.prediction_phase_label
+
+    @property
+    def prediction_progress_lbl(self) -> QLabel:
+        """Return the prediction progress label."""
+        return self.prediction_progress_label
+
+    @property
+    def prediction_elapsed_lbl(self) -> QLabel:
+        """Return the prediction elapsed time label."""
+        return self.prediction_elapsed_label
+
+    @property
+    def prediction_eta_lbl(self) -> QLabel:
+        """Return the prediction estimated time remaining label."""
+        return self.prediction_eta_label
+
+    @property
+    def prediction_progress_bar_widget(self) -> QProgressBar:
+        """Return the prediction task progress bar."""
+        return self.prediction_progress_bar
+
+    @property
+    def predicted_thickness_lbl(self) -> QLabel:
+        """Return the estimated section thickness label."""
+        return self.predicted_thickness_label
+
+    @property
+    def accept_predicted_thickness_btn(self) -> QPushButton:
+        """Return the accept predicted thickness button."""
+        return self.accept_predicted_thickness_button
+
+    @property
+    def prediction_direction_lbl(self) -> QLabel:
+        """Return the detected indexing direction label."""
+        return self.prediction_direction_label
+
+    @property
+    def console_toggle_btn(self) -> QToolButton:
+        """Return the toggle runtime console button."""
+        return self.console_toggle
+
+    @property
+    def console_autoscroll_toggle_btn(self) -> QToolButton:
+        """Return the toggle console auto-scroll button."""
+        return self.console_autoscroll_toggle
+
+    @property
+    def clear_console_btn(self) -> QToolButton:
+        """Return the clear console button."""
+        return self.clear_console_button
+
+    @property
+    def copy_console_btn(self) -> QToolButton:
+        """Return the copy console button."""
+        return self.copy_console_button
+
+    @property
+    def console_output_widget(self) -> QTextEdit:
+        """Return the runtime console text edit."""
+        return self.console_output
+
+    @property
+    def run_blocker_lbl(self) -> QLabel:
+        """Return the run blocker warning label."""
+        return self.run_blocker_label
+
+    @property
+    def prediction_slice_selector_combo(self) -> QComboBox:
+        """Return the prediction preview section selector combo box."""
+        return self.prediction_slice_selector
+
+    @property
+    def prediction_compare_check(self) -> QCheckBox:
+        """Return the atlas comparison checkbox."""
+        return self.prediction_compare_checkbox
+
+    @property
+    def prediction_atlas_info_lbl(self) -> QLabel:
+        """Return the atlas comparison status label."""
+        return self.prediction_atlas_info_label
+
+    @property
+    def preprocessing_preview_info_lbl(self) -> QLabel:
+        """Return the model input preview info label."""
+        return self.preprocessing_preview_info_label
+
+    @property
+    def preprocessing_preview_lbl(self) -> QLabel:
+        """Return the model input image preview label."""
+        return self.preprocessing_preview_label
+
+    @property
+    def prediction_slice_viewer(self) -> SliceGraphicsView:
+        """Return the interactive slice preview graphics view."""
+        return self.prediction_viewer
+
+    @property
+    def prediction_atlas_viewer_widget(self) -> SliceGraphicsView:
+        """Return the interactive atlas comparison graphics view."""
+        return self.prediction_atlas_viewer
+
+    # --- Prediction Page Ergonomic Queries & Action Helpers ---
+
+    def prediction_phase_text(self) -> str:
+        """Return the current prediction phase status text."""
+        return str(self.prediction_phase_label.text()) if hasattr(self, "prediction_phase_label") else ""
+
+    def prediction_progress_text(self) -> str:
+        """Return the current prediction progress text."""
+        return str(self.prediction_progress_label.text()) if hasattr(self, "prediction_progress_label") else ""
+
+    def prediction_elapsed_text(self) -> str:
+        """Return the elapsed alignment time text."""
+        return str(self.prediction_elapsed_label.text()) if hasattr(self, "prediction_elapsed_label") else ""
+
+    def prediction_eta_text(self) -> str:
+        """Return the remaining alignment time text."""
+        return str(self.prediction_eta_label.text()) if hasattr(self, "prediction_eta_label") else ""
+
+    def prediction_progress_value(self) -> int:
+        """Return current prediction progress bar value (0-100)."""
+        return int(self.prediction_progress_bar.value()) if hasattr(self, "prediction_progress_bar") else 0
+
+    def predicted_thickness_text(self) -> str:
+        """Return estimated section thickness text."""
+        return str(self.predicted_thickness_label.text()) if hasattr(self, "predicted_thickness_label") else ""
+
+    def prediction_direction_text(self) -> str:
+        """Return detected indexing direction text."""
+        return str(self.prediction_direction_label.text()) if hasattr(self, "prediction_direction_label") else ""
+
+    def is_run_alignment_enabled(self) -> bool:
+        """Return True if Run Alignment button is enabled."""
+        return bool(hasattr(self, "run_alignment_button") and self.run_alignment_button.isEnabled())
+
+    def is_cancel_alignment_enabled(self) -> bool:
+        """Return True if Cancel Alignment button is enabled."""
+        return bool(hasattr(self, "cancel_alignment_button") and self.cancel_alignment_button.isEnabled())
+
+    def is_accept_predicted_thickness_enabled(self) -> bool:
+        """Return True if Use Predicted Thickness button is enabled."""
+        return bool(hasattr(self, "accept_predicted_thickness_button") and self.accept_predicted_thickness_button.isEnabled())
+
+    def is_console_visible(self) -> bool:
+        """Return True if runtime console is expanded."""
+        return bool(hasattr(self, "console_output") and self.console_output.isVisible())
+
+    def set_console_visible(self, visible: bool) -> None:
+        """Expand or collapse runtime console."""
+        if hasattr(self, "console_toggle"):
+            self.console_toggle.setChecked(visible)
+
+    def is_console_autoscroll_enabled(self) -> bool:
+        """Return True if console auto-scroll is enabled."""
+        return bool(hasattr(self, "console_autoscroll_toggle") and self.console_autoscroll_toggle.isChecked())
+
+    def set_console_autoscroll_enabled(self, enabled: bool) -> None:
+        """Enable or disable console auto-scroll."""
+        if hasattr(self, "console_autoscroll_toggle"):
+            self.console_autoscroll_toggle.setChecked(enabled)
+
+    def console_text(self) -> str:
+        """Return current runtime console text output."""
+        return str(self.console_output.toPlainText()) if hasattr(self, "console_output") else ""
+
+    def trigger_clear_console(self) -> bool:
+        """Trigger clear runtime console button."""
+        if hasattr(self, "clear_console_button"):
+            self.clear_console_button.click()
+            return True
+        return False
+
+    def trigger_copy_console(self) -> bool:
+        """Trigger copy runtime console text button."""
+        if hasattr(self, "copy_console_button"):
+            self.copy_console_button.click()
+            return True
+        return False
+
+    def prediction_slice_count(self) -> int:
+        """Return number of slices in prediction preview selector."""
+        return int(self.prediction_slice_selector.count()) if hasattr(self, "prediction_slice_selector") else 0
+
+    def prediction_slice_texts(self) -> list[str]:
+        """Return all slice names in prediction preview selector."""
+        if not hasattr(self, "prediction_slice_selector"):
+            return []
+        return [str(self.prediction_slice_selector.itemText(i)) for i in range(self.prediction_slice_selector.count())]
+
+    def selected_prediction_slice_index(self) -> int:
+        """Return index of selected preview slice."""
+        return int(self.prediction_slice_selector.currentIndex()) if hasattr(self, "prediction_slice_selector") else -1
+
+    def select_prediction_slice_index(self, index: int) -> bool:
+        """Select preview slice by index."""
+        if hasattr(self, "prediction_slice_selector") and 0 <= index < self.prediction_slice_selector.count():
+            self.prediction_slice_selector.setCurrentIndex(index)
+            return True
+        return False
+
+    def is_atlas_comparison_checked(self) -> bool:
+        """Return True if atlas comparison checkbox is checked."""
+        return bool(hasattr(self, "prediction_compare_checkbox") and self.prediction_compare_checkbox.isChecked())
+
+    def trigger_accept_predicted_thickness(self) -> bool:
+        """Trigger use predicted thickness button."""
+        if hasattr(self, "accept_predicted_thickness_button") and self.accept_predicted_thickness_button.isEnabled():
+            self.accept_predicted_thickness_button.click()
+            return True
+        return False
+
+
 
     def _notify_startup_progress(self, message: str, percent: int):
 
@@ -8037,19 +8265,22 @@ class DeepSliceMainWindow(QMainWindow):
         run_layout = QHBoxLayout()
 
         self.run_alignment_button = QPushButton("Run Alignment")
-
+        self.run_alignment_button.setObjectName("runAlignmentBtn")
+        self.run_alignment_button.setAccessibleName("Run Alignment")
+        self.run_alignment_button.setAccessibleDescription("Execute deep learning model to predict histological slice alignment")
+        self.run_alignment_button.setToolTip("Execute deep learning model to predict histological slice alignment")
+        self.run_alignment_button.setCursor(Qt.PointingHandCursor)
         self.run_alignment_button.clicked.connect(self._run_alignment)
-
         self.run_alignment_button.setMinimumHeight(44)
 
-        
-
         self.cancel_alignment_button = QPushButton("Cancel Alignment")
-
+        self.cancel_alignment_button.setObjectName("cancelAlignmentBtn")
+        self.cancel_alignment_button.setAccessibleName("Cancel Alignment")
+        self.cancel_alignment_button.setAccessibleDescription("Halt active alignment execution")
+        self.cancel_alignment_button.setToolTip("Halt active alignment execution")
+        self.cancel_alignment_button.setCursor(Qt.PointingHandCursor)
         self.cancel_alignment_button.clicked.connect(self._cancel_alignment)
-
         self.cancel_alignment_button.setMinimumHeight(44)
-
         self.cancel_alignment_button.setEnabled(False)
 
         
@@ -8061,12 +8292,20 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.prediction_phase_label = QLabel("Phase 0/1: idle")
+        self.prediction_phase_label.setObjectName("predictionPhaseLabel")
+        self.prediction_phase_label.setAccessibleName("Prediction Phase Status")
 
         self.prediction_progress_label = QLabel("Progress: 0 / 0")
+        self.prediction_progress_label.setObjectName("predictionProgressLabel")
+        self.prediction_progress_label.setAccessibleName("Prediction Progress Status")
 
         self.prediction_elapsed_label = QLabel("Elapsed: 00:00")
+        self.prediction_elapsed_label.setObjectName("predictionElapsedLabel")
+        self.prediction_elapsed_label.setAccessibleName("Elapsed Alignment Time")
 
         self.prediction_eta_label = QLabel("Remaining: --:--")
+        self.prediction_eta_label.setObjectName("predictionEtaLabel")
+        self.prediction_eta_label.setAccessibleName("Estimated Time Remaining")
 
         self.prediction_progress_bar = QProgressBar()
 
@@ -8081,6 +8320,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.predicted_thickness_label = QLabel("Estimated thickness: -")
+        self.predicted_thickness_label.setObjectName("predictedThicknessLabel")
+        self.predicted_thickness_label.setAccessibleName("Estimated Section Thickness")
 
         self.accept_predicted_thickness_button = QPushButton("Use Predicted Thickness")
 
@@ -8103,6 +8344,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.prediction_direction_label = QLabel("Detected indexing direction: -")
+        self.prediction_direction_label.setObjectName("predictionDirectionLabel")
+        self.prediction_direction_label.setAccessibleName("Detected Indexing Direction")
 
 
 
@@ -8271,56 +8514,47 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.prediction_slice_selector = QComboBox()
-
+        self.prediction_slice_selector.setObjectName("predictionSliceSelector")
+        self.prediction_slice_selector.setAccessibleName("Prediction Preview Section Selector")
+        self.prediction_slice_selector.setToolTip("Select section to preview during alignment")
+        self.prediction_slice_selector.setCursor(Qt.PointingHandCursor)
         self.prediction_slice_selector.currentIndexChanged.connect(
-
             self._refresh_prediction_preview
-
         )
-
         right_layout.addWidget(self.prediction_slice_selector)
 
-
-
         self.prediction_compare_checkbox = QCheckBox("Show Atlas Comparison")
-
+        self.prediction_compare_checkbox.setObjectName("predictionCompareCheck")
+        self.prediction_compare_checkbox.setAccessibleName("Show Atlas Comparison")
+        self.prediction_compare_checkbox.setCursor(Qt.PointingHandCursor)
         self.prediction_compare_checkbox.setChecked(True)
-
         self.prediction_compare_checkbox.setEnabled(False)
-
         self.prediction_compare_checkbox.setText("Atlas Comparison (always on)")
-
         self.prediction_compare_checkbox.toggled.connect(self._refresh_prediction_preview)
-
         self.prediction_atlas_info_label = QLabel("Atlas comparison: waiting for prediction")
-
+        self.prediction_atlas_info_label.setObjectName("predictionAtlasInfoLabel")
+        self.prediction_atlas_info_label.setAccessibleName("Atlas Comparison Status")
         right_layout.addWidget(self.prediction_compare_checkbox)
-
         right_layout.addWidget(self.prediction_atlas_info_label)
 
-
-
         self.preprocessing_preview_info_label = QLabel("Model input preview: waiting for selection")
-
+        self.preprocessing_preview_info_label.setObjectName("preprocessingPreviewInfoLabel")
+        self.preprocessing_preview_info_label.setAccessibleName("Model Input Preview Status")
         self.preprocessing_preview_info_label.setWordWrap(True)
-
         self.preprocessing_preview_label = QLabel()
-
+        self.preprocessing_preview_label.setObjectName("preprocessingPreviewLabel")
+        self.preprocessing_preview_label.setAccessibleName("Model Input Image Preview")
         self.preprocessing_preview_label.setMinimumHeight(180)
-
         self.preprocessing_preview_label.setAlignment(Qt.AlignCenter)
-
-        self.preprocessing_preview_label.setObjectName("PreviewPanel")
-
         right_layout.addWidget(self.preprocessing_preview_info_label)
-
         right_layout.addWidget(self.preprocessing_preview_label)
 
-
-
         self.prediction_viewer = SliceGraphicsView()
-
+        self.prediction_viewer.setObjectName("predictionSliceViewer")
+        self.prediction_viewer.setAccessibleName("Prediction Slice Interactive Viewer")
         self.prediction_atlas_viewer = SliceGraphicsView()
+        self.prediction_atlas_viewer.setObjectName("predictionAtlasViewer")
+        self.prediction_atlas_viewer.setAccessibleName("Prediction Atlas Interactive Viewer")
 
         self.prediction_atlas_viewer.clear_with_text("Atlas view will update during prediction")
 
