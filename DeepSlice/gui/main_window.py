@@ -3462,6 +3462,198 @@ class DeepSliceMainWindow(QMainWindow):
             return True
         return False
 
+    @property
+    def top_bar_widget(self) -> QFrame:
+        """Top bar container frame widget."""
+        return getattr(self, "_top_bar", self.findChild(QFrame, "TopBar"))
+
+    @property
+    def project_title_label(self) -> QLabel:
+        """Top bar project title and version label."""
+        return self.project_label
+
+    @property
+    def session_status_lbl(self) -> QLabel:
+        """Top bar session status label."""
+        return self.session_status_label
+
+    @property
+    def hardware_mode_lbl(self) -> QLabel:
+        """Top bar hardware execution mode label."""
+        return self.hardware_mode_label
+
+    @property
+    def hardware_health_btn(self) -> QPushButton:
+        """Top bar hardware health button."""
+        return self.hardware_button
+
+    @property
+    def theme_toggle_btn(self) -> QToolButton:
+        """Top bar theme toggle menu button."""
+        return self.theme_toggle_button
+
+    @property
+    def new_session_btn(self) -> QPushButton:
+        """Top bar new session button."""
+        return self.new_session_button
+
+    @property
+    def save_session_btn(self) -> QPushButton:
+        """Top bar save session button."""
+        return self.save_session_button
+
+    @property
+    def load_session_btn(self) -> QPushButton:
+        """Top bar load session button."""
+        return self.load_session_button
+
+    @property
+    def session_io_spinner_widget(self) -> QProgressBar:
+        """Top bar background session I/O progress spinner."""
+        return self.session_io_spinner
+
+    @property
+    def shortcut_help_btn(self) -> QToolButton:
+        """Top bar keyboard shortcuts help button."""
+        return self.shortcut_help_button
+
+    @property
+    def preferences_btn(self) -> QToolButton:
+        """Top bar preferences dialog button."""
+        return self.preferences_button
+
+    @property
+    def about_btn(self) -> QToolButton:
+        """Top bar about dialog button."""
+        return self.about_button
+
+    @property
+    def error_menu_btn(self) -> QPushButton:
+        """Top bar runtime error center menu button."""
+        return self.error_menu_button
+
+    @property
+    def sidebar_container_widget(self) -> QWidget:
+        """Sidebar container widget."""
+        return self.sidebar_container
+
+    @property
+    def completion_lbl(self) -> QLabel:
+        """Sidebar completion percentage label."""
+        return self.completion_label
+
+    @property
+    def collapse_sidebar_btn(self) -> QPushButton:
+        """Sidebar collapse/expand toggle button."""
+        return self.collapse_sidebar_button
+
+    @property
+    def step_list_widget(self) -> QListWidget:
+        """Sidebar step navigation list widget."""
+        return self.step_list
+
+    @property
+    def guide_banner_frame(self) -> QFrame:
+        """Step guidance banner container frame."""
+        return self.guide_banner
+
+    @property
+    def guide_title_lbl(self) -> QLabel:
+        """Step guidance title label."""
+        return self.guide_title_label
+
+    @property
+    def guide_text_lbl(self) -> QLabel:
+        """Step guidance instruction body label."""
+        return self.guide_text_label
+
+    @property
+    def guide_next_btn(self) -> QPushButton:
+        """Step guidance next step button."""
+        return self.guide_next_button
+
+    @property
+    def status_bar_widget(self) -> QStatusBar:
+        """Main window status bar."""
+        return self.status_bar
+
+    @property
+    def global_progress_bar(self) -> QProgressBar:
+        """Global task progress bar in status bar."""
+        return self.global_progress
+
+    def project_title_text(self) -> str:
+        """Return text of project title and version label."""
+        return self.project_label.text()
+
+    def session_status_text(self) -> str:
+        """Return current session status text."""
+        return self.session_status_label.text()
+
+    def hardware_mode_text(self) -> str:
+        """Return hardware mode indicator text."""
+        return self.hardware_mode_label.text()
+
+    def is_sidebar_collapsed(self) -> bool:
+        """Return True if the step list sidebar is collapsed."""
+        return self.sidebar_container.width() <= 50
+
+    def set_sidebar_collapsed(self, collapsed: bool) -> None:
+        """Collapse or expand the step list sidebar."""
+        if self.is_sidebar_collapsed() != collapsed:
+            self._toggle_sidebar()
+
+    def completion_percentage_text(self) -> str:
+        """Return completion percentage label text."""
+        return self.completion_label.text()
+
+    def guide_title_text(self) -> str:
+        """Return step guidance banner title text."""
+        return self.guide_title_label.text()
+
+    def guide_body_text(self) -> str:
+        """Return step guidance banner instruction body text."""
+        return self.guide_text_label.text()
+
+    def is_guide_next_visible(self) -> bool:
+        """Return True if the guidance next step button is visible."""
+        return self.guide_next_button.isVisible()
+
+    def status_bar_message(self) -> str:
+        """Return current status bar message."""
+        return self.status_bar.currentMessage()
+
+    def is_global_progress_visible(self) -> bool:
+        """Return True if the status bar global progress bar is visible."""
+        return self.global_progress.isVisible()
+
+    def trigger_hardware_health(self) -> QMessageBox:
+        """Programmatically open hardware health diagnostics dialog."""
+        return self._show_hardware_health()
+
+    def trigger_shortcuts_help(self) -> QMessageBox:
+        """Programmatically open keyboard shortcuts help dialog."""
+        return self._show_shortcuts_help()
+
+    def trigger_about_dialog(self) -> QMessageBox:
+        """Programmatically open about dialog."""
+        return self._show_about_dialog()
+
+    def trigger_open_preferences(self) -> QDialog:
+        """Programmatically open preferences dialog."""
+        return self._open_preferences_dialog()
+
+    def trigger_toggle_sidebar(self) -> None:
+        """Programmatically toggle sidebar collapsed state."""
+        self._toggle_sidebar()
+
+    def trigger_guide_next(self) -> bool:
+        """Programmatically trigger guide next step button. Returns True if navigated, False if locked or at end."""
+        initial_row = self.step_list.currentRow()
+        self._go_to_next_step()
+        return self.step_list.currentRow() > initial_row
+
+
 
 
 
@@ -3616,6 +3808,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.sidebar_container = QWidget()
+        self.sidebar_container.setObjectName("sidebarContainer")
+        self.sidebar_container.setAccessibleName("Step Navigation Sidebar")
 
         sidebar_layout = QVBoxLayout(self.sidebar_container)
 
@@ -3752,13 +3946,12 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.status_bar = self.statusBar()
-
+        self.status_bar.setObjectName("mainStatusBar")
         self.status_bar.setAccessibleName("Main Status Bar")
-
         self.status_bar.showMessage("Ready")
 
         self.global_progress = QProgressBar()
-
+        self.global_progress.setObjectName("globalProgressBar")
         self.global_progress.setAccessibleName("Global Task Progress")
 
         self.global_progress.setToolTip("Current progress of background analysis or export")
@@ -4638,207 +4831,116 @@ class DeepSliceMainWindow(QMainWindow):
 
 
     def _build_top_bar(self) -> QWidget:
-
         frame = QFrame()
-
         frame.setObjectName("TopBar")
-
+        self._top_bar = frame
         layout = QHBoxLayout(frame)
-
         layout.setContentsMargins(12, 10, 12, 10)
-
         layout.setSpacing(12)
 
-
-
         try:
-
             from importlib.metadata import version
-
             self.app_version = version("DeepSlice")
-
         except Exception:
-
             self.app_version = "Unknown"
 
-
-
         version_suffix = "" if self.app_version == "Unknown" else f" v{self.app_version}"
-
         self.project_label = QLabel(f"DeepSlice Desktop{version_suffix}")
-
         self.project_label.setObjectName("ProjectLabel")
 
-
-
         self.session_status_label = QLabel("Session: New")
-
         self.session_status_label.setObjectName("SessionLabel")
 
-
-
         self.hardware_mode_label = QLabel("Runs on: detecting...")
-
         self.hardware_mode_label.setObjectName("HardwareLabel")
 
-
-
         self.hardware_button = QPushButton("Hardware Health")
-
+        self.hardware_button.setObjectName("hardwareHealthBtn")
         self.hardware_button.setAccessibleName("Hardware Health and Acceleration Info")
-
         self.hardware_button.setToolTip("View GPU acceleration, TensorFlow version, CUDA/cuDNN status, and memory")
-
         self.hardware_button.setCursor(Qt.PointingHandCursor)
-
         self.hardware_button.clicked.connect(self._show_hardware_health)
 
-
-
         self.theme_toggle_button = QToolButton()
-
+        self.theme_toggle_button.setObjectName("themeToggleBtn")
         self.theme_toggle_button.setText("Theme")
-
         self.theme_toggle_button.setAccessibleName("Toggle Application Theme")
-
         self.theme_toggle_button.setToolTip("Switch between dark and light themes")
-
         self.theme_toggle_button.setCursor(Qt.PointingHandCursor)
-
         self.theme_menu = QMenu(self.theme_toggle_button)
-
         self.theme_dark_action = self.theme_menu.addAction("Dark")
-
         self.theme_light_action = self.theme_menu.addAction("Light")
-
         self.theme_dark_action.triggered.connect(lambda: self._set_theme("dark"))
-
         self.theme_light_action.triggered.connect(lambda: self._set_theme("light"))
-
         self.theme_toggle_button.setMenu(self.theme_menu)
-
         self.theme_toggle_button.setPopupMode(QToolButton.InstantPopup)
 
-
-
         self.new_session_button = QPushButton("New Session")
-
+        self.new_session_button.setObjectName("newSessionBtn")
         self.new_session_button.setAccessibleName("Start New Session")
-
         self.new_session_button.setToolTip("Reset the workspace and begin a new session (Ctrl+N)")
-
         self.new_session_button.setCursor(Qt.PointingHandCursor)
-
         self.new_session_button.clicked.connect(self._reset_session)
 
-
-
         self.save_session_button = QPushButton("Save Session")
-
+        self.save_session_button.setObjectName("saveSessionBtn")
         self.save_session_button.setAccessibleName("Save Current Session")
-
         self.save_session_button.setToolTip("Save the current state and alignments to file (Ctrl+S)")
-
         self.save_session_button.setCursor(Qt.PointingHandCursor)
-
         self.save_session_button.clicked.connect(self._save_session)
 
-
-
         self.load_session_button = QPushButton("Load Session / QuickNII")
-
+        self.load_session_button.setObjectName("loadSessionBtn")
         self.load_session_button.setAccessibleName("Load Session or QuickNII Project")
-
         self.load_session_button.setToolTip("Load a saved session or import QuickNII alignment files (Ctrl+O)")
-
         self.load_session_button.setCursor(Qt.PointingHandCursor)
-
         self.load_session_menu = QMenu(self.load_session_button)
-
         self.load_session_action = self.load_session_menu.addAction("Browse...")
-
         self.load_session_action.triggered.connect(self._load_session_or_quint)
-
         self.load_session_menu.addSeparator()
-
         self.recent_sessions_actions = []
-
         for i in range(5):
-
             action = self.load_session_menu.addAction(f"Recent {i+1}")
-
             action.setVisible(False)
-
             self.recent_sessions_actions.append(action)
-
         self.load_session_button.setMenu(self.load_session_menu)
-
         self._update_recent_sessions_menu()
 
-
-
         self.session_io_spinner = QProgressBar()
-
+        self.session_io_spinner.setObjectName("sessionIoSpinner")
         self.session_io_spinner.setRange(0, 0)
-
         self.session_io_spinner.setTextVisible(False)
-
         self.session_io_spinner.setMaximumWidth(70)
-
         self.session_io_spinner.setMaximumHeight(12)
-
         self.session_io_spinner.setAccessibleName("Session I/O Activity Progress")
-
         self.session_io_spinner.setToolTip("Indicates background session saving and loading activity")
-
         self.session_io_spinner.setVisible(False)
 
-
-
         self.shortcut_help_button = QToolButton()
-
+        self.shortcut_help_button.setObjectName("shortcutHelpBtn")
         self.shortcut_help_button.setText("Shortcuts")
-
         self.shortcut_help_button.setAccessibleName("Keyboard Shortcuts Reference")
-
         self.shortcut_help_button.setToolTip("View available keyboard shortcuts (Ctrl+/)")
-
         self.shortcut_help_button.setCursor(Qt.PointingHandCursor)
-
         self.shortcut_help_button.clicked.connect(self._show_shortcuts_help)
 
-
-
         self.preferences_button = QToolButton()
-
+        self.preferences_button.setObjectName("preferencesBtn")
         self.preferences_button.setText("Preferences")
-
         self.preferences_button.setAccessibleName("Application Preferences")
-
         self.preferences_button.setToolTip("Open preferences and global application settings (Ctrl+,)")
-
         self.preferences_button.setCursor(Qt.PointingHandCursor)
-
         self.preferences_button.clicked.connect(self._open_preferences_dialog)
 
-
-
         self.about_button = QToolButton()
-
+        self.about_button.setObjectName("aboutBtn")
         self.about_button.setText("About")
-
         self.about_button.setAccessibleName("About DeepSlice Desktop")
-
         self.about_button.setToolTip("View DeepSlice version, citations, and licenses")
-
         self.about_button.setCursor(Qt.PointingHandCursor)
-
         self.about_button.clicked.connect(self._show_about_dialog)
 
-
-
         self.error_menu_button = QPushButton("Errors")
-
         self.error_menu_button.setAccessibleName("Runtime Error Center")
 
         self.error_menu_button.setToolTip("View runtime error log and automated diagnostics")

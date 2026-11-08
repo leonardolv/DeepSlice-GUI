@@ -2,7 +2,22 @@
 
 ## In Progress
 
+
 ## Completed
+
+### Task: TopBar, Sidebar, GuideBanner, and StatusBar explicit object names, public properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across TopBar, Sidebar, GuideBanner, and StatusBar controls: `TopBar`, `ProjectLabel`, `SessionLabel`, `HardwareLabel`, `hardwareHealthBtn`, `themeToggleBtn`, `newSessionBtn`, `saveSessionBtn`, `loadSessionBtn`, `sessionIoSpinner`, `shortcutHelpBtn`, `preferencesBtn`, `aboutBtn`, `ErrorMenuButton`, `sidebarContainer`, `CompletionLabel`, `CollapseButton`, `StepNavigator`, `GuideBanner`, `GuideTitle`, `GuideText`, `GuideNextButton`, `mainStatusBar`, and `globalProgressBar`.
+    - Added pointing hand cursor affordances across all interactive buttons.
+    - Exposed 24 public widget properties on `DeepSliceMainWindow`: `top_bar_widget`, `project_title_label`, `session_status_lbl`, `hardware_mode_lbl`, `hardware_health_btn`, `theme_toggle_btn`, `new_session_btn`, `save_session_btn`, `load_session_btn`, `session_io_spinner_widget`, `shortcut_help_btn`, `preferences_btn`, `about_btn`, `error_menu_btn`, `sidebar_container_widget`, `completion_lbl`, `collapse_sidebar_btn`, `step_list_widget`, `guide_banner_frame`, `guide_title_lbl`, `guide_text_lbl`, `guide_next_btn`, `status_bar_widget`, and `global_progress_bar`.
+    - Added 17 ergonomic state queries, setters, and programmatic action triggers: `project_title_text()`, `session_status_text()`, `hardware_mode_text()`, `is_sidebar_collapsed()`, `set_sidebar_collapsed()`, `completion_percentage_text()`, `guide_title_text()`, `guide_body_text()`, `is_guide_next_visible()`, `status_bar_message()`, `is_global_progress_visible()`, `trigger_hardware_health()`, `trigger_shortcuts_help()`, `trigger_about_dialog()`, `trigger_open_preferences()`, `trigger_toggle_sidebar()`, and `trigger_guide_next()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added comprehensive unit test `test_top_bar_sidebar_guide_banner_and_status_bar_accessibility_and_ergonomics` validating control object names, accessible metadata, cursor affordances, public property accessors, ergonomic queries, sidebar toggling, step navigation, and modal-safe helper dialog triggers.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py tests/test_drop_event_toast.py -v` (42 passed in 11.39s, 0 errors).
+- **Status**: Completed
+
 
 ### Task: Curation Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
 - **Completed**: 2026-11-08

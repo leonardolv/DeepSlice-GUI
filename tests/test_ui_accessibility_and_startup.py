@@ -1904,3 +1904,114 @@ def test_curation_page_accessibility_properties_and_ergonomics(qtbot):
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_top_bar_sidebar_guide_banner_and_status_bar_accessibility_and_ergonomics(qtbot):
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        # TopBar metadata and properties
+        assert win.top_bar_widget.objectName() == "TopBar"
+        assert win.project_title_label.objectName() == "ProjectLabel"
+        assert win.session_status_lbl.objectName() == "SessionLabel"
+        assert win.hardware_mode_lbl.objectName() == "HardwareLabel"
+
+        assert win.hardware_health_btn.objectName() == "hardwareHealthBtn"
+        assert win.hardware_health_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.theme_toggle_btn.objectName() == "themeToggleBtn"
+        assert win.theme_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.new_session_btn.objectName() == "newSessionBtn"
+        assert win.new_session_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.save_session_btn.objectName() == "saveSessionBtn"
+        assert win.save_session_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.load_session_btn.objectName() == "loadSessionBtn"
+        assert win.load_session_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.session_io_spinner_widget.objectName() == "sessionIoSpinner"
+
+        assert win.shortcut_help_btn.objectName() == "shortcutHelpBtn"
+        assert win.shortcut_help_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.preferences_btn.objectName() == "preferencesBtn"
+        assert win.preferences_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.about_btn.objectName() == "aboutBtn"
+        assert win.about_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.error_menu_btn.objectName() == "ErrorMenuButton"
+        assert win.error_menu_btn.cursor().shape() == Qt.PointingHandCursor
+
+        # Sidebar metadata and properties
+        assert win.sidebar_container_widget.objectName() == "sidebarContainer"
+        assert win.sidebar_container_widget.accessibleName() == "Step Navigation Sidebar"
+        assert win.completion_lbl.objectName() == "CompletionLabel"
+        assert win.collapse_sidebar_btn.objectName() == "CollapseButton"
+        assert win.collapse_sidebar_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.step_list_widget.objectName() == "StepNavigator"
+
+        # GuideBanner metadata and properties
+        assert win.guide_banner_frame.objectName() == "GuideBanner"
+        assert win.guide_title_lbl.objectName() == "GuideTitle"
+        assert win.guide_text_lbl.objectName() == "GuideText"
+        assert win.guide_next_btn.objectName() == "GuideNextButton"
+        assert win.guide_next_btn.cursor().shape() == Qt.PointingHandCursor
+
+        # StatusBar metadata and properties
+        assert win.status_bar_widget.objectName() == "mainStatusBar"
+        assert win.status_bar_widget.accessibleName() == "Main Status Bar"
+        assert win.global_progress_bar.objectName() == "globalProgressBar"
+        assert win.global_progress_bar.accessibleName() == "Global Task Progress"
+
+        # Ergonomic queries and setters
+        assert "DeepSlice" in win.project_title_text()
+        assert "Session:" in win.session_status_text()
+        assert "Runs on:" in win.hardware_mode_text()
+
+        assert win.is_sidebar_collapsed() is False
+        win.set_sidebar_collapsed(True)
+        assert win.is_sidebar_collapsed() is True
+        win.set_sidebar_collapsed(False)
+        assert win.is_sidebar_collapsed() is False
+
+        assert "complete" in win.completion_percentage_text().lower()
+        assert isinstance(win.guide_title_text(), str)
+        assert isinstance(win.guide_body_text(), str)
+        assert isinstance(win.is_guide_next_visible(), bool)
+        assert win.status_bar_message() == "Ready"
+        assert win.is_global_progress_visible() is False
+
+        # Programmatic triggers
+        health_dialog = win.trigger_hardware_health()
+        assert health_dialog is not None
+
+        shortcuts_dialog = win.trigger_shortcuts_help()
+        assert shortcuts_dialog is not None
+
+        about_dialog = win.trigger_about_dialog()
+        assert about_dialog is not None
+
+        pref_dialog = win.trigger_open_preferences()
+        assert pref_dialog is not None
+        pref_dialog.close()
+
+        win.trigger_toggle_sidebar()
+        assert win.is_sidebar_collapsed() is True
+        win.trigger_toggle_sidebar()
+        assert win.is_sidebar_collapsed() is False
+
+        # Guide next trigger (locked when 0 images, advances when images present)
+        assert win.trigger_guide_next() is False
+        assert win.step_list_widget.currentRow() == 0
+
+        win.state.image_paths = ["dummy.png"]
+        assert win.trigger_guide_next() is True
+        assert win.step_list_widget.currentRow() == 1
+    finally:
+        win.close()
+        win.deleteLater()
+
