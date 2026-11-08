@@ -23,7 +23,7 @@ Status: **done** (PR left open for review, not merged, per coordinator)
 - Root cause: `write_QUINT_JSON` opened the target with `"w"` and streamed `json.dump`, so a serialisation error (reproduced with an ndarray in `markers`) left truncated invalid JSON over the user's previous alignment; `write_QuickNII_XML` had the same truncate-first shape.
 - Fix: new `DeepSlice/read_and_write/atomic_io.py` (`write_json_atomic` moved there, re-exported from `gui/state.py`; new `write_file_atomic`); both exporters use it; ndarray markers are converted with `tolist()`.
 - Validation: `tests/test_quint_export_atomic.py` (3 tests, all red before the fix); full suite 564 passed, 9 skipped; ruff clean on new files.
-- PR: see branch `claude/bold-cray-hm1eeg` on leonardolv/deepslice-gui.
+- PR: https://github.com/leonardolv/DeepSlice-GUI/pull/64 (draft, not merged)
 
 
 ### 2026-11-07 - ThumbnailListWidget and FlagListWidget Accessibility and Curation Ergonomics Helpers
