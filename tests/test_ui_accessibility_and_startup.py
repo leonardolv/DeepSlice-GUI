@@ -1219,3 +1219,170 @@ def test_thumbnail_and_flag_list_widget_and_main_window_curation_ergonomics():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_configuration_page_accessibility_properties_and_ergonomics():
+    """Assert Configuration Page controls accessibility metadata, pointers, properties, and ergonomics helpers."""
+    from DeepSlice.gui.main_window import DeepSliceMainWindow
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import Qt
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # 1. Object names and accessible metadata
+        controls = [
+            (win.mouse_radio, "mouseRadio", "Mouse CCFv3 Atlas"),
+            (win.rat_radio, "ratRadio", "Rat Waxholm Atlas"),
+            (win.auto_thickness_checkbox, "autoThicknessCheck", "Auto-estimate Thickness"),
+            (win.thickness_spin, "thicknessSpin", "Section Thickness SpinBox"),
+            (win.suggest_thickness_button, "suggestThicknessBtn", "Suggest Thickness"),
+            (win.direction_override_combo, "directionOverrideCombo", "Direction Override"),
+            (win.direction_guide_button, "directionGuideBtn", "Direction Guide"),
+            (win.ensemble_checkbox, "ensembleCheck", "Ensemble Prediction"),
+            (win.ensemble_help_button, "ensembleHelpBtn", "Ensemble Help"),
+            (win.secondary_model_checkbox, "secondaryModelCheck", "Secondary Model Only"),
+            (win.legacy_from_config_checkbox, "legacyParserCheck", "Legacy Section Parser"),
+            (win.outlier_sigma_spin, "outlierSigmaSpin", "Outlier Sigma Threshold"),
+            (win.confidence_high_spin, "confidenceHighSpin", "High Confidence Threshold"),
+            (win.confidence_medium_spin, "confidenceMediumSpin", "Medium Confidence Threshold"),
+            (win.inference_batch_spin, "inferenceBatchSpin", "Inference Batch Size"),
+            (win.quality_gate_checkbox, "qualityGateCheck", "Input Quality Gate"),
+            (win.tissue_crop_checkbox, "tissueCropCheck", "Tissue ROI Crop"),
+            (win.clahe_checkbox, "claheCheck", "CLAHE Contrast Normalization"),
+            (win.stain_norm_combo, "stainNormCombo", "Stain Normalization Mode"),
+            (win.preserve_color_checkbox, "preserveColorCheck", "Preserve Color Channels"),
+            (win.percentile_norm_checkbox, "percentileNormCheck", "Percentile Intensity Normalization"),
+            (win.bilateral_checkbox, "bilateralCheck", "Bilateral Denoise"),
+            (win.gamma_spin, "gammaSpin", "Gamma Correction"),
+            (win.min_resolution_spin, "minResolutionSpin", "Minimum Resolution in Pixels"),
+            (win.blur_threshold_spin, "blurThresholdSpin", "Blur Variance Threshold"),
+            (win.tta_checkbox, "ttaCheck", "Test-Time Augmentation"),
+            (win.multiscale_checkbox, "multiscaleCheck", "Multi-Scale Inference"),
+            (win.fast_fp16_checkbox, "fastFp16Check", "Fast Mode Float16"),
+            (win.section_dropout_spin, "sectionDropoutSpin", "Section Dropout Passes"),
+            (win.conf_weighted_ensemble_checkbox, "confWeightedEnsembleCheck", "Confidence Weighted Ensemble"),
+            (win.training_group_mode_combo, "trainingGroupModeCombo", "Training Group Mode"),
+            (win.training_seed_spin, "trainingSeedSpin", "Training Random Seed"),
+            (win.training_train_fraction_spin, "trainingTrainFractionSpin", "Training Train Split Fraction"),
+            (win.training_val_fraction_spin, "trainingValFractionSpin", "Training Validation Split Fraction"),
+            (win.training_patience_spin, "trainingPatienceSpin", "Training Early Stopping Patience"),
+            (win.training_lr_factor_spin, "trainingLrFactorSpin", "Training Learning Rate Decay Factor"),
+            (win.training_min_lr_spin, "trainingMinLrSpin", "Training Minimum Learning Rate"),
+            (win.training_mixed_precision_checkbox, "trainingMixedPrecisionCheck", "Training Mixed Precision"),
+        ]
+
+        for widget, obj_name, acc_name in controls:
+            assert widget.objectName() == obj_name, f"Expected objectName {obj_name}, got {widget.objectName()}"
+            assert widget.accessibleName() == acc_name, f"Expected accessibleName {acc_name}, got {widget.accessibleName()}"
+            assert len(widget.toolTip()) > 0, f"Expected non-empty tooltip for {obj_name}"
+
+        # 2. PointingHandCursor affordances on interactive controls
+        cursor_controls = [
+            win.mouse_radio,
+            win.rat_radio,
+            win.auto_thickness_checkbox,
+            win.suggest_thickness_button,
+            win.direction_guide_button,
+            win.advanced_options_toggle,
+            win.ensemble_checkbox,
+            win.ensemble_help_button,
+            win.secondary_model_checkbox,
+            win.legacy_from_config_checkbox,
+            win.quality_gate_checkbox,
+            win.tissue_crop_checkbox,
+            win.clahe_checkbox,
+            win.preserve_color_checkbox,
+            win.percentile_norm_checkbox,
+            win.bilateral_checkbox,
+            win.tta_checkbox,
+            win.multiscale_checkbox,
+            win.fast_fp16_checkbox,
+            win.conf_weighted_ensemble_checkbox,
+            win.preview_training_split_button,
+            win.save_training_split_button,
+            win.save_training_metadata_button,
+        ]
+        for ctrl in cursor_controls:
+            assert ctrl.cursor().shape() == Qt.CursorShape.PointingHandCursor, f"Expected PointingHandCursor for {ctrl.objectName()}"
+
+        # 3. MainWindow property aliases
+        assert win.mouse_atlas_radio is win.mouse_radio
+        assert win.rat_atlas_radio is win.rat_radio
+        assert win.auto_thickness_check is win.auto_thickness_checkbox
+        assert win.thickness_spin_box is win.thickness_spin
+        assert win.suggest_thickness_btn is win.suggest_thickness_button
+        assert win.direction_override_combobox is win.direction_override_combo
+        assert win.direction_guide_btn is win.direction_guide_button
+        assert win.advanced_options_toggle_btn is win.advanced_options_toggle
+        assert win.ensemble_check is win.ensemble_checkbox
+        assert win.ensemble_help_btn is win.ensemble_help_button
+        assert win.secondary_model_check is win.secondary_model_checkbox
+        assert win.legacy_parser_check is win.legacy_from_config_checkbox
+        assert win.outlier_sigma_spin_box is win.outlier_sigma_spin
+        assert win.confidence_high_spin_box is win.confidence_high_spin
+        assert win.confidence_medium_spin_box is win.confidence_medium_spin
+        assert win.inference_batch_spin_box is win.inference_batch_spin
+        assert win.quality_gate_check is win.quality_gate_checkbox
+        assert win.tissue_crop_check is win.tissue_crop_checkbox
+        assert win.clahe_check is win.clahe_checkbox
+        assert win.stain_norm_combobox is win.stain_norm_combo
+        assert win.preserve_color_check is win.preserve_color_checkbox
+        assert win.percentile_norm_check is win.percentile_norm_checkbox
+        assert win.bilateral_check is win.bilateral_checkbox
+        assert win.gamma_spin_box is win.gamma_spin
+        assert win.min_resolution_spin_box is win.min_resolution_spin
+        assert win.blur_threshold_spin_box is win.blur_threshold_spin
+        assert win.tta_check is win.tta_checkbox
+        assert win.multiscale_check is win.multiscale_checkbox
+        assert win.fast_fp16_check is win.fast_fp16_checkbox
+        assert win.section_dropout_spin_box is win.section_dropout_spin
+        assert win.conf_weighted_ensemble_check is win.conf_weighted_ensemble_checkbox
+        assert win.training_group_mode_combobox is win.training_group_mode_combo
+        assert win.preview_training_split_btn is win.preview_training_split_button
+        assert win.save_training_split_btn is win.save_training_split_button
+        assert win.save_training_metadata_btn is win.save_training_metadata_button
+
+        # 4. Ergonomic query and action helpers
+        assert win.is_auto_thickness_enabled() is True
+        win.set_auto_thickness_enabled(False)
+        assert win.is_auto_thickness_enabled() is False
+        win.set_auto_thickness_enabled(True)
+        assert win.is_auto_thickness_enabled() is True
+
+        win.set_section_thickness_um(40.5)
+        assert win.section_thickness_um() == 40.5
+
+        assert win.direction_override_text() in ("Auto", "rostro-caudal", "caudal-rostro")
+        win.set_direction_override("caudal-rostro")
+        assert win.direction_override_text() == "caudal-rostro"
+
+        assert win.is_advanced_options_expanded() is False
+        win.set_advanced_options_expanded(True)
+        assert win.is_advanced_options_expanded() is True
+        win.set_advanced_options_expanded(False)
+        assert win.is_advanced_options_expanded() is False
+
+        assert win.is_ensemble_enabled() is True
+        win.set_ensemble_enabled(False)
+        assert win.is_ensemble_enabled() is False
+        win.set_ensemble_enabled(True)
+        assert win.is_ensemble_enabled() is True
+
+        win.set_quality_gate_enabled(True)
+        assert win.is_quality_gate_enabled() is True
+
+        win.set_tissue_crop_enabled(True)
+        assert win.is_tissue_crop_enabled() is True
+
+        win.set_clahe_enabled(True)
+        assert win.is_clahe_enabled() is True
+
+        # Triggers
+        assert isinstance(win.trigger_suggest_thickness(), bool)
+        assert isinstance(win.trigger_direction_guide(), bool)
+        assert isinstance(win.trigger_ensemble_help(), bool)
+        assert isinstance(win.trigger_preview_training_split(), bool)
+    finally:
+        win.close()
+        win.deleteLater()

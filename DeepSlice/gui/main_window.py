@@ -1942,6 +1942,257 @@ class DeepSliceMainWindow(QMainWindow):
             return True
         return False
 
+    # Configuration Page property aliases
+    @property
+    def mouse_atlas_radio(self) -> QRadioButton:
+        return self.mouse_radio
+
+    @property
+    def rat_atlas_radio(self) -> QRadioButton:
+        return self.rat_radio
+
+    @property
+    def auto_thickness_check(self) -> QCheckBox:
+        return self.auto_thickness_checkbox
+
+    @property
+    def thickness_spin_box(self) -> QDoubleSpinBox:
+        return self.thickness_spin
+
+    @property
+    def suggest_thickness_btn(self) -> QPushButton:
+        return self.suggest_thickness_button
+
+    @property
+    def direction_override_combobox(self) -> QComboBox:
+        return self.direction_override_combo
+
+    @property
+    def direction_guide_btn(self) -> QToolButton:
+        return self.direction_guide_button
+
+    @property
+    def advanced_options_toggle_btn(self) -> QToolButton:
+        return self.advanced_options_toggle
+
+    @property
+    def ensemble_check(self) -> QCheckBox:
+        return self.ensemble_checkbox
+
+    @property
+    def ensemble_help_btn(self) -> QToolButton:
+        return self.ensemble_help_button
+
+    @property
+    def secondary_model_check(self) -> QCheckBox:
+        return self.secondary_model_checkbox
+
+    @property
+    def legacy_parser_check(self) -> QCheckBox:
+        return self.legacy_from_config_checkbox
+
+    @property
+    def outlier_sigma_spin_box(self) -> QDoubleSpinBox:
+        return self.outlier_sigma_spin
+
+    @property
+    def confidence_high_spin_box(self) -> QDoubleSpinBox:
+        return self.confidence_high_spin
+
+    @property
+    def confidence_medium_spin_box(self) -> QDoubleSpinBox:
+        return self.confidence_medium_spin
+
+    @property
+    def inference_batch_spin_box(self) -> QSpinBox:
+        return self.inference_batch_spin
+
+    @property
+    def quality_gate_check(self) -> QCheckBox:
+        return self.quality_gate_checkbox
+
+    @property
+    def tissue_crop_check(self) -> QCheckBox:
+        return self.tissue_crop_checkbox
+
+    @property
+    def clahe_check(self) -> QCheckBox:
+        return self.clahe_checkbox
+
+    @property
+    def stain_norm_combobox(self) -> QComboBox:
+        return self.stain_norm_combo
+
+    @property
+    def preserve_color_check(self) -> QCheckBox:
+        return self.preserve_color_checkbox
+
+    @property
+    def percentile_norm_check(self) -> QCheckBox:
+        return self.percentile_norm_checkbox
+
+    @property
+    def bilateral_check(self) -> QCheckBox:
+        return self.bilateral_checkbox
+
+    @property
+    def gamma_spin_box(self) -> QDoubleSpinBox:
+        return self.gamma_spin
+
+    @property
+    def min_resolution_spin_box(self) -> QSpinBox:
+        return self.min_resolution_spin
+
+    @property
+    def blur_threshold_spin_box(self) -> QDoubleSpinBox:
+        return self.blur_threshold_spin
+
+    @property
+    def tta_check(self) -> QCheckBox:
+        return self.tta_checkbox
+
+    @property
+    def multiscale_check(self) -> QCheckBox:
+        return self.multiscale_checkbox
+
+    @property
+    def fast_fp16_check(self) -> QCheckBox:
+        return self.fast_fp16_checkbox
+
+    @property
+    def section_dropout_spin_box(self) -> QSpinBox:
+        return self.section_dropout_spin
+
+    @property
+    def conf_weighted_ensemble_check(self) -> QCheckBox:
+        return self.conf_weighted_ensemble_checkbox
+
+    @property
+    def training_group_mode_combobox(self) -> QComboBox:
+        return self.training_group_mode_combo
+
+    @property
+    def preview_training_split_btn(self) -> QPushButton:
+        return self.preview_training_split_button
+
+    @property
+    def save_training_split_btn(self) -> QPushButton:
+        return self.save_training_split_button
+
+    @property
+    def save_training_metadata_btn(self) -> QPushButton:
+        return self.save_training_metadata_button
+
+    # Configuration Page ergonomic query and action helpers
+    def is_auto_thickness_enabled(self) -> bool:
+        """Return True if auto-thickness estimation is enabled."""
+        return bool(hasattr(self, "auto_thickness_checkbox") and self.auto_thickness_checkbox.isChecked())
+
+    def set_auto_thickness_enabled(self, enabled: bool) -> None:
+        """Enable or disable auto-thickness estimation."""
+        if hasattr(self, "auto_thickness_checkbox"):
+            self.auto_thickness_checkbox.setChecked(enabled)
+
+    def section_thickness_um(self) -> float:
+        """Return the current section thickness in micrometers."""
+        if hasattr(self, "thickness_spin"):
+            return float(self.thickness_spin.value())
+        return 0.0
+
+    def set_section_thickness_um(self, val: float) -> None:
+        """Set the section thickness in micrometers."""
+        if hasattr(self, "thickness_spin"):
+            self.thickness_spin.setValue(val)
+
+    def direction_override_text(self) -> str:
+        """Return the current direction override text."""
+        if hasattr(self, "direction_override_combo"):
+            return str(self.direction_override_combo.currentText())
+        return ""
+
+    def set_direction_override(self, direction: str) -> None:
+        """Set the sectioning direction override."""
+        if hasattr(self, "direction_override_combo"):
+            idx = self.direction_override_combo.findText(direction)
+            if idx >= 0:
+                self.direction_override_combo.setCurrentIndex(idx)
+            else:
+                self.direction_override_combo.setCurrentText(direction)
+
+    def is_advanced_options_expanded(self) -> bool:
+        """Return True if the advanced configuration options drawer is expanded."""
+        return bool(hasattr(self, "advanced_options_toggle") and self.advanced_options_toggle.isChecked())
+
+    def set_advanced_options_expanded(self, expanded: bool) -> None:
+        """Expand or collapse the advanced configuration options drawer."""
+        if hasattr(self, "advanced_options_toggle"):
+            self.advanced_options_toggle.setChecked(expanded)
+
+    def is_ensemble_enabled(self) -> bool:
+        """Return True if ensemble prediction mode is checked."""
+        return bool(hasattr(self, "ensemble_checkbox") and self.ensemble_checkbox.isChecked())
+
+    def set_ensemble_enabled(self, enabled: bool) -> None:
+        """Enable or disable ensemble prediction mode."""
+        if hasattr(self, "ensemble_checkbox"):
+            self.ensemble_checkbox.setChecked(enabled)
+
+    def is_quality_gate_enabled(self) -> bool:
+        """Return True if input image quality gate is enabled."""
+        return bool(hasattr(self, "quality_gate_checkbox") and self.quality_gate_checkbox.isChecked())
+
+    def set_quality_gate_enabled(self, enabled: bool) -> None:
+        """Enable or disable input image quality gate."""
+        if hasattr(self, "quality_gate_checkbox"):
+            self.quality_gate_checkbox.setChecked(enabled)
+
+    def is_tissue_crop_enabled(self) -> bool:
+        """Return True if tissue ROI crop is enabled."""
+        return bool(hasattr(self, "tissue_crop_checkbox") and self.tissue_crop_checkbox.isChecked())
+
+    def set_tissue_crop_enabled(self, enabled: bool) -> None:
+        """Enable or disable tissue ROI crop."""
+        if hasattr(self, "tissue_crop_checkbox"):
+            self.tissue_crop_checkbox.setChecked(enabled)
+
+    def is_clahe_enabled(self) -> bool:
+        """Return True if CLAHE contrast normalization is enabled."""
+        return bool(hasattr(self, "clahe_checkbox") and self.clahe_checkbox.isChecked())
+
+    def set_clahe_enabled(self, enabled: bool) -> None:
+        """Enable or disable CLAHE contrast normalization."""
+        if hasattr(self, "clahe_checkbox"):
+            self.clahe_checkbox.setChecked(enabled)
+
+    def trigger_suggest_thickness(self) -> bool:
+        """Trigger the 'Suggest Thickness' button action."""
+        if hasattr(self, "suggest_thickness_button") and self.suggest_thickness_button.isEnabled():
+            self.suggest_thickness_button.click()
+            return True
+        return False
+
+    def trigger_direction_guide(self) -> bool:
+        """Trigger the direction guide dialog button."""
+        if hasattr(self, "direction_guide_button") and self.direction_guide_button.isEnabled():
+            self.direction_guide_button.click()
+            return True
+        return False
+
+    def trigger_ensemble_help(self) -> bool:
+        """Trigger the ensemble help dialog button."""
+        if hasattr(self, "ensemble_help_button") and self.ensemble_help_button.isEnabled():
+            self.ensemble_help_button.click()
+            return True
+        return False
+
+    def trigger_preview_training_split(self) -> bool:
+        """Trigger the 'Preview Split' training button action."""
+        if hasattr(self, "preview_training_split_button") and self.preview_training_split_button.isEnabled():
+            self.preview_training_split_button.click()
+            return True
+        return False
+
+
     def _notify_startup_progress(self, message: str, percent: int):
 
         callback = self._startup_progress_callback
@@ -6628,13 +6879,17 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.mouse_radio.setCursor(Qt.PointingHandCursor)
 
+        self.mouse_radio.setObjectName("mouseRadio")
         self.mouse_radio.setAccessibleName("Mouse CCFv3 Atlas")
+        self.mouse_radio.setToolTip("Select Mouse (Allen CCFv3) atlas for prediction")
 
         self.rat_radio = QRadioButton("Rat (Waxholm Rat Atlas)")
 
         self.rat_radio.setCursor(Qt.PointingHandCursor)
 
+        self.rat_radio.setObjectName("ratRadio")
         self.rat_radio.setAccessibleName("Rat Waxholm Atlas")
+        self.rat_radio.setToolTip("Select Rat (Waxholm Rat Atlas) for prediction")
 
         self.mouse_radio.setChecked(True)
 
@@ -6688,7 +6943,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.auto_thickness_checkbox.setCursor(Qt.PointingHandCursor)
 
+        self.auto_thickness_checkbox.setObjectName("autoThicknessCheck")
         self.auto_thickness_checkbox.setAccessibleName("Auto-estimate Thickness")
+        self.auto_thickness_checkbox.setToolTip("Automatically estimate slice thickness from section coordinates")
 
         self.auto_thickness_checkbox.setChecked(True)
 
@@ -6696,7 +6953,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.thickness_spin = QDoubleSpinBox()
 
+        self.thickness_spin.setObjectName("thicknessSpin")
         self.thickness_spin.setAccessibleName("Section Thickness SpinBox")
+        self.thickness_spin.setToolTip("Physical thickness of each histology section in micrometers")
 
         self.thickness_spin.setRange(0.0, 1000.0)
 
@@ -6714,7 +6973,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.suggest_thickness_button.setCursor(Qt.PointingHandCursor)
 
+        self.suggest_thickness_button.setObjectName("suggestThicknessBtn")
         self.suggest_thickness_button.setAccessibleName("Suggest Thickness")
+        self.suggest_thickness_button.setToolTip("Analyze section filenames to suggest physical thickness")
 
         self.suggest_thickness_button.clicked.connect(self._suggest_thickness)
 
@@ -6722,7 +6983,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.direction_override_combo = QComboBox()
 
+        self.direction_override_combo.setObjectName("directionOverrideCombo")
         self.direction_override_combo.setAccessibleName("Direction Override")
+        self.direction_override_combo.setToolTip("Override rostro-caudal or caudal-rostro sectioning direction")
 
         self.direction_override_combo.addItems(
 
@@ -6740,7 +7003,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.direction_guide_button.setCursor(Qt.PointingHandCursor)
 
+        self.direction_guide_button.setObjectName("directionGuideBtn")
         self.direction_guide_button.setAccessibleName("Direction Guide")
+        self.direction_guide_button.setToolTip("View anatomical orientation and direction guide")
 
         self.direction_guide_button.setText("Guide")
 
@@ -6774,7 +7039,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.advanced_options_toggle = QToolButton()
 
-        self.advanced_options_toggle.setObjectName("AdvancedOptionsToggle")
+        self.advanced_options_toggle.setObjectName("advancedOptionsToggle")
 
         self.advanced_options_toggle.setCheckable(True)
 
@@ -6820,7 +7085,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.ensemble_checkbox.setCursor(Qt.PointingHandCursor)
 
+        self.ensemble_checkbox.setObjectName("ensembleCheck")
         self.ensemble_checkbox.setAccessibleName("Ensemble Prediction")
+        self.ensemble_checkbox.setToolTip("Run multi-model ensemble for higher confidence predictions")
 
         self.ensemble_checkbox.setChecked(True)
 
@@ -6830,7 +7097,9 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.ensemble_help_button.setCursor(Qt.PointingHandCursor)
 
+        self.ensemble_help_button.setObjectName("ensembleHelpBtn")
         self.ensemble_help_button.setAccessibleName("Ensemble Help")
+        self.ensemble_help_button.setToolTip("Learn how ensemble predictions work")
 
         self.ensemble_help_button.setText("?")
 
@@ -6852,6 +7121,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.secondary_model_checkbox.setCursor(Qt.PointingHandCursor)
 
+        self.secondary_model_checkbox.setObjectName("secondaryModelCheck")
         self.secondary_model_checkbox.setAccessibleName("Secondary Model Only")
 
         self.secondary_model_checkbox.setChecked(False)
@@ -6872,6 +7142,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         self.legacy_from_config_checkbox.setCursor(Qt.PointingHandCursor)
 
+        self.legacy_from_config_checkbox.setObjectName("legacyParserCheck")
         self.legacy_from_config_checkbox.setAccessibleName("Legacy Section Parser")
 
         self.legacy_from_config_checkbox.setToolTip(
@@ -6899,6 +7170,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.outlier_sigma_spin = QDoubleSpinBox()
+        self.outlier_sigma_spin.setObjectName("outlierSigmaSpin")
+        self.outlier_sigma_spin.setAccessibleName("Outlier Sigma Threshold")
+        self.outlier_sigma_spin.setToolTip("Standard deviation threshold for detecting outlier slice angles")
 
         self.outlier_sigma_spin.setRange(1.0, 3.0)
 
@@ -6915,6 +7189,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.confidence_high_spin = QDoubleSpinBox()
+        self.confidence_high_spin.setObjectName("confidenceHighSpin")
+        self.confidence_high_spin.setAccessibleName("High Confidence Threshold")
+        self.confidence_high_spin.setToolTip("Confidence threshold for high-certainty predictions")
 
         self.confidence_high_spin.setRange(0.55, 0.99)
 
@@ -6929,6 +7206,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.confidence_medium_spin = QDoubleSpinBox()
+        self.confidence_medium_spin.setObjectName("confidenceMediumSpin")
+        self.confidence_medium_spin.setAccessibleName("Medium Confidence Threshold")
+        self.confidence_medium_spin.setToolTip("Confidence threshold for medium-certainty predictions")
 
         self.confidence_medium_spin.setRange(0.20, 0.90)
 
@@ -6943,6 +7223,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.inference_batch_spin = QSpinBox()
+        self.inference_batch_spin.setObjectName("inferenceBatchSpin")
+        self.inference_batch_spin.setAccessibleName("Inference Batch Size")
+        self.inference_batch_spin.setToolTip("Batch size used during deep learning model inference")
 
         self.inference_batch_spin.setRange(1, 64)
 
@@ -6971,6 +7254,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.quality_gate_checkbox = QCheckBox("Enable input quality gate")
+        self.quality_gate_checkbox.setObjectName("qualityGateCheck")
+        self.quality_gate_checkbox.setAccessibleName("Input Quality Gate")
+        self.quality_gate_checkbox.setCursor(Qt.PointingHandCursor)
+        self.quality_gate_checkbox.setToolTip("Check image resolution, contrast, and blur before inference")
 
         self.quality_gate_checkbox.setChecked(bool(self.state.quality_gate_enabled))
 
@@ -6979,6 +7266,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.tissue_crop_checkbox = QCheckBox("Tissue ROI crop")
+        self.tissue_crop_checkbox.setObjectName("tissueCropCheck")
+        self.tissue_crop_checkbox.setAccessibleName("Tissue ROI Crop")
+        self.tissue_crop_checkbox.setCursor(Qt.PointingHandCursor)
+        self.tissue_crop_checkbox.setToolTip("Automatically detect and crop tissue boundary before inference")
 
         self.tissue_crop_checkbox.setChecked(bool(self.state.tissue_crop_enabled))
 
@@ -6987,6 +7278,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.clahe_checkbox = QCheckBox("CLAHE contrast normalization")
+        self.clahe_checkbox.setObjectName("claheCheck")
+        self.clahe_checkbox.setAccessibleName("CLAHE Contrast Normalization")
+        self.clahe_checkbox.setCursor(Qt.PointingHandCursor)
+        self.clahe_checkbox.setToolTip("Apply Contrast Limited Adaptive Histogram Equalization")
 
         self.clahe_checkbox.setChecked(bool(self.state.clahe_enabled))
 
@@ -6995,6 +7290,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.stain_norm_combo = QComboBox()
+        self.stain_norm_combo.setObjectName("stainNormCombo")
+        self.stain_norm_combo.setAccessibleName("Stain Normalization Mode")
+        self.stain_norm_combo.setToolTip("Color/stain normalization algorithm")
 
         self.stain_norm_combo.addItem("None", "none")
 
@@ -7009,6 +7307,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.preserve_color_checkbox = QCheckBox("Preserve color channels")
+        self.preserve_color_checkbox.setObjectName("preserveColorCheck")
+        self.preserve_color_checkbox.setAccessibleName("Preserve Color Channels")
+        self.preserve_color_checkbox.setCursor(Qt.PointingHandCursor)
+        self.preserve_color_checkbox.setToolTip("Preserve RGB color channels instead of converting to grayscale")
 
         self.preserve_color_checkbox.setChecked(bool(self.state.preserve_color_enabled))
 
@@ -7017,6 +7319,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.percentile_norm_checkbox = QCheckBox("Percentile intensity normalization")
+        self.percentile_norm_checkbox.setObjectName("percentileNormCheck")
+        self.percentile_norm_checkbox.setAccessibleName("Percentile Intensity Normalization")
+        self.percentile_norm_checkbox.setCursor(Qt.PointingHandCursor)
+        self.percentile_norm_checkbox.setToolTip("Robust percentile contrast stretching")
 
         self.percentile_norm_checkbox.setChecked(bool(self.state.percentile_normalization_enabled))
 
@@ -7025,6 +7331,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.bilateral_checkbox = QCheckBox("Bilateral denoise")
+        self.bilateral_checkbox.setObjectName("bilateralCheck")
+        self.bilateral_checkbox.setAccessibleName("Bilateral Denoise")
+        self.bilateral_checkbox.setCursor(Qt.PointingHandCursor)
+        self.bilateral_checkbox.setToolTip("Edge-preserving bilateral smoothing filter")
 
         self.bilateral_checkbox.setChecked(bool(self.state.bilateral_denoise_enabled))
 
@@ -7033,6 +7343,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.gamma_spin = QDoubleSpinBox()
+        self.gamma_spin.setObjectName("gammaSpin")
+        self.gamma_spin.setAccessibleName("Gamma Correction")
+        self.gamma_spin.setToolTip("Gamma curve adjustment for brightness/contrast")
 
         self.gamma_spin.setRange(0.50, 2.00)
 
@@ -7047,6 +7360,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.min_resolution_spin = QSpinBox()
+        self.min_resolution_spin.setObjectName("minResolutionSpin")
+        self.min_resolution_spin.setAccessibleName("Minimum Resolution in Pixels")
+        self.min_resolution_spin.setToolTip("Minimum allowed width or height in pixels")
 
         self.min_resolution_spin.setRange(64, 8192)
 
@@ -7059,6 +7375,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.blur_threshold_spin = QDoubleSpinBox()
+        self.blur_threshold_spin.setObjectName("blurThresholdSpin")
+        self.blur_threshold_spin.setAccessibleName("Blur Variance Threshold")
+        self.blur_threshold_spin.setToolTip("Laplacian variance threshold to flag blurry images")
 
         self.blur_threshold_spin.setRange(0.00001, 0.02)
 
@@ -7073,6 +7392,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.tta_checkbox = QCheckBox("Test-time augmentation (flip)")
+        self.tta_checkbox.setObjectName("ttaCheck")
+        self.tta_checkbox.setAccessibleName("Test-Time Augmentation")
+        self.tta_checkbox.setCursor(Qt.PointingHandCursor)
+        self.tta_checkbox.setToolTip("Average predictions across original and flipped orientations")
 
         self.tta_checkbox.setChecked(bool(self.state.tta_enabled))
 
@@ -7081,6 +7404,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.multiscale_checkbox = QCheckBox("Multi-scale inference")
+        self.multiscale_checkbox.setObjectName("multiscaleCheck")
+        self.multiscale_checkbox.setAccessibleName("Multi-Scale Inference")
+        self.multiscale_checkbox.setCursor(Qt.PointingHandCursor)
+        self.multiscale_checkbox.setToolTip("Run inference across multiple downsample resolutions")
 
         self.multiscale_checkbox.setChecked(bool(self.state.multiscale_enabled))
 
@@ -7089,6 +7416,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.fast_fp16_checkbox = QCheckBox("Fast mode (float16 inputs)")
+        self.fast_fp16_checkbox.setObjectName("fastFp16Check")
+        self.fast_fp16_checkbox.setAccessibleName("Fast Mode Float16")
+        self.fast_fp16_checkbox.setCursor(Qt.PointingHandCursor)
+        self.fast_fp16_checkbox.setToolTip("Accelerate prediction using half-precision float16")
 
         self.fast_fp16_checkbox.setChecked(bool(self.state.fast_fp16_enabled))
 
@@ -7097,6 +7428,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.section_dropout_spin = QSpinBox()
+        self.section_dropout_spin.setObjectName("sectionDropoutSpin")
+        self.section_dropout_spin.setAccessibleName("Section Dropout Passes")
+        self.section_dropout_spin.setToolTip("Number of random dropout evaluation passes")
 
         self.section_dropout_spin.setRange(0, 6)
 
@@ -7107,6 +7441,10 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.conf_weighted_ensemble_checkbox = QCheckBox("Confidence-weighted ensemble")
+        self.conf_weighted_ensemble_checkbox.setObjectName("confWeightedEnsembleCheck")
+        self.conf_weighted_ensemble_checkbox.setAccessibleName("Confidence Weighted Ensemble")
+        self.conf_weighted_ensemble_checkbox.setCursor(Qt.PointingHandCursor)
+        self.conf_weighted_ensemble_checkbox.setToolTip("Weight individual model predictions by their confidence scores")
 
         self.conf_weighted_ensemble_checkbox.setChecked(bool(self.state.confidence_weighted_ensemble))
 
@@ -7155,6 +7493,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_group_mode_combo = QComboBox()
+        self.training_group_mode_combo.setObjectName("trainingGroupModeCombo")
+        self.training_group_mode_combo.setAccessibleName("Training Group Mode")
+        self.training_group_mode_combo.setToolTip("Strategy used to group images into train/validation/test sets")
 
         self.training_group_mode_combo.addItem("Parent folder", "parent-folder")
 
@@ -7183,6 +7524,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_seed_spin = QSpinBox()
+        self.training_seed_spin.setObjectName("trainingSeedSpin")
+        self.training_seed_spin.setAccessibleName("Training Random Seed")
+        self.training_seed_spin.setToolTip("Random number generator seed for reproducible dataset splits")
 
         self.training_seed_spin.setRange(0, 2147483647)
 
@@ -7193,6 +7537,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_train_fraction_spin = QDoubleSpinBox()
+        self.training_train_fraction_spin.setObjectName("trainingTrainFractionSpin")
+        self.training_train_fraction_spin.setAccessibleName("Training Train Split Fraction")
 
         self.training_train_fraction_spin.setRange(0.50, 0.90)
 
@@ -7207,6 +7553,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_val_fraction_spin = QDoubleSpinBox()
+        self.training_val_fraction_spin.setObjectName("trainingValFractionSpin")
+        self.training_val_fraction_spin.setAccessibleName("Training Validation Split Fraction")
 
         self.training_val_fraction_spin.setRange(0.05, 0.40)
 
@@ -7221,6 +7569,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_patience_spin = QSpinBox()
+        self.training_patience_spin.setObjectName("trainingPatienceSpin")
+        self.training_patience_spin.setAccessibleName("Training Early Stopping Patience")
 
         self.training_patience_spin.setRange(1, 50)
 
@@ -7231,6 +7581,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_lr_factor_spin = QDoubleSpinBox()
+        self.training_lr_factor_spin.setObjectName("trainingLrFactorSpin")
+        self.training_lr_factor_spin.setAccessibleName("Training Learning Rate Decay Factor")
 
         self.training_lr_factor_spin.setRange(0.05, 0.95)
 
@@ -7245,6 +7597,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_min_lr_spin = QDoubleSpinBox()
+        self.training_min_lr_spin.setObjectName("trainingMinLrSpin")
+        self.training_min_lr_spin.setAccessibleName("Training Minimum Learning Rate")
 
         self.training_min_lr_spin.setRange(1e-8, 1e-3)
 
@@ -7259,6 +7613,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.training_mixed_precision_checkbox = QCheckBox("Use mixed precision")
+        self.training_mixed_precision_checkbox.setObjectName("trainingMixedPrecisionCheck")
+        self.training_mixed_precision_checkbox.setToolTip("Use mixed precision arithmetic during model training")
 
         self.training_mixed_precision_checkbox.setCursor(Qt.PointingHandCursor)
 

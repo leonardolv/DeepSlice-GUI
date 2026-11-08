@@ -1,11 +1,20 @@
 # GUI & UX Maintenance Log
 
-
-
 ## In Progress
 
-
 ## Completed
+
+### Task: Configuration Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Configured explicit object names, accessible descriptions, tooltips, and pointing hand cursors across Configuration Page controls: `mouse_radio` (`mouseRadio`), `rat_radio` (`ratRadio`), `auto_thickness_checkbox` (`autoThicknessCheck`), `thickness_spin` (`thicknessSpin`), `suggest_thickness_button` (`suggestThicknessBtn`), `direction_override_combo` (`directionOverrideCombo`), `direction_guide_button` (`directionGuideBtn`), `advanced_options_toggle` (`advancedOptionsToggle`), `ensemble_checkbox` (`ensembleCheck`), `ensemble_help_button` (`ensembleHelpBtn`), `secondary_model_checkbox` (`secondaryModelCheck`), `legacy_from_config_checkbox` (`legacyParserCheck`), `outlier_sigma_spin` (`outlierSigmaSpin`), `confidence_high_spin` (`confidenceHighSpin`), `confidence_medium_spin` (`confidenceMediumSpin`), `inference_batch_spin` (`inferenceBatchSpin`), `quality_gate_checkbox` (`qualityGateCheck`), `tissue_crop_checkbox` (`tissueCropCheck`), `clahe_checkbox` (`claheCheck`), `stain_norm_combo` (`stainNormCombo`), `preserve_color_checkbox` (`preserveColorCheck`), `percentile_norm_checkbox` (`percentileNormCheck`), `bilateral_checkbox` (`bilateralCheck`), `gamma_spin` (`gammaSpin`), `min_resolution_spin` (`minResolutionSpin`), `blur_threshold_spin` (`blurThresholdSpin`), `tta_checkbox` (`ttaCheck`), `multiscale_checkbox` (`multiscaleCheck`), `fast_fp16_checkbox` (`fastFp16Check`), `section_dropout_spin` (`sectionDropoutSpin`), `conf_weighted_ensemble_checkbox` (`confWeightedEnsembleCheck`), `training_group_mode_combo` (`trainingGroupModeCombo`), `training_seed_spin` (`trainingSeedSpin`), `training_train_fraction_spin` (`trainingTrainFractionSpin`), `training_val_fraction_spin` (`trainingValFractionSpin`), `training_patience_spin` (`trainingPatienceSpin`), `training_lr_factor_spin` (`trainingLrFactorSpin`), `training_min_lr_spin` (`trainingMinLrSpin`), `training_mixed_precision_checkbox` (`trainingMixedPrecisionCheck`).
+    - Exposed public widget properties on `DeepSliceMainWindow`: `mouse_atlas_radio`, `rat_atlas_radio`, `auto_thickness_check`, `thickness_spin_box`, `suggest_thickness_btn`, `direction_override_combobox`, `direction_guide_btn`, `advanced_options_toggle_btn`, `ensemble_check`, `ensemble_help_btn`, `secondary_model_check`, `legacy_parser_check`, `outlier_sigma_spin_box`, `confidence_high_spin_box`, `confidence_medium_spin_box`, `inference_batch_spin_box`, `quality_gate_check`, `tissue_crop_check`, `clahe_check`, `stain_norm_combobox`, `preserve_color_check`, `percentile_norm_check`, `bilateral_check`, `gamma_spin_box`, `min_resolution_spin_box`, `blur_threshold_spin_box`, `tta_check`, `multiscale_check`, `fast_fp16_check`, `section_dropout_spin_box`, `conf_weighted_ensemble_check`, `training_group_mode_combobox`, `preview_training_split_btn`, `save_training_split_btn`, `save_training_metadata_btn`.
+    - Added ergonomic state queries and triggers: `is_auto_thickness_enabled()`, `set_auto_thickness_enabled()`, `section_thickness_um()`, `set_section_thickness_um()`, `direction_override_text()`, `set_direction_override()`, `is_advanced_options_expanded()`, `set_advanced_options_expanded()`, `is_ensemble_enabled()`, `set_ensemble_enabled()`, `is_quality_gate_enabled()`, `set_quality_gate_enabled()`, `is_tissue_crop_enabled()`, `set_tissue_crop_enabled()`, `is_clahe_enabled()`, `set_clahe_enabled()`, `trigger_suggest_thickness()`, `trigger_direction_guide()`, `trigger_ensemble_help()`, `trigger_preview_training_split()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_configuration_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, property aliases, and ergonomic setters/getters/triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (37 passed in 11.18s, 0 errors).
+- **Status**: Completed
 
 ### Task: ThumbnailListWidget and FlagListWidget accessibility and curation ergonomics helpers
 - **Completed**: 2026-11-07
