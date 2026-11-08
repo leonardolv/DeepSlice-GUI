@@ -1559,3 +1559,111 @@ def test_prediction_page_accessibility_properties_and_ergonomics(qtbot):
     finally:
         win.close()
         win.deleteLater()
+
+def test_ingestion_page_accessibility_properties_and_ergonomics(qtbot):
+    """Verify accessibility metadata, cursor shapes, properties, and ergonomic helpers on Ingestion Page."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        win.go_to_page(0)
+        assert win.current_page_index == 0
+
+        # Object names and accessible names
+        assert win.drop_area_widget.objectName() == "ingestionDropArea"
+        assert win.drop_area_widget.accessibleName() == "Image Drop Area"
+        assert "Drag and drop" in win.drop_area_widget.accessibleDescription()
+
+        assert win.add_folder_btn.objectName() == "addFolderBtn"
+        assert win.add_folder_btn.accessibleName() == "Add Folder"
+        assert win.add_folder_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.add_files_btn.objectName() == "addFilesBtn"
+        assert win.add_files_btn.accessibleName() == "Add Files"
+        assert win.add_files_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.clear_images_btn.objectName() == "clearImagesBtn"
+        assert win.clear_images_btn.accessibleName() == "Clear All Images"
+        assert win.clear_images_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.enable_section_numbers_check.objectName() == "enableSectionNumbersCheck"
+        assert win.enable_section_numbers_check.accessibleName() == "Detect Section Numbers"
+        assert win.enable_section_numbers_check.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.naming_helper_btn.objectName() == "namingHelperBtn"
+        assert win.naming_helper_btn.accessibleName() == "Naming Helper"
+        assert win.naming_helper_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.legacy_parsing_check.objectName() == "legacyParsingCheck"
+        assert win.legacy_parsing_check.accessibleName() == "Legacy Parser Fallback"
+        assert win.legacy_parsing_check.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.orientation_combobox.objectName() == "orientationCombo"
+        assert win.orientation_combobox.accessibleName() == "Anatomical Orientation"
+        assert win.orientation_combobox.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.orientation_guide_btn.objectName() == "orientationGuideBtn"
+        assert win.orientation_guide_btn.accessibleName() == "Orientation Guide"
+        assert win.orientation_guide_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.slice_count_lbl.objectName() == "sliceCountLabel"
+        assert win.file_size_summary_lbl.objectName() == "fileSizeSummaryLabel"
+        assert win.ingestion_summary_banner_lbl.objectName() == "SummaryBanner"
+        assert win.ingestion_warning_lbl.objectName() == "WarningText"
+
+        assert win.index_table_widget.objectName() == "indexTable"
+        assert win.index_table_widget.accessibleName() == "Section Indices Table"
+
+        assert win.thumbnail_sort_combobox.objectName() == "thumbnailSortCombo"
+        assert win.thumbnail_sort_combobox.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.thumbnail_filter_input.objectName() == "thumbnailFilterEdit"
+        assert win.thumbnail_list_widget.objectName() == "ingestionThumbnailList"
+        assert win.thumbnail_progress_bar.objectName() == "thumbnailProgress"
+        assert win.ingestion_preview_view.objectName() == "ingestionPreview"
+
+        # Ergonomic state queries and setters
+        assert "Slices: 0" in win.slice_count_text()
+        assert "0 files loaded" in win.file_size_summary_text()
+        assert "No files loaded" in win.ingestion_summary_banner_text()
+        assert win.index_table_row_count() == 0
+
+        assert win.is_section_number_detection_enabled() is True
+        win.set_section_number_detection_enabled(False)
+        assert win.is_section_number_detection_enabled() is False
+        win.set_section_number_detection_enabled(True)
+        assert win.is_section_number_detection_enabled() is True
+
+        assert win.is_legacy_parsing_enabled() is False
+        win.set_legacy_parsing_enabled(True)
+        assert win.is_legacy_parsing_enabled() is True
+        win.set_legacy_parsing_enabled(False)
+        assert win.is_legacy_parsing_enabled() is False
+
+        assert "Coronal" in win.cutting_plane_orientation()
+        win.set_cutting_plane_orientation("Sagittal")
+        assert "Sagittal" in win.cutting_plane_orientation()
+        win.set_cutting_plane_orientation("Coronal")
+        assert "Coronal" in win.cutting_plane_orientation()
+
+        assert "Filename" in win.thumbnail_sort_order()
+        win.set_thumbnail_sort_order("Detected Index")
+        assert "Detected Index" in win.thumbnail_sort_order()
+        win.set_thumbnail_sort_order("Filename")
+
+        win.set_thumbnail_filter_query("brain_s001")
+        assert win.thumbnail_filter_query() == "brain_s001"
+        win.clear_thumbnail_filter()
+        assert win.thumbnail_filter_query() == ""
+
+        # Programmatic dialog triggers (headless safe)
+        helper_dlg = win.trigger_naming_helper()
+        assert helper_dlg is not None
+        guide_dlg = win.trigger_orientation_guide()
+        assert guide_dlg is not None
+
+        win.trigger_clear_images()
+    finally:
+        win.close()
+        win.deleteLater()
+

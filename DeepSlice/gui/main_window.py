@@ -1942,6 +1942,205 @@ class DeepSliceMainWindow(QMainWindow):
             return True
         return False
 
+    # Ingestion Page property aliases
+    @property
+    def drop_area_widget(self) -> DropArea:
+        """Return the drag-and-drop area widget."""
+        return self.drop_area
+
+    @property
+    def add_folder_btn(self) -> QPushButton:
+        """Return the Add Folder button."""
+        return self.add_folder_button
+
+    @property
+    def add_files_btn(self) -> QPushButton:
+        """Return the Add Files button."""
+        return self.add_files_button
+
+    @property
+    def clear_images_btn(self) -> QPushButton:
+        """Return the Clear All images button."""
+        return self.clear_images_button
+
+    @property
+    def enable_section_numbers_check(self) -> QCheckBox:
+        """Return the detect section numbers checkbox."""
+        return self.enable_section_numbers_checkbox
+
+    @property
+    def naming_helper_btn(self) -> QToolButton:
+        """Return the naming convention help button."""
+        return self.naming_helper_button
+
+    @property
+    def legacy_parsing_check(self) -> QCheckBox:
+        """Return the legacy filename parsing checkbox."""
+        return self.legacy_parsing_checkbox
+
+    @property
+    def orientation_combobox(self) -> QComboBox:
+        """Return the cutting plane orientation combo box."""
+        return self.orientation_combo
+
+    @property
+    def orientation_guide_btn(self) -> QToolButton:
+        """Return the orientation guide button."""
+        return self.orientation_guide_button
+
+    @property
+    def slice_count_lbl(self) -> QLabel:
+        """Return the slice count label."""
+        return self.slice_count_label
+
+    @property
+    def file_size_summary_lbl(self) -> QLabel:
+        """Return the file size summary label."""
+        return self.file_size_summary_label
+
+    @property
+    def ingestion_summary_banner_lbl(self) -> QLabel:
+        """Return the ingestion summary banner label."""
+        return self.ingestion_summary_banner
+
+    @property
+    def ingestion_warning_lbl(self) -> QLabel:
+        """Return the ingestion warning label."""
+        return self.ingestion_warning_label
+
+    @property
+    def index_table_widget(self) -> QTableWidget:
+        """Return the section index table."""
+        return self.index_table
+
+    @property
+    def thumbnail_sort_combobox(self) -> QComboBox:
+        """Return the thumbnail sort order combo box."""
+        return self.thumbnail_sort_combo
+
+    @property
+    def thumbnail_filter_input(self) -> QLineEdit:
+        """Return the thumbnail filter line edit."""
+        return self.thumbnail_filter_edit
+
+    @property
+    def thumbnail_list_widget(self) -> ThumbnailListWidget:
+        """Return the thumbnail list / grid widget."""
+        return self.thumbnail_list
+
+    @property
+    def thumbnail_progress_bar(self) -> QProgressBar:
+        """Return the thumbnail generation progress bar."""
+        return self.thumbnail_progress
+
+    @property
+    def ingestion_preview_view(self) -> SliceGraphicsView:
+        """Return the slice graphics preview widget."""
+        return self.ingestion_preview
+
+    # --- Ingestion Page Ergonomic Queries & Action Helpers ---
+
+    def slice_count_text(self) -> str:
+        """Return the current slice count label text."""
+        return str(self.slice_count_label.text()) if hasattr(self, "slice_count_label") else ""
+
+    def file_size_summary_text(self) -> str:
+        """Return the file size summary label text."""
+        return str(self.file_size_summary_label.text()) if hasattr(self, "file_size_summary_label") else ""
+
+    def ingestion_summary_banner_text(self) -> str:
+        """Return the ingestion summary banner text."""
+        return str(self.ingestion_summary_banner.text()) if hasattr(self, "ingestion_summary_banner") else ""
+
+    def ingestion_warning_text(self) -> str:
+        """Return the ingestion warning label text."""
+        return str(self.ingestion_warning_label.text()) if hasattr(self, "ingestion_warning_label") else ""
+
+    def is_section_number_detection_enabled(self) -> bool:
+        """Return True if section number parsing from filenames is enabled."""
+        return bool(self.enable_section_numbers_checkbox.isChecked()) if hasattr(self, "enable_section_numbers_checkbox") else False
+
+    def set_section_number_detection_enabled(self, enabled: bool) -> None:
+        """Set whether section numbers are parsed from filenames."""
+        if hasattr(self, "enable_section_numbers_checkbox"):
+            self.enable_section_numbers_checkbox.setChecked(bool(enabled))
+
+    def is_legacy_parsing_enabled(self) -> bool:
+        """Return True if legacy parser fallback (last 3 digits) is enabled."""
+        return bool(self.legacy_parsing_checkbox.isChecked()) if hasattr(self, "legacy_parsing_checkbox") else False
+
+    def set_legacy_parsing_enabled(self, enabled: bool) -> None:
+        """Set whether legacy parser fallback is enabled."""
+        if hasattr(self, "legacy_parsing_checkbox"):
+            self.legacy_parsing_checkbox.setChecked(bool(enabled))
+
+    def cutting_plane_orientation(self) -> str:
+        """Return the active anatomical orientation / cutting plane."""
+        return str(self.orientation_combo.currentText()) if hasattr(self, "orientation_combo") else ""
+
+    def set_cutting_plane_orientation(self, orientation: str) -> bool:
+        """Set anatomical cutting plane by text match."""
+        if not hasattr(self, "orientation_combo"):
+            return False
+        idx = self.orientation_combo.findText(orientation)
+        if idx >= 0:
+            self.orientation_combo.setCurrentIndex(idx)
+            return True
+        for i in range(self.orientation_combo.count()):
+            if orientation.lower() in self.orientation_combo.itemText(i).lower():
+                self.orientation_combo.setCurrentIndex(i)
+                return True
+        return False
+
+    def thumbnail_sort_order(self) -> str:
+        """Return the thumbnail grid sort order text."""
+        return str(self.thumbnail_sort_combo.currentText()) if hasattr(self, "thumbnail_sort_combo") else ""
+
+    def set_thumbnail_sort_order(self, order: str) -> bool:
+        """Set thumbnail sort order by text."""
+        if not hasattr(self, "thumbnail_sort_combo"):
+            return False
+        idx = self.thumbnail_sort_combo.findText(order)
+        if idx >= 0:
+            self.thumbnail_sort_combo.setCurrentIndex(idx)
+            return True
+        for i in range(self.thumbnail_sort_combo.count()):
+            if order.lower() in self.thumbnail_sort_combo.itemText(i).lower():
+                self.thumbnail_sort_combo.setCurrentIndex(i)
+                return True
+        return False
+
+    def thumbnail_filter_query(self) -> str:
+        """Return the thumbnail filter query string."""
+        return str(self.thumbnail_filter_edit.text()) if hasattr(self, "thumbnail_filter_edit") else ""
+
+    def set_thumbnail_filter_query(self, query: str) -> None:
+        """Set the thumbnail filter query string."""
+        if hasattr(self, "thumbnail_filter_edit"):
+            self.thumbnail_filter_edit.setText(query)
+
+    def clear_thumbnail_filter(self) -> None:
+        """Clear the thumbnail filter input."""
+        if hasattr(self, "thumbnail_filter_edit"):
+            self.thumbnail_filter_edit.clear()
+
+    def index_table_row_count(self) -> int:
+        """Return the number of rows in the section index table."""
+        return int(self.index_table.rowCount()) if hasattr(self, "index_table") else 0
+
+    def trigger_clear_images(self) -> None:
+        """Trigger Clear All images button."""
+        if hasattr(self, "clear_images_button"):
+            self.clear_images_button.click()
+
+    def trigger_naming_helper(self) -> QMessageBox:
+        """Trigger Naming Helper dialog."""
+        return self._show_naming_helper()
+
+    def trigger_orientation_guide(self) -> QMessageBox:
+        """Trigger Orientation Guide dialog."""
+        return self._show_orientation_guide()
+
     # Configuration Page property aliases
     @property
     def mouse_atlas_radio(self) -> QRadioButton:
@@ -6200,6 +6399,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.drop_area = DropArea()
+        self.drop_area.setObjectName("ingestionDropArea")
+        self.drop_area.setAccessibleName("Image Drop Area")
+        self.drop_area.setAccessibleDescription("Drag and drop histological images or folders here")
 
         self.drop_area.pathsDropped.connect(self._handle_dropped_paths)
 
@@ -6210,6 +6412,7 @@ class DeepSliceMainWindow(QMainWindow):
         button_row = QHBoxLayout()
 
         self.add_folder_button = QPushButton("Add Folder")
+        self.add_folder_button.setObjectName("addFolderBtn")
 
         self.add_folder_button.setCursor(Qt.PointingHandCursor)
 
@@ -6218,6 +6421,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.add_folder_button.clicked.connect(self._add_folder)
 
         self.add_files_button = QPushButton("Add Files")
+        self.add_files_button.setObjectName("addFilesBtn")
 
         self.add_files_button.setCursor(Qt.PointingHandCursor)
 
@@ -6226,6 +6430,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.add_files_button.clicked.connect(self._add_files)
 
         self.clear_images_button = QPushButton("Clear All")
+        self.clear_images_button.setObjectName("clearImagesBtn")
 
         self.clear_images_button.setCursor(Qt.PointingHandCursor)
 
@@ -6256,6 +6461,7 @@ class DeepSliceMainWindow(QMainWindow):
             "Read section numbers from filenames (e.g. _s012)"
 
         )
+        self.enable_section_numbers_checkbox.setObjectName("enableSectionNumbersCheck")
 
         self.enable_section_numbers_checkbox.setCursor(Qt.PointingHandCursor)
 
@@ -6266,6 +6472,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.enable_section_numbers_checkbox.toggled.connect(self._update_run_button_state)
 
         self.naming_helper_button = QToolButton()
+        self.naming_helper_button.setObjectName("namingHelperBtn")
 
         self.naming_helper_button.setCursor(Qt.PointingHandCursor)
 
@@ -6290,6 +6497,7 @@ class DeepSliceMainWindow(QMainWindow):
             "Older naming: use the last 3 digits of the filename"
 
         )
+        self.legacy_parsing_checkbox.setObjectName("legacyParsingCheck")
 
         self.legacy_parsing_checkbox.setCursor(Qt.PointingHandCursor)
 
@@ -6298,6 +6506,8 @@ class DeepSliceMainWindow(QMainWindow):
         self.legacy_parsing_checkbox.toggled.connect(self._refresh_ingestion_views)
 
         self.orientation_combo = QComboBox()
+        self.orientation_combo.setObjectName("orientationCombo")
+        self.orientation_combo.setCursor(Qt.PointingHandCursor)
 
         self.orientation_combo.setAccessibleName("Anatomical Orientation")
 
@@ -6318,6 +6528,7 @@ class DeepSliceMainWindow(QMainWindow):
         self.orientation_combo.currentIndexChanged.connect(self._update_run_button_state)
 
         self.orientation_guide_button = QToolButton()
+        self.orientation_guide_button.setObjectName("orientationGuideBtn")
 
         self.orientation_guide_button.setCursor(Qt.PointingHandCursor)
 
@@ -6346,10 +6557,12 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.slice_count_label = QLabel("Slices: 0")
+        self.slice_count_label.setObjectName("sliceCountLabel")
 
         self.slice_count_label.setAccessibleName("Slice Count Label")
 
         self.file_size_summary_label = QLabel("0 files loaded - 0 B")
+        self.file_size_summary_label.setObjectName("fileSizeSummaryLabel")
 
         self.file_size_summary_label.setAccessibleName("File Size Summary Label")
 
@@ -6378,6 +6591,7 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.index_table = QTableWidget(0, 3)
+        self.index_table.setObjectName("indexTable")
 
         self.index_table.setAccessibleName("Section Indices Table")
 
@@ -6410,6 +6624,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.thumbnail_sort_combo = QComboBox()
+        self.thumbnail_sort_combo.setObjectName("thumbnailSortCombo")
+        self.thumbnail_sort_combo.setCursor(Qt.PointingHandCursor)
 
         self.thumbnail_sort_combo.setAccessibleName("Thumbnail Sort Order")
 
@@ -6434,6 +6650,7 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.thumbnail_filter_edit = QLineEdit()
+        self.thumbnail_filter_edit.setObjectName("thumbnailFilterEdit")
 
         self.thumbnail_filter_edit.setAccessibleName("Thumbnail Filter")
 
@@ -6452,6 +6669,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.thumbnail_list = ThumbnailListWidget()
+        self.thumbnail_list.setObjectName("ingestionThumbnailList")
+        self.thumbnail_list.setAccessibleName("Ingestion Thumbnail Grid")
 
         self.thumbnail_list.setViewMode(QListWidget.IconMode)
 
@@ -6474,6 +6693,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.thumbnail_progress = QProgressBar()
+        self.thumbnail_progress.setObjectName("thumbnailProgress")
+        self.thumbnail_progress.setAccessibleName("Thumbnail Generation Progress")
 
         self.thumbnail_progress.setRange(0, 100)
 
@@ -6490,6 +6711,8 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         self.ingestion_preview = SliceGraphicsView()
+        self.ingestion_preview.setObjectName("ingestionPreview")
+        self.ingestion_preview.setAccessibleName("Ingestion Slice Preview")
 
         right_layout.addWidget(self.ingestion_preview, stretch=2)
 

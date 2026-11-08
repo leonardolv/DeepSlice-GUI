@@ -4,6 +4,20 @@
 
 ## Completed
 
+### Task: Ingestion Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across Ingestion Page controls: `drop_area` (`ingestionDropArea`), `add_folder_button` (`addFolderBtn`), `add_files_button` (`addFilesBtn`), `clear_images_button` (`clearImagesBtn`), `enable_section_numbers_checkbox` (`enableSectionNumbersCheck`), `naming_helper_button` (`namingHelperBtn`), `legacy_parsing_checkbox` (`legacyParsingCheck`), `orientation_combo` (`orientationCombo`), `orientation_guide_button` (`orientationGuideBtn`), `slice_count_label` (`sliceCountLabel`), `file_size_summary_label` (`fileSizeSummaryLabel`), `index_table` (`indexTable`), `thumbnail_sort_combo` (`thumbnailSortCombo`), `thumbnail_filter_edit` (`thumbnailFilterEdit`), `thumbnail_list` (`ingestionThumbnailList`), `thumbnail_progress` (`thumbnailProgress`), `ingestion_preview` (`ingestionPreview`).
+    - Standardized accessible names, descriptions, tooltips, and pointing hand cursor affordances across file addition, option configuration, sorting, filtering, and preview controls.
+    - Exposed 19 public widget properties on `DeepSliceMainWindow`: `drop_area_widget`, `add_folder_btn`, `add_files_btn`, `clear_images_btn`, `enable_section_numbers_check`, `naming_helper_btn`, `legacy_parsing_check`, `orientation_combobox`, `orientation_guide_btn`, `slice_count_lbl`, `file_size_summary_lbl`, `ingestion_summary_banner_lbl`, `ingestion_warning_lbl`, `index_table_widget`, `thumbnail_sort_combobox`, `thumbnail_filter_input`, `thumbnail_list_widget`, `thumbnail_progress_bar`, `ingestion_preview_view`.
+    - Added 19 ergonomic state queries and triggers: `slice_count_text()`, `file_size_summary_text()`, `ingestion_summary_banner_text()`, `ingestion_warning_text()`, `is_section_number_detection_enabled()`, `set_section_number_detection_enabled()`, `is_legacy_parsing_enabled()`, `set_legacy_parsing_enabled()`, `cutting_plane_orientation()`, `set_cutting_plane_orientation()`, `thumbnail_sort_order()`, `set_thumbnail_sort_order()`, `thumbnail_filter_query()`, `set_thumbnail_filter_query()`, `clear_thumbnail_filter()`, `index_table_row_count()`, `trigger_clear_images()`, `trigger_naming_helper()`, `trigger_orientation_guide()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_ingestion_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, properties, and ergonomic setters, getters, and action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (40 passed in 11.89s, 0 errors).
+- **Status**: Completed
+
+
 ### Task: Prediction Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
 - **Completed**: 2026-11-08
 - **Changes**:
