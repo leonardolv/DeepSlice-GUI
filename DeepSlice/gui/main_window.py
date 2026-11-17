@@ -16,7 +16,7 @@ import traceback
 
 from datetime import datetime
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 
 
@@ -193,6 +193,11 @@ def _open_path_in_os(path: str) -> None:
         return
 
     subprocess.Popen(["xdg-open", path])
+
+
+def _is_headless() -> bool:
+    """Return True if running in offscreen or test environment."""
+    return os.environ.get("QT_QPA_PLATFORM") == "offscreen" or "PYTEST_CURRENT_TEST" in os.environ
 
 
 
@@ -3652,6 +3657,42 @@ class DeepSliceMainWindow(QMainWindow):
         initial_row = self.step_list.currentRow()
         self._go_to_next_step()
         return self.step_list.currentRow() > initial_row
+
+    def trigger_new_session(self) -> None:
+        """Programmatically reset workspace and begin a new session."""
+        self._reset_session()
+
+    def trigger_save_session(self, filename: Optional[str] = None) -> Optional[str]:
+        """Programmatically save current session state to a file."""
+        return self._save_session(filename)
+
+    def trigger_load_session(self, filename: Optional[str] = None) -> Optional[str]:
+        """Programmatically load session state from a file."""
+        return self._load_session_or_quint(filename)
+
+    def trigger_add_folder(self, folder: Optional[str] = None) -> Optional[List[str]]:
+        """Programmatically import images from a folder."""
+        return self._add_folder(folder)
+
+    def trigger_add_files(self, files: Optional[Union[List[str], str]] = None) -> Optional[List[str]]:
+        """Programmatically import specified image files."""
+        return self._add_files(files)
+
+    def trigger_save_training_split(self, filename: Optional[str] = None) -> Optional[str]:
+        """Programmatically save training split manifest."""
+        return self._save_training_split_manifest(filename)
+
+    def trigger_save_training_metadata(self, filename: Optional[str] = None) -> Optional[str]:
+        """Programmatically save training metadata manifest."""
+        return self._save_training_metadata_manifest(filename)
+
+    def trigger_browse_export_dir(self, directory: Optional[str] = None) -> Optional[str]:
+        """Programmatically browse and set output export directory."""
+        return self._browse_output_directory(directory)
+
+    def trigger_browse_quicknii_path(self, path: Optional[str] = None) -> Optional[str]:
+        """Programmatically browse and set QuickNII executable path."""
+        return self._browse_quicknii_path(path)
 
 
 
@@ -12329,43 +12370,36 @@ class DeepSliceMainWindow(QMainWindow):
 
 
 
-    def _add_folder(self):
-
-        folder = QFileDialog.getExistingDirectory(self, "Select Image Folder")
-
+    def _add_folder(self, folder: Optional[str] = None) -> Optional[List[str]]:
+        if folder is None:
+            if _is_headless():
+                return None
+            folder = QFileDialog.getExistingDirectory(self, "Select Image Folder")
         if not folder:
-
-            return
-
+            return None
         image_paths = self._collect_supported_files_from_paths([folder])
-
         self.state.add_images(image_paths)
-
         self._refresh_all_views()
+        return image_paths
 
-
-
-    def _add_files(self):
-
-        files, _ = QFileDialog.getOpenFileNames(
-
-            self,
-
-            "Select Histology Images",
-
-            "",
-
-            "Images (*.jpg *.jpeg *.png *.tif *.tiff)",
-
-        )
-
+    def _add_files(self, files: Optional[Union[List[str], str]] = None) -> Optional[List[str]]:
+        if files is None:
+            if _is_headless():
+                return None
+            selected, _ = QFileDialog.getOpenFileNames(
+                self,
+                "Select Histology Images",
+                "",
+                "Images (*.jpg *.jpeg *.png *.tif *.tiff)",
+            )
+            files = selected
+        elif isinstance(files, str):
+            files = [files]
         if not files:
-
-            return
-
+            return None
         self.state.add_images(files)
-
         self._refresh_all_views()
+        return files
 
 
 
@@ -13237,133 +13271,80 @@ class DeepSliceMainWindow(QMainWindow):
 
 
 
-    def _save_training_split_manifest(self):
-
+    def _save_training_split_manifest(self, filename: Optional[str] = None) -> Optional[str]:
         if len(self.state.image_paths) == 0:
-
             self._show_toast("Load images before exporting split manifest.", timeout_ms=3000, level="warning")
-
             return None
 
-
-
-        base_dir = os.getcwd()
-
-        if hasattr(self, "output_dir_edit"):
-
-            configured_dir = str(self.output_dir_edit.text()).strip()
-
-            if configured_dir:
-
-                base_dir = configured_dir
-
-
-
-        default_name = os.path.join(base_dir, "training_split_manifest.json")
-
-        filename, _ = QFileDialog.getSaveFileName(
-
-            self,
-
-            "Save Training Split Manifest",
-
-            default_name,
-
-            "JSON Files (*.json)",
-
-        )
-
-        if not filename:
-
-            return
-
-
+        if filename is None:
+            if _is_headless():
+                return None
+            base_dir = os.getcwd()
+            if hasattr(self, "output_dir_edit"):
+                configured_dir = str(self.output_dir_edit.text()).strip()
+                if configured_dir:
+                    base_dir = configured_dir
+            default_name = os.path.join(base_dir, "training_split_manifest.json")
+            selected, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Training Split Manifest",
+                default_name,
+                "JSON Files (*.json)",
+            )
+            if not selected:
+                return None
+            filename = selected
 
         try:
-
             saved_path = self.state.save_training_split_manifest(filename)
-
             self._update_training_split_summary()
-
             self._show_toast(f"Saved training split manifest: {saved_path}", level="success")
-
+            return saved_path
         except Exception as exc:
-
             self._show_logged_exception(
-
                 title="Save Training Split Manifest",
-
                 context="Unable to save split manifest",
-
                 exc=exc,
-
                 icon=QMessageBox.Critical,
-
             )
-
-
-
-    def _save_training_metadata_manifest(self):
-
-        if len(self.state.image_paths) == 0:
-
-            self._show_toast("Load images before exporting training metadata.", timeout_ms=3000, level="warning")
-
             return None
 
+    def _save_training_metadata_manifest(self, filename: Optional[str] = None) -> Optional[str]:
+        if len(self.state.image_paths) == 0:
+            self._show_toast("Load images before exporting training metadata.", timeout_ms=3000, level="warning")
+            return None
 
-
-        base_dir = os.getcwd()
-
-        if hasattr(self, "output_dir_edit"):
-
-            configured_dir = str(self.output_dir_edit.text()).strip()
-
-            if configured_dir:
-
-                base_dir = configured_dir
-
-
-
-        default_name = os.path.join(base_dir, "training_run_metadata.json")
-
-        filename, _ = QFileDialog.getSaveFileName(
-
-            self,
-
-            "Save Training Metadata",
-
-            default_name,
-
-            "JSON Files (*.json)",
-
-        )
-
-        if not filename:
-
-            return
-
-
+        if filename is None:
+            if _is_headless():
+                return None
+            base_dir = os.getcwd()
+            if hasattr(self, "output_dir_edit"):
+                configured_dir = str(self.output_dir_edit.text()).strip()
+                if configured_dir:
+                    base_dir = configured_dir
+            default_name = os.path.join(base_dir, "training_run_metadata.json")
+            selected, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Training Metadata",
+                default_name,
+                "JSON Files (*.json)",
+            )
+            if not selected:
+                return None
+            filename = selected
 
         try:
-
             saved_path = self.state.save_training_metadata_manifest(filename)
-
             self._show_toast(f"Saved training metadata: {saved_path}", level="success")
-
+            return saved_path
         except Exception as exc:
-
             self._show_logged_exception(
-
                 title="Save Training Metadata",
-
                 context="Unable to save training metadata",
-
                 exc=exc,
-
                 icon=QMessageBox.Critical,
-
             )
+            return None
 
 
 
@@ -17963,33 +17944,31 @@ class DeepSliceMainWindow(QMainWindow):
 
 
 
-    def _browse_output_directory(self):
-
-        directory = QFileDialog.getExistingDirectory(self, "Select Export Directory")
-
+    def _browse_output_directory(self, directory: Optional[str] = None) -> Optional[str]:
+        if directory is None:
+            if _is_headless():
+                return None
+            directory = QFileDialog.getExistingDirectory(self, "Select Export Directory")
         if directory:
-
             self.output_dir_edit.setText(directory)
+            return directory
+        return None
 
-
-
-    def _browse_quicknii_path(self):
-
-        path, _ = QFileDialog.getOpenFileName(
-
-            self,
-
-            "Locate QuickNII Executable",
-
-            "",
-
-            "Executables (*.exe);;All Files (*)",
-
-        )
-
+    def _browse_quicknii_path(self, path: Optional[str] = None) -> Optional[str]:
+        if path is None:
+            if _is_headless():
+                return None
+            selected, _ = QFileDialog.getOpenFileName(
+                self,
+                "Locate QuickNII Executable",
+                "",
+                "Executables (*.exe);;All Files (*)",
+            )
+            path = selected
         if path:
-
             self.quicknii_path_edit.setText(path)
+            return path
+        return None
 
 
 
@@ -18867,116 +18846,73 @@ class DeepSliceMainWindow(QMainWindow):
 
 
 
-    def _save_session(self):
-
-        filename, _ = QFileDialog.getSaveFileName(
-
-            self,
-
-            "Save DeepSlice GUI Session",
-
-            "",
-
-            "DeepSlice Session (*.deepslice-session.json)",
-
-        )
-
-        if not filename:
-
-            return
-
-
+    def _save_session(self, filename: Optional[str] = None) -> Optional[str]:
+        if filename is None:
+            if _is_headless():
+                return None
+            selected, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save DeepSlice GUI Session",
+                "",
+                "DeepSlice Session (*.deepslice-session.json)",
+            )
+            if not selected:
+                return None
+            filename = selected
 
         if not filename.endswith(".deepslice-session.json"):
-
             filename = filename + ".deepslice-session.json"
 
-
-
         self._set_session_io_busy(True)
-
         self.save_session_button.setText("Saving...")
-
         self.save_session_button.setEnabled(False)
-
         QApplication.processEvents()
 
-
-
         try:
-
             payload = self.state.to_session_dict()
-
             payload["anchor_depth_targets"] = {
-
                 str(index): float(depth)
-
                 for index, depth in self._anchor_depth_targets.items()
-
             }
             write_json_atomic(filename, payload, indent=2)
-
         except Exception as exc:
-
             self._set_session_io_busy(False)
-
             self.save_session_button.setText("Save Session")
-
             self.save_session_button.setEnabled(True)
-
             self._show_logged_exception(
-
                 title="Save Session",
-
                 context="Failed to save DeepSlice session",
-
                 exc=exc,
-
                 icon=QMessageBox.Critical,
-
             )
-
-            return
-
-
+            return None
 
         self._set_session_io_busy(False)
-
         self.save_session_button.setText("Save Session")
-
         self.save_session_button.setEnabled(True)
-
         self.state.is_dirty = False
-
         self._session_base_text = f"Session: Saved {os.path.basename(filename)}"
-
         self._update_session_status()
-
         self._add_recent_session(filename)
-
         self._show_toast("Session saved", timeout_ms=3000)
+        return filename
 
-
-
-    def _load_session_or_quint(self):
-
-        filename, _ = QFileDialog.getOpenFileName(
-
-            self,
-
-            "Load Session or QuickNII",
-
-            "",
-
-            "Session/QuickNII (*.json *.xml *.deepslice-session.json)",
-
-        )
-
-        if not filename:
-
-            return
+    def _load_session_or_quint(self, filename: Optional[str] = None) -> Optional[str]:
+        if filename is None:
+            if _is_headless():
+                return None
+            selected, _ = QFileDialog.getOpenFileName(
+                self,
+                "Load Session or QuickNII",
+                "",
+                "Session/QuickNII (*.json *.xml *.deepslice-session.json)",
+            )
+            if not selected:
+                return None
+            filename = selected
 
         self._load_session_file(filename)
+        return filename
 
 
 

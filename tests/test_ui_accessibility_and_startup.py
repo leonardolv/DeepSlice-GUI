@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 
 from PySide6.QtWidgets import QApplication, QPushButton, QMessageBox
@@ -2060,4 +2063,73 @@ def test_top_bar_sidebar_guide_banner_and_status_bar_accessibility_and_ergonomic
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_file_io_session_actions_and_training_manifest_triggers(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Headless guards: calling without parameters in offscreen test environment returns None without blocking
+        assert win.trigger_add_folder() is None
+        assert win.trigger_add_files() is None
+        assert win.trigger_browse_export_dir() is None
+        assert win.trigger_browse_quicknii_path() is None
+        assert win.trigger_save_session() is None
+        assert win.trigger_load_session() is None
+        assert win.trigger_save_training_split() is None
+        assert win.trigger_save_training_metadata() is None
+
+        # Browse triggers with explicit path parameter
+        export_dir = str(tmp_path / "custom_exports")
+        os.makedirs(export_dir, exist_ok=True)
+        res_dir = win.trigger_browse_export_dir(export_dir)
+        assert res_dir == export_dir
+        assert win.output_dir_line_edit.text() == export_dir
+
+        quicknii_exe = str(tmp_path / "QuickNII.exe")
+        with open(quicknii_exe, "w", encoding="utf-8") as f:
+            f.write("mock")
+        res_qnii = win.trigger_browse_quicknii_path(quicknii_exe)
+        assert res_qnii == quicknii_exe
+        assert win.quicknii_path_line_edit.text() == quicknii_exe
+
+        # Session saving and loading triggers
+        session_file = str(tmp_path / "test_run.deepslice-session.json")
+        saved_file = win.trigger_save_session(session_file)
+        assert saved_file == session_file
+        assert os.path.exists(session_file)
+
+        # Trigger new session
+        win.trigger_new_session()
+        assert "DeepSlice" in win.project_title_text()
+        assert win.session_status_text() == "Session: New"
+
+        # Trigger load session
+        loaded_file = win.trigger_load_session(session_file)
+        assert loaded_file == session_file
+
+        # Ingestion triggers with sample image
+        sample_img = str(tmp_path / "slice_001.png")
+        from PIL import Image
+        img = Image.new("RGB", (64, 64), color=(128, 128, 128))
+        img.save(sample_img)
+
+        imported = win.trigger_add_files([sample_img])
+        assert imported == [sample_img]
+        assert len(win.state.image_paths) == 1
+
+        # Training manifest triggers
+        split_path = str(tmp_path / "split_test.json")
+        saved_split = win.trigger_save_training_split(split_path)
+        assert saved_split == split_path
+        assert os.path.exists(split_path)
+
+        meta_path = str(tmp_path / "meta_test.json")
+        saved_meta = win.trigger_save_training_metadata(meta_path)
+        assert saved_meta == meta_path
+        assert os.path.exists(meta_path)
+    finally:
+        win.close()
+        win.deleteLater()
+
 

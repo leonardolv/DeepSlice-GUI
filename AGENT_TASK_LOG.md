@@ -16,9 +16,13 @@ here.
 
 ## In Progress
 
-
-
 ## Completed
+
+### 2026-11-17 UTC - File I/O and session action triggers, headless dialog safety guards, and training manifest export helpers
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added module-level `_is_headless()` utility checking offscreen and pytest runtime environments; added headless execution safety guards and optional path parameters to file and directory dialog methods: `_add_folder(folder=None)`, `_add_files(files=None)`, `_save_training_split_manifest(filename=None)`, `_save_training_metadata_manifest(filename=None)`, `_browse_output_directory(directory=None)`, `_browse_quicknii_path(path=None)`, `_save_session(filename=None)`, `_load_session_or_quint(filename=None)`; exposed 9 programmatic action triggers on `DeepSliceMainWindow`: `trigger_new_session()`, `trigger_save_session(filename=None)`, `trigger_load_session(filename=None)`, `trigger_add_folder(folder=None)`, `trigger_add_files(files=None)`, `trigger_save_training_split(filename=None)`, `trigger_save_training_metadata(filename=None)`, `trigger_browse_export_dir(directory=None)`, and `trigger_browse_quicknii_path(path=None)`.
+- `tests/test_ui_accessibility_and_startup.py`: Added comprehensive unit test `test_file_io_session_actions_and_training_manifest_triggers` asserting headless execution safety, path parameter injection, session serialization/deserialization roundtrip, image ingestion, and training manifest exports.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (43 passed in 11.62s, 0 errors).
 
 ### 2026-11-17 UTC - PreferencesDialog Accessible Description, Headless Guards, and Ergonomics Helpers
 Status: **done** (Antigravity)
