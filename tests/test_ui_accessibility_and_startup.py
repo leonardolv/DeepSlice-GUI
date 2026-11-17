@@ -108,6 +108,52 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
             assert dlg.output_dir_edit.text() == ""
             assert dlg.quicknii_edit.text() == ""
             assert not dlg.console_always_visible.isChecked()
+
+            # Ergonomic queries, setters, and triggers
+            assert dlg.accessibleDescription() == "Application preferences and default configuration options dialog"
+            assert dlg.selected_species() == "mouse"
+            assert dlg.set_selected_species("rat") is True
+            assert dlg.selected_species() == "rat"
+            assert dlg.set_selected_species("unknown") is False
+
+            assert dlg.selected_theme() == "dark"
+            assert dlg.set_selected_theme("light") is True
+            assert dlg.selected_theme() == "light"
+            assert dlg.set_selected_theme("neon") is False
+
+            dlg.set_output_directory("C:/ErgonomicOutput")
+            assert dlg.output_directory() == "C:/ErgonomicOutput"
+
+            dlg.set_quicknii_path("C:/path/quicknii.exe")
+            assert dlg.quicknii_path() == "C:/path/quicknii.exe"
+
+            assert dlg.is_console_always_visible() is False
+            dlg.set_console_always_visible(True)
+            assert dlg.is_console_always_visible() is True
+
+            # Headless browse triggers (guarded)
+            dlg.trigger_browse_output_dir()
+            dlg.trigger_browse_quicknii()
+
+            # Trigger reset defaults
+            dlg.trigger_reset_defaults()
+            assert dlg.selected_species() == "mouse"
+            assert dlg.selected_theme() == "dark"
+            assert dlg.output_directory() == ""
+            assert dlg.quicknii_path() == ""
+            assert dlg.is_console_always_visible() is False
+
+            # Triggers for cancel and save
+            accepted = []
+            rejected = []
+            dlg.accepted.connect(lambda: accepted.append(True))
+            dlg.rejected.connect(lambda: rejected.append(True))
+
+            dlg.trigger_save()
+            assert len(accepted) == 1
+
+            dlg.trigger_cancel()
+            assert len(rejected) == 1
         finally:
             dlg.deleteLater()
 

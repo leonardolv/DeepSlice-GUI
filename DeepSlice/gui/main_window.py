@@ -5594,11 +5594,9 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         dialog = QDialog(self)
-
         dialog.setObjectName("preferencesDialog")
-
         dialog.setAccessibleName("Preferences Dialog")
-
+        dialog.setAccessibleDescription("Application preferences and default configuration options dialog")
         dialog.setWindowTitle("Preferences")
 
         layout = QVBoxLayout(dialog)
@@ -5666,61 +5664,38 @@ class DeepSliceMainWindow(QMainWindow):
 
 
         def _browse_default_output_dir():
-
+            if os.environ.get("QT_QPA_PLATFORM") == "offscreen" or (QApplication.instance() and QApplication.platformName() == "offscreen"):
+                return
             selected = QFileDialog.getExistingDirectory(dialog, "Default Output Directory")
-
             if selected:
-
                 output_dir_edit.setText(selected)
 
-
-
         output_dir_browse.clicked.connect(_browse_default_output_dir)
-
         output_dir_row.addWidget(output_dir_edit)
-
         output_dir_row.addWidget(output_dir_browse)
 
-
-
         quicknii_row = QHBoxLayout()
-
         quicknii_edit = QLineEdit(str(settings.value("quicknii_path", "")).strip())
-
         quicknii_edit.setObjectName("prefQuickNiiEdit")
-
         quicknii_edit.setAccessibleName("Default QuickNII executable path")
-
         quicknii_edit.setToolTip("Path to the QuickNII executable")
 
         quicknii_browse = QPushButton("Browse")
-
         quicknii_browse.setObjectName("prefQuickNiiBrowse")
-
         quicknii_browse.setAccessibleName("Browse QuickNII executable")
-
         quicknii_browse.setToolTip("Browse filesystem for QuickNII executable")
-
         quicknii_browse.setCursor(Qt.CursorShape.PointingHandCursor)
 
-
-
         def _browse_default_quicknii_path():
-
+            if os.environ.get("QT_QPA_PLATFORM") == "offscreen" or (QApplication.instance() and QApplication.platformName() == "offscreen"):
+                return
             selected, _ = QFileDialog.getOpenFileName(
-
                 dialog,
-
                 "Default QuickNII Executable",
-
                 "",
-
                 "Executables (*.exe);;All Files (*)",
-
             )
-
             if selected:
-
                 quicknii_edit.setText(selected)
 
 
@@ -5876,8 +5851,74 @@ class DeepSliceMainWindow(QMainWindow):
             if "console_always_visible" in values:
                 console_always_visible.setChecked(bool(values["console_always_visible"]))
 
+        def selected_species() -> str:
+            return species_combo.currentText().strip().lower()
+
+        def set_selected_species(val: str) -> bool:
+            if val in ("mouse", "rat"):
+                species_combo.setCurrentText(val)
+                return True
+            return False
+
+        def selected_theme() -> str:
+            return theme_combo.currentText().strip().lower()
+
+        def set_selected_theme(val: str) -> bool:
+            if val in ("dark", "light"):
+                theme_combo.setCurrentText(val)
+                return True
+            return False
+
+        def output_directory() -> str:
+            return output_dir_edit.text().strip()
+
+        def set_output_directory(path: str) -> None:
+            output_dir_edit.setText(path)
+
+        def quicknii_path() -> str:
+            return quicknii_edit.text().strip()
+
+        def set_quicknii_path(path: str) -> None:
+            quicknii_edit.setText(path)
+
+        def is_console_always_visible() -> bool:
+            return console_always_visible.isChecked()
+
+        def set_console_always_visible(visible: bool) -> None:
+            console_always_visible.setChecked(visible)
+
+        def trigger_reset_defaults() -> None:
+            _reset_to_defaults()
+
+        def trigger_save() -> None:
+            dialog.accept()
+
+        def trigger_cancel() -> None:
+            dialog.reject()
+
+        def trigger_browse_output_dir() -> None:
+            _browse_default_output_dir()
+
+        def trigger_browse_quicknii() -> None:
+            _browse_default_quicknii_path()
+
         dialog.get_values = get_values
         dialog.set_values = set_values
+        dialog.selected_species = selected_species
+        dialog.set_selected_species = set_selected_species
+        dialog.selected_theme = selected_theme
+        dialog.set_selected_theme = set_selected_theme
+        dialog.output_directory = output_directory
+        dialog.set_output_directory = set_output_directory
+        dialog.quicknii_path = quicknii_path
+        dialog.set_quicknii_path = set_quicknii_path
+        dialog.is_console_always_visible = is_console_always_visible
+        dialog.set_console_always_visible = set_console_always_visible
+        dialog.trigger_reset_defaults = trigger_reset_defaults
+        dialog.trigger_save = trigger_save
+        dialog.trigger_cancel = trigger_cancel
+        dialog.trigger_browse_output_dir = trigger_browse_output_dir
+        dialog.trigger_browse_quicknii = trigger_browse_quicknii
         dialog.form = form
         dialog.species_label = species_label
         dialog.theme_label = theme_label

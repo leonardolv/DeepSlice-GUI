@@ -5,6 +5,19 @@
 
 ## Completed
 
+### Task: PreferencesDialog accessible description, headless guards, and ergonomics helpers
+- **Completed**: 2026-11-17
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Configured explicit accessible description on `PreferencesDialog` (`preferencesDialog`).
+    - Added headless safety guards in `_browse_default_output_dir` and `_browse_default_quicknii_path` preventing blocking file picker dialogs during offscreen test execution.
+    - Added 10 ergonomic state queries and setters: `selected_species()`, `set_selected_species()`, `selected_theme()`, `set_selected_theme()`, `output_directory()`, `set_output_directory()`, `quicknii_path()`, `set_quicknii_path()`, `is_console_always_visible()`, and `set_console_always_visible()`.
+    - Added 5 programmatic action triggers: `trigger_reset_defaults()`, `trigger_save()`, `trigger_cancel()`, `trigger_browse_output_dir()`, and `trigger_browse_quicknii()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Expanded `test_preferences_dialog_accessibility_and_reset_to_defaults` asserting accessible description, query/setter ergonomics, headless browse guards, and programmatic save/cancel triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k test_preferences_dialog_accessibility_and_reset_to_defaults -v` (1 passed in 2.24s, 0 errors).
+- **Status**: Completed
+
 ### Task: TopBar, Sidebar, GuideBanner, and StatusBar explicit object names, public properties, and ergonomics helpers
 - **Completed**: 2026-11-08
 - **Changes**:
