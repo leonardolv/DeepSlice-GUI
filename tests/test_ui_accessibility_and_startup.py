@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 
 from PySide6.QtWidgets import QApplication, QPushButton, QMessageBox
@@ -108,6 +111,52 @@ def test_preferences_dialog_accessibility_and_reset_to_defaults():
             assert dlg.output_dir_edit.text() == ""
             assert dlg.quicknii_edit.text() == ""
             assert not dlg.console_always_visible.isChecked()
+
+            # Ergonomic queries, setters, and triggers
+            assert dlg.accessibleDescription() == "Application preferences and default configuration options dialog"
+            assert dlg.selected_species() == "mouse"
+            assert dlg.set_selected_species("rat") is True
+            assert dlg.selected_species() == "rat"
+            assert dlg.set_selected_species("unknown") is False
+
+            assert dlg.selected_theme() == "dark"
+            assert dlg.set_selected_theme("light") is True
+            assert dlg.selected_theme() == "light"
+            assert dlg.set_selected_theme("neon") is False
+
+            dlg.set_output_directory("C:/ErgonomicOutput")
+            assert dlg.output_directory() == "C:/ErgonomicOutput"
+
+            dlg.set_quicknii_path("C:/path/quicknii.exe")
+            assert dlg.quicknii_path() == "C:/path/quicknii.exe"
+
+            assert dlg.is_console_always_visible() is False
+            dlg.set_console_always_visible(True)
+            assert dlg.is_console_always_visible() is True
+
+            # Headless browse triggers (guarded)
+            dlg.trigger_browse_output_dir()
+            dlg.trigger_browse_quicknii()
+
+            # Trigger reset defaults
+            dlg.trigger_reset_defaults()
+            assert dlg.selected_species() == "mouse"
+            assert dlg.selected_theme() == "dark"
+            assert dlg.output_directory() == ""
+            assert dlg.quicknii_path() == ""
+            assert dlg.is_console_always_visible() is False
+
+            # Triggers for cancel and save
+            accepted = []
+            rejected = []
+            dlg.accepted.connect(lambda: accepted.append(True))
+            dlg.rejected.connect(lambda: rejected.append(True))
+
+            dlg.trigger_save()
+            assert len(accepted) == 1
+
+            dlg.trigger_cancel()
+            assert len(rejected) == 1
         finally:
             dlg.deleteLater()
 
@@ -1064,3 +1113,1071 @@ def test_main_window_extended_ergonomics_and_species_selection():
     finally:
         win.close()
         win.deleteLater()
+
+
+def test_drop_area_toast_overlay_and_slice_view_ergonomics():
+    """Assert DropArea, ToastOverlay, and SliceGraphicsView accessibility and ergonomics helpers."""
+    from DeepSlice.gui.main_window import DropArea, ToastOverlay, SliceGraphicsView
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance() or QApplication([])
+
+    # 1. DropArea
+    drop = DropArea()
+    try:
+        assert drop.objectName() == "DropArea"
+        assert drop.accessibleName() == "Image and Folder Ingestion Drop Area"
+        assert len(drop.accessibleDescription()) > 0
+        assert "Drag and Drop" in drop.title_text()
+        assert "Supports JPG" in drop.subtitle_text()
+        assert drop.title_label is not None
+        assert drop.subtitle_label is not None
+        assert drop.icon_label is not None
+    finally:
+        drop.deleteLater()
+
+    # 2. ToastOverlay
+    toast = ToastOverlay()
+    try:
+        assert toast.objectName() == "ToastOverlay"
+        assert toast.accessibleName() == "Notification Toast"
+        assert len(toast.accessibleDescription()) > 0
+        assert toast.message_label.objectName() == "ToastMessageLabel"
+        assert toast.message_label.accessibleName() == "Toast Message"
+        assert toast.message_text() == ""
+        toast.show_message("Predictions loaded successfully", timeout_ms=2000, level="success")
+        assert toast.message_text() == "Predictions loaded successfully"
+    finally:
+        toast.deleteLater()
+
+    # 3. SliceGraphicsView
+    view = SliceGraphicsView()
+    try:
+        assert view.objectName() == "sliceGraphicsView"
+        assert view.accessibleName() == "Slice Interactive Canvas"
+        assert len(view.accessibleDescription()) > 0
+        assert view.zoom_level() == 0
+        assert view.is_loupe_enabled() is False
+        assert view.has_sync_partner() is False
+        assert view.is_mouse_tracking_active() is True
+
+        view.set_loupe_enabled(True)
+        assert view.is_loupe_enabled() is True
+    finally:
+        view.deleteLater()
+
+
+def test_thumbnail_and_flag_list_widget_and_main_window_curation_ergonomics():
+    """Assert ThumbnailListWidget and FlagListWidget accessibility and DeepSliceMainWindow curation triggers."""
+    from PySide6.QtWidgets import QApplication, QListWidgetItem
+    from PySide6.QtCore import Qt
+    from DeepSlice.gui.main_window import DeepSliceMainWindow, ThumbnailListWidget, FlagListWidget
+
+    app = QApplication.instance() or QApplication([])
+
+    # 1. ThumbnailListWidget
+    thumb = ThumbnailListWidget()
+    try:
+        assert thumb.objectName() == "thumbnailListWidget"
+        assert thumb.accessibleName() == "Thumbnail Sections List"
+        assert "thumbnail list" in thumb.accessibleDescription().lower()
+        assert thumb.item_count() == 0
+        assert thumb.has_items() is False
+        assert thumb.selected_index() == -1
+        assert thumb.selected_text() == ""
+
+        thumb.addItem("slide_001.png")
+        thumb.addItem("slide_002.png")
+        assert thumb.item_count() == 2
+        assert thumb.has_items() is True
+        assert thumb.item_texts() == ["slide_001.png", "slide_002.png"]
+
+        assert thumb.select_index(1) is True
+        assert thumb.selected_index() == 1
+        assert thumb.selected_text() == "slide_002.png"
+        assert thumb.select_index(999) is False
+    finally:
+        thumb.deleteLater()
+
+    # 2. FlagListWidget
+    flags = FlagListWidget()
+    try:
+        assert flags.objectName() == "flagListWidget"
+        assert flags.accessibleName() == "Flag Sections List"
+        assert "checklist" in flags.accessibleDescription().lower()
+        assert flags.item_count() == 0
+        assert flags.has_items() is False
+        assert flags.checked_count() == 0
+        assert flags.unchecked_count() == 0
+
+        it1 = QListWidgetItem("sec_01.png")
+        it1.setFlags(it1.flags() | Qt.ItemIsUserCheckable)
+        it1.setCheckState(Qt.Unchecked)
+        flags.addItem(it1)
+
+        it2 = QListWidgetItem("sec_02.png")
+        it2.setFlags(it2.flags() | Qt.ItemIsUserCheckable)
+        it2.setCheckState(Qt.Checked)
+        flags.addItem(it2)
+
+        assert flags.item_count() == 2
+        assert flags.has_items() is True
+        assert flags.checked_count() == 1
+        assert flags.unchecked_count() == 1
+        assert flags.is_item_checked(0) is False
+        assert flags.is_item_checked(1) is True
+        assert flags.checked_texts() == ["sec_02.png"]
+
+        assert flags.set_item_checked(0, True) is True
+        assert flags.is_item_checked(0) is True
+        assert flags.checked_count() == 2
+
+        assert flags.toggle_item(1) is True
+        assert flags.is_item_checked(1) is False
+        assert flags.checked_count() == 1
+
+        assert flags.select_index(0) is True
+        assert flags.selected_index() == 0
+        assert flags.trigger_toggle_current() is True
+        assert flags.is_item_checked(0) is False
+    finally:
+        flags.deleteLater()
+
+    # 3. DeepSliceMainWindow curation queries and triggers
+    win = DeepSliceMainWindow()
+    try:
+        assert win.thumbnail_count == 0
+        assert win.curation_slice_count == 0
+        assert win.curation_flagged_count == 0
+
+        win.thumbnail_list.addItem("test_section.png")
+        assert win.thumbnail_count == 1
+
+        item = QListWidgetItem("test_slice.png")
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+        item.setCheckState(Qt.Unchecked)
+        win.slice_flag_list.addItem(item)
+        assert win.curation_slice_count == 1
+        assert win.curation_flagged_count == 0
+
+        # Triggers
+        assert isinstance(win.trigger_curation_select_all(), bool)
+        assert isinstance(win.trigger_curation_deselect_all(), bool)
+        assert isinstance(win.trigger_apply_bad_section_flags(), bool)
+        assert isinstance(win.trigger_apply_manual_order(), bool)
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_configuration_page_accessibility_properties_and_ergonomics():
+    """Assert Configuration Page controls accessibility metadata, pointers, properties, and ergonomics helpers."""
+    from DeepSlice.gui.main_window import DeepSliceMainWindow
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import Qt
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # 1. Object names and accessible metadata
+        controls = [
+            (win.mouse_radio, "mouseRadio", "Mouse CCFv3 Atlas"),
+            (win.rat_radio, "ratRadio", "Rat Waxholm Atlas"),
+            (win.auto_thickness_checkbox, "autoThicknessCheck", "Auto-estimate Thickness"),
+            (win.thickness_spin, "thicknessSpin", "Section Thickness SpinBox"),
+            (win.suggest_thickness_button, "suggestThicknessBtn", "Suggest Thickness"),
+            (win.direction_override_combo, "directionOverrideCombo", "Direction Override"),
+            (win.direction_guide_button, "directionGuideBtn", "Direction Guide"),
+            (win.ensemble_checkbox, "ensembleCheck", "Ensemble Prediction"),
+            (win.ensemble_help_button, "ensembleHelpBtn", "Ensemble Help"),
+            (win.secondary_model_checkbox, "secondaryModelCheck", "Secondary Model Only"),
+            (win.legacy_from_config_checkbox, "legacyParserCheck", "Legacy Section Parser"),
+            (win.outlier_sigma_spin, "outlierSigmaSpin", "Outlier Sigma Threshold"),
+            (win.confidence_high_spin, "confidenceHighSpin", "High Confidence Threshold"),
+            (win.confidence_medium_spin, "confidenceMediumSpin", "Medium Confidence Threshold"),
+            (win.inference_batch_spin, "inferenceBatchSpin", "Inference Batch Size"),
+            (win.quality_gate_checkbox, "qualityGateCheck", "Input Quality Gate"),
+            (win.tissue_crop_checkbox, "tissueCropCheck", "Tissue ROI Crop"),
+            (win.clahe_checkbox, "claheCheck", "CLAHE Contrast Normalization"),
+            (win.stain_norm_combo, "stainNormCombo", "Stain Normalization Mode"),
+            (win.preserve_color_checkbox, "preserveColorCheck", "Preserve Color Channels"),
+            (win.percentile_norm_checkbox, "percentileNormCheck", "Percentile Intensity Normalization"),
+            (win.bilateral_checkbox, "bilateralCheck", "Bilateral Denoise"),
+            (win.gamma_spin, "gammaSpin", "Gamma Correction"),
+            (win.min_resolution_spin, "minResolutionSpin", "Minimum Resolution in Pixels"),
+            (win.blur_threshold_spin, "blurThresholdSpin", "Blur Variance Threshold"),
+            (win.tta_checkbox, "ttaCheck", "Test-Time Augmentation"),
+            (win.multiscale_checkbox, "multiscaleCheck", "Multi-Scale Inference"),
+            (win.fast_fp16_checkbox, "fastFp16Check", "Fast Mode Float16"),
+            (win.section_dropout_spin, "sectionDropoutSpin", "Section Dropout Passes"),
+            (win.conf_weighted_ensemble_checkbox, "confWeightedEnsembleCheck", "Confidence Weighted Ensemble"),
+            (win.training_group_mode_combo, "trainingGroupModeCombo", "Training Group Mode"),
+            (win.training_seed_spin, "trainingSeedSpin", "Training Random Seed"),
+            (win.training_train_fraction_spin, "trainingTrainFractionSpin", "Training Train Split Fraction"),
+            (win.training_val_fraction_spin, "trainingValFractionSpin", "Training Validation Split Fraction"),
+            (win.training_patience_spin, "trainingPatienceSpin", "Training Early Stopping Patience"),
+            (win.training_lr_factor_spin, "trainingLrFactorSpin", "Training Learning Rate Decay Factor"),
+            (win.training_min_lr_spin, "trainingMinLrSpin", "Training Minimum Learning Rate"),
+            (win.training_mixed_precision_checkbox, "trainingMixedPrecisionCheck", "Training Mixed Precision"),
+        ]
+
+        for widget, obj_name, acc_name in controls:
+            assert widget.objectName() == obj_name, f"Expected objectName {obj_name}, got {widget.objectName()}"
+            assert widget.accessibleName() == acc_name, f"Expected accessibleName {acc_name}, got {widget.accessibleName()}"
+            assert len(widget.toolTip()) > 0, f"Expected non-empty tooltip for {obj_name}"
+
+        # 2. PointingHandCursor affordances on interactive controls
+        cursor_controls = [
+            win.mouse_radio,
+            win.rat_radio,
+            win.auto_thickness_checkbox,
+            win.suggest_thickness_button,
+            win.direction_guide_button,
+            win.advanced_options_toggle,
+            win.ensemble_checkbox,
+            win.ensemble_help_button,
+            win.secondary_model_checkbox,
+            win.legacy_from_config_checkbox,
+            win.quality_gate_checkbox,
+            win.tissue_crop_checkbox,
+            win.clahe_checkbox,
+            win.preserve_color_checkbox,
+            win.percentile_norm_checkbox,
+            win.bilateral_checkbox,
+            win.tta_checkbox,
+            win.multiscale_checkbox,
+            win.fast_fp16_checkbox,
+            win.conf_weighted_ensemble_checkbox,
+            win.preview_training_split_button,
+            win.save_training_split_button,
+            win.save_training_metadata_button,
+        ]
+        for ctrl in cursor_controls:
+            assert ctrl.cursor().shape() == Qt.CursorShape.PointingHandCursor, f"Expected PointingHandCursor for {ctrl.objectName()}"
+
+        # 3. MainWindow property aliases
+        assert win.mouse_atlas_radio is win.mouse_radio
+        assert win.rat_atlas_radio is win.rat_radio
+        assert win.auto_thickness_check is win.auto_thickness_checkbox
+        assert win.thickness_spin_box is win.thickness_spin
+        assert win.suggest_thickness_btn is win.suggest_thickness_button
+        assert win.direction_override_combobox is win.direction_override_combo
+        assert win.direction_guide_btn is win.direction_guide_button
+        assert win.advanced_options_toggle_btn is win.advanced_options_toggle
+        assert win.ensemble_check is win.ensemble_checkbox
+        assert win.ensemble_help_btn is win.ensemble_help_button
+        assert win.secondary_model_check is win.secondary_model_checkbox
+        assert win.legacy_parser_check is win.legacy_from_config_checkbox
+        assert win.outlier_sigma_spin_box is win.outlier_sigma_spin
+        assert win.confidence_high_spin_box is win.confidence_high_spin
+        assert win.confidence_medium_spin_box is win.confidence_medium_spin
+        assert win.inference_batch_spin_box is win.inference_batch_spin
+        assert win.quality_gate_check is win.quality_gate_checkbox
+        assert win.tissue_crop_check is win.tissue_crop_checkbox
+        assert win.clahe_check is win.clahe_checkbox
+        assert win.stain_norm_combobox is win.stain_norm_combo
+        assert win.preserve_color_check is win.preserve_color_checkbox
+        assert win.percentile_norm_check is win.percentile_norm_checkbox
+        assert win.bilateral_check is win.bilateral_checkbox
+        assert win.gamma_spin_box is win.gamma_spin
+        assert win.min_resolution_spin_box is win.min_resolution_spin
+        assert win.blur_threshold_spin_box is win.blur_threshold_spin
+        assert win.tta_check is win.tta_checkbox
+        assert win.multiscale_check is win.multiscale_checkbox
+        assert win.fast_fp16_check is win.fast_fp16_checkbox
+        assert win.section_dropout_spin_box is win.section_dropout_spin
+        assert win.conf_weighted_ensemble_check is win.conf_weighted_ensemble_checkbox
+        assert win.training_group_mode_combobox is win.training_group_mode_combo
+        assert win.preview_training_split_btn is win.preview_training_split_button
+        assert win.save_training_split_btn is win.save_training_split_button
+        assert win.save_training_metadata_btn is win.save_training_metadata_button
+
+        # 4. Ergonomic query and action helpers
+        assert win.is_auto_thickness_enabled() is True
+        win.set_auto_thickness_enabled(False)
+        assert win.is_auto_thickness_enabled() is False
+        win.set_auto_thickness_enabled(True)
+        assert win.is_auto_thickness_enabled() is True
+
+        win.set_section_thickness_um(40.5)
+        assert win.section_thickness_um() == 40.5
+
+        assert win.direction_override_text() in ("Auto", "rostro-caudal", "caudal-rostro")
+        win.set_direction_override("caudal-rostro")
+        assert win.direction_override_text() == "caudal-rostro"
+
+        assert win.is_advanced_options_expanded() is False
+        win.set_advanced_options_expanded(True)
+        assert win.is_advanced_options_expanded() is True
+        win.set_advanced_options_expanded(False)
+        assert win.is_advanced_options_expanded() is False
+
+        assert win.is_ensemble_enabled() is True
+        win.set_ensemble_enabled(False)
+        assert win.is_ensemble_enabled() is False
+        win.set_ensemble_enabled(True)
+        assert win.is_ensemble_enabled() is True
+
+        win.set_quality_gate_enabled(True)
+        assert win.is_quality_gate_enabled() is True
+
+        win.set_tissue_crop_enabled(True)
+        assert win.is_tissue_crop_enabled() is True
+
+        win.set_clahe_enabled(True)
+        assert win.is_clahe_enabled() is True
+
+        # Triggers
+        assert isinstance(win.trigger_suggest_thickness(), bool)
+        assert isinstance(win.trigger_direction_guide(), bool)
+        assert isinstance(win.trigger_ensemble_help(), bool)
+        assert isinstance(win.trigger_preview_training_split(), bool)
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_export_page_accessibility_properties_and_ergonomics(qtbot, tmp_path):
+    """Verify Export Page control object names, pointer affordances, public properties, and ergonomic helpers."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    try:
+        win.go_to_page(4)
+
+        # Explicit object names
+        assert win.output_dir_line_edit.objectName() == "outputDirEdit"
+        assert win.browse_output_dir_btn.objectName() == "browseOutputDirBtn"
+        assert win.output_basename_line_edit.objectName() == "outputBasenameEdit"
+        assert win.output_format_combobox.objectName() == "outputFormatCombo"
+        assert win.output_format_help_btn.objectName() == "outputFormatHelpBtn"
+        assert win.export_size_estimate_lbl.objectName() == "exportSizeEstimateLabel"
+        assert win.export_btn.objectName() == "exportBtn"
+        assert win.open_export_dir_btn.objectName() == "openExportDirBtn"
+        assert win.copy_export_path_btn.objectName() == "copyExportPathBtn"
+        assert win.report_btn.objectName() == "reportBtn"
+        assert win.preview_report_btn.objectName() == "previewReportBtn"
+        assert win.pdf_content_group_box.objectName() == "pdfContentGroup"
+        assert win.pdf_include_stats_check.objectName() == "pdfIncludeStatsCheck"
+        assert win.pdf_include_plot_check.objectName() == "pdfIncludePlotCheck"
+        assert win.pdf_include_images_check.objectName() == "pdfIncludeImagesCheck"
+        assert win.pdf_include_angles_check.objectName() == "pdfIncludeAnglesCheck"
+        assert win.quicknii_path_line_edit.objectName() == "quickniiPathEdit"
+        assert win.quicknii_browse_btn.objectName() == "quickniiBrowseBtn"
+        assert win.open_quicknii_btn.objectName() == "openQuickniiBtn"
+        assert win.export_summary_label.objectName() == "exportSummaryLabel"
+        assert win.export_deviation_label.objectName() == "exportDeviationLabel"
+
+        # Cursor affordances
+        assert win.browse_output_dir_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.output_format_help_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.export_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.open_export_dir_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.copy_export_path_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.report_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.preview_report_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.quicknii_browse_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.open_quicknii_btn.cursor().shape() == Qt.PointingHandCursor
+
+        # Ergonomic queries and setters
+        win.set_export_output_dir(str(tmp_path))
+        assert win.export_output_dir() == str(tmp_path)
+
+        win.set_export_base_filename("CohortStudy_Export")
+        assert win.export_base_filename() == "CohortStudy_Export"
+
+        win.set_export_format_name("Legacy XML")
+        assert "Legacy XML" in win.export_format_name()
+
+        win.set_pdf_stats_included(False)
+        assert win.is_pdf_stats_included() is False
+        win.set_pdf_stats_included(True)
+        assert win.is_pdf_stats_included() is True
+
+        win.set_pdf_plot_included(False)
+        assert win.is_pdf_plot_included() is False
+
+        win.set_pdf_images_included(True)
+        assert win.is_pdf_images_included() is True
+
+        win.set_pdf_angles_included(False)
+        assert win.is_pdf_angles_included() is False
+
+        assert "Processed" in win.export_summary_text()
+        assert "angular deviation" in win.export_deviation_text()
+
+        # Action triggers
+        assert isinstance(win.trigger_export_format_help(), bool)
+        assert isinstance(win.trigger_copy_export_path(), bool)
+        assert isinstance(win.trigger_preview_report(), bool)
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_prediction_page_accessibility_properties_and_ergonomics(qtbot):
+    """Verify accessibility metadata, cursor shapes, properties, and ergonomic helpers on Prediction Page."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        # Navigate to Prediction Page (Step index 2)
+        win.go_to_page(2)
+
+        # Explicit object names and accessible names
+        assert win.run_alignment_btn.objectName() == "runAlignmentBtn"
+        assert win.run_alignment_btn.accessibleName() == "Run Alignment"
+        assert win.cancel_alignment_btn.objectName() == "cancelAlignmentBtn"
+        assert win.cancel_alignment_btn.accessibleName() == "Cancel Alignment"
+
+        assert win.prediction_phase_lbl.objectName() == "predictionPhaseLabel"
+        assert win.prediction_phase_lbl.accessibleName() == "Prediction Phase Status"
+        assert win.prediction_progress_lbl.objectName() == "predictionProgressLabel"
+        assert win.prediction_progress_lbl.accessibleName() == "Prediction Progress Status"
+        assert win.prediction_elapsed_lbl.objectName() == "predictionElapsedLabel"
+        assert win.prediction_elapsed_lbl.accessibleName() == "Elapsed Alignment Time"
+        assert win.prediction_eta_lbl.objectName() == "predictionEtaLabel"
+        assert win.prediction_eta_lbl.accessibleName() == "Estimated Time Remaining"
+
+        assert win.prediction_progress_bar_widget.objectName() == "predictionProgressBar"
+        assert win.predicted_thickness_lbl.objectName() == "predictedThicknessLabel"
+        assert win.predicted_thickness_lbl.accessibleName() == "Estimated Section Thickness"
+        assert win.accept_predicted_thickness_btn.objectName() == "acceptPredictedThicknessBtn"
+        assert win.prediction_direction_lbl.objectName() == "predictionDirectionLabel"
+        assert win.prediction_direction_lbl.accessibleName() == "Detected Indexing Direction"
+
+        assert win.console_toggle_btn.objectName() == "consoleToggle"
+        assert win.console_autoscroll_toggle_btn.objectName() == "consoleAutoscrollToggle"
+        assert win.clear_console_btn.objectName() == "clearConsoleButton"
+        assert win.copy_console_btn.objectName() == "copyConsoleButton"
+        assert win.console_output_widget.objectName() == "consoleOutput"
+        assert win.run_blocker_lbl.objectName() == "WarningText"
+
+        assert win.prediction_slice_selector_combo.objectName() == "predictionSliceSelector"
+        assert win.prediction_compare_check.objectName() == "predictionCompareCheck"
+        assert win.prediction_atlas_info_lbl.objectName() == "predictionAtlasInfoLabel"
+        assert win.preprocessing_preview_info_lbl.objectName() == "preprocessingPreviewInfoLabel"
+        assert win.preprocessing_preview_lbl.objectName() == "preprocessingPreviewLabel"
+        assert win.prediction_slice_viewer.objectName() == "predictionSliceViewer"
+        assert win.prediction_atlas_viewer_widget.objectName() == "predictionAtlasViewer"
+
+        # Cursor affordances
+        assert win.run_alignment_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.cancel_alignment_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.accept_predicted_thickness_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.console_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.console_autoscroll_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.clear_console_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.copy_console_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.prediction_slice_selector_combo.cursor().shape() == Qt.PointingHandCursor
+        assert win.prediction_compare_check.cursor().shape() == Qt.PointingHandCursor
+
+        # State readouts
+        assert "idle" in win.prediction_phase_text().lower()
+        assert "0" in win.prediction_progress_text()
+        assert "00:00" in win.prediction_elapsed_text()
+        assert "--:--" in win.prediction_eta_text()
+        assert win.prediction_progress_value() == 0
+        assert "-" in win.predicted_thickness_text()
+        assert "-" in win.prediction_direction_text()
+        assert isinstance(win.is_run_alignment_enabled(), bool)
+        assert win.is_cancel_alignment_enabled() is False
+        assert win.is_accept_predicted_thickness_enabled() is False
+
+        # Console controls and ergonomics
+        assert win.is_console_visible() is False
+        win.set_console_visible(True)
+        assert win.is_console_visible() is True
+        win.set_console_visible(False)
+        assert win.is_console_visible() is False
+
+        assert win.is_console_autoscroll_enabled() is True
+        win.set_console_autoscroll_enabled(False)
+        assert win.is_console_autoscroll_enabled() is False
+        win.set_console_autoscroll_enabled(True)
+        assert win.is_console_autoscroll_enabled() is True
+
+        assert isinstance(win.console_text(), str)
+        assert win.trigger_clear_console() is True
+        assert win.trigger_copy_console() is True
+
+        # Preview controls
+        assert win.prediction_slice_count() >= 0
+        assert isinstance(win.prediction_slice_texts(), list)
+        assert win.is_atlas_comparison_checked() is True
+        assert isinstance(win.trigger_accept_predicted_thickness(), bool)
+    finally:
+        win.close()
+        win.deleteLater()
+
+def test_ingestion_page_accessibility_properties_and_ergonomics(qtbot):
+    """Verify accessibility metadata, cursor shapes, properties, and ergonomic helpers on Ingestion Page."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        win.go_to_page(0)
+        assert win.current_page_index == 0
+
+        # Object names and accessible names
+        assert win.drop_area_widget.objectName() == "ingestionDropArea"
+        assert win.drop_area_widget.accessibleName() == "Image Drop Area"
+        assert "Drag and drop" in win.drop_area_widget.accessibleDescription()
+
+        assert win.add_folder_btn.objectName() == "addFolderBtn"
+        assert win.add_folder_btn.accessibleName() == "Add Folder"
+        assert win.add_folder_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.add_files_btn.objectName() == "addFilesBtn"
+        assert win.add_files_btn.accessibleName() == "Add Files"
+        assert win.add_files_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.clear_images_btn.objectName() == "clearImagesBtn"
+        assert win.clear_images_btn.accessibleName() == "Clear All Images"
+        assert win.clear_images_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.enable_section_numbers_check.objectName() == "enableSectionNumbersCheck"
+        assert win.enable_section_numbers_check.accessibleName() == "Detect Section Numbers"
+        assert win.enable_section_numbers_check.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.naming_helper_btn.objectName() == "namingHelperBtn"
+        assert win.naming_helper_btn.accessibleName() == "Naming Helper"
+        assert win.naming_helper_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.legacy_parsing_check.objectName() == "legacyParsingCheck"
+        assert win.legacy_parsing_check.accessibleName() == "Legacy Parser Fallback"
+        assert win.legacy_parsing_check.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.orientation_combobox.objectName() == "orientationCombo"
+        assert win.orientation_combobox.accessibleName() == "Anatomical Orientation"
+        assert win.orientation_combobox.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.orientation_guide_btn.objectName() == "orientationGuideBtn"
+        assert win.orientation_guide_btn.accessibleName() == "Orientation Guide"
+        assert win.orientation_guide_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.slice_count_lbl.objectName() == "sliceCountLabel"
+        assert win.file_size_summary_lbl.objectName() == "fileSizeSummaryLabel"
+        assert win.ingestion_summary_banner_lbl.objectName() == "SummaryBanner"
+        assert win.ingestion_warning_lbl.objectName() == "WarningText"
+
+        assert win.index_table_widget.objectName() == "indexTable"
+        assert win.index_table_widget.accessibleName() == "Section Indices Table"
+
+        assert win.thumbnail_sort_combobox.objectName() == "thumbnailSortCombo"
+        assert win.thumbnail_sort_combobox.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.thumbnail_filter_input.objectName() == "thumbnailFilterEdit"
+        assert win.thumbnail_list_widget.objectName() == "ingestionThumbnailList"
+        assert win.thumbnail_progress_bar.objectName() == "thumbnailProgress"
+        assert win.ingestion_preview_view.objectName() == "ingestionPreview"
+
+        # Ergonomic state queries and setters
+        assert "Slices: 0" in win.slice_count_text()
+        assert "0 files loaded" in win.file_size_summary_text()
+        assert "No files loaded" in win.ingestion_summary_banner_text()
+        assert win.index_table_row_count() == 0
+
+        assert win.is_section_number_detection_enabled() is True
+        win.set_section_number_detection_enabled(False)
+        assert win.is_section_number_detection_enabled() is False
+        win.set_section_number_detection_enabled(True)
+        assert win.is_section_number_detection_enabled() is True
+
+        assert win.is_legacy_parsing_enabled() is False
+        win.set_legacy_parsing_enabled(True)
+        assert win.is_legacy_parsing_enabled() is True
+        win.set_legacy_parsing_enabled(False)
+        assert win.is_legacy_parsing_enabled() is False
+
+        assert "Coronal" in win.cutting_plane_orientation()
+        win.set_cutting_plane_orientation("Sagittal")
+        assert "Sagittal" in win.cutting_plane_orientation()
+        win.set_cutting_plane_orientation("Coronal")
+        assert "Coronal" in win.cutting_plane_orientation()
+
+        assert "Filename" in win.thumbnail_sort_order()
+        win.set_thumbnail_sort_order("Detected Index")
+        assert "Detected Index" in win.thumbnail_sort_order()
+        win.set_thumbnail_sort_order("Filename")
+
+        win.set_thumbnail_filter_query("brain_s001")
+        assert win.thumbnail_filter_query() == "brain_s001"
+        win.clear_thumbnail_filter()
+        assert win.thumbnail_filter_query() == ""
+
+        # Programmatic dialog triggers (headless safe)
+        helper_dlg = win.trigger_naming_helper()
+        assert helper_dlg is not None
+        guide_dlg = win.trigger_orientation_guide()
+        assert guide_dlg is not None
+
+        win.trigger_clear_images()
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+
+def test_curation_page_accessibility_properties_and_ergonomics(qtbot):
+    """Verify accessibility metadata, cursor shapes, properties, and ergonomic helpers on Curation Page."""
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        win.go_to_page(3)
+        assert win.current_page_index == 3
+
+        # Object names and accessible names on left panel
+        assert win.curation_prev_btn.objectName() == "curationPrevBtn"
+        assert win.curation_prev_btn.accessibleName() == "Previous Section"
+        assert "previous histological section" in win.curation_prev_btn.accessibleDescription()
+        assert win.curation_prev_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_next_btn.objectName() == "curationNextBtn"
+        assert win.curation_next_btn.accessibleName() == "Next Section"
+        assert "next histological section" in win.curation_next_btn.accessibleDescription()
+        assert win.curation_next_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_select_all_button.objectName() == "curationSelectAllBtn"
+        assert win.curation_select_all_button.accessibleName() == "Select All Bad Section Flags"
+        assert win.curation_select_all_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_deselect_all_button.objectName() == "curationDeselectAllBtn"
+        assert win.curation_deselect_all_button.accessibleName() == "Deselect All Bad Section Flags"
+        assert win.curation_deselect_all_button.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.confidence_filter_combobox.objectName() == "confidenceFilterCombo"
+        assert win.confidence_filter_combobox.accessibleName() == "Filter Slices by Confidence"
+        assert win.confidence_filter_combobox.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.slice_flag_list_widget.objectName() == "sliceFlagList"
+        assert win.slice_flag_list_widget.accessibleName() == "Curated Slices List"
+
+        assert win.apply_bad_sections_btn.objectName() == "applyBadSectionsBtn"
+        assert win.apply_bad_sections_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.apply_manual_order_btn.objectName() == "applyManualOrderBtn"
+        assert win.apply_manual_order_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.move_slice_up_btn.objectName() == "moveSliceUpBtn"
+        assert win.move_slice_up_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.move_slice_down_btn.objectName() == "moveSliceDownBtn"
+        assert win.move_slice_down_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.detect_outliers_btn.objectName() == "detectOutliersBtn"
+        assert win.detect_outliers_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.reset_flags_btn.objectName() == "resetFlagsBtn"
+        assert win.reset_flags_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.auto_flag_low_conf_btn.objectName() == "autoFlagLowConfBtn"
+        assert win.auto_flag_low_conf_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.interpolate_bad_depth_btn.objectName() == "interpolateBadDepthBtn"
+        assert win.interpolate_bad_depth_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.toggle_current_flag_btn.objectName() == "toggleCurrentFlagBtn"
+        assert win.toggle_current_flag_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.slice_note_line_edit.objectName() == "sliceNoteEdit"
+        assert win.save_slice_note_btn.objectName() == "saveSliceNoteBtn"
+        assert win.save_slice_note_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.curation_queue_lbl.objectName() == "curationQueueLabel"
+
+        assert win.controls_group_box.objectName() == "controlsGroupBox"
+        assert win.normalize_angles_btn.objectName() == "normalizeAnglesBtn"
+        assert win.normalize_angles_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.enforce_order_btn.objectName() == "enforceOrderBtn"
+        assert win.enforce_order_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.enforce_spacing_btn.objectName() == "enforceSpacingBtn"
+        assert win.enforce_spacing_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.ml_angle_spin_box.objectName() == "mlSpin"
+        assert win.dv_angle_spin_box.objectName() == "dvSpin"
+        assert win.apply_manual_angles_btn.objectName() == "applyManualAnglesBtn"
+        assert win.apply_manual_angles_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.undo_curation_btn.objectName() == "undoBtn"
+        assert win.undo_curation_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.redo_curation_btn.objectName() == "redoBtn"
+        assert win.redo_curation_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.anchor_group_box.objectName() == "anchorGroupBox"
+        assert win.anchor_summary_lbl.objectName() == "anchorSummaryLabel"
+        assert win.anchor_depth_spin_box.objectName() == "anchorDepthSpin"
+        assert win.set_anchor_btn.objectName() == "setAnchorBtn"
+        assert win.set_anchor_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.remove_anchor_btn.objectName() == "removeAnchorBtn"
+        assert win.remove_anchor_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.apply_anchor_interpolation_btn.objectName() == "applyAnchorInterpolationBtn"
+        assert win.apply_anchor_interpolation_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.clear_anchor_btn.objectName() == "clearAnchorBtn"
+        assert win.clear_anchor_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.anchor_list_widget.objectName() == "anchorList"
+
+        # Right panel controls
+        assert win.linearity_figure_canvas.objectName() == "linearityCanvas"
+        assert win.zoom_fit_plot_btn.objectName() == "zoomFitBtn"
+        assert win.zoom_fit_plot_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.zoom_in_plot_btn.objectName() == "zoomInBtn"
+        assert win.zoom_in_plot_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.zoom_out_plot_btn.objectName() == "zoomOutBtn"
+        assert win.zoom_out_plot_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.hist_figure_canvas.objectName() == "histCanvas"
+
+        assert win.enable_atlas_preview_check.objectName() == "enableAtlasPreviewCheck"
+        assert win.enable_atlas_preview_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_volume_combobox.objectName() == "atlasVolumeCombo"
+        assert win.enable_blend_overlay_check.objectName() == "enableBlendOverlayCheck"
+        assert win.enable_blend_overlay_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.blend_opacity_slider.objectName() == "blendSlider"
+        assert win.blend_percent_lbl.objectName() == "blendPercentLabel"
+        assert win.atlas_slice_info_lbl.objectName() == "atlasSliceInfoLabel"
+        assert win.before_after_check.objectName() == "beforeAfterToggle"
+        assert win.before_after_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.loupe_check.objectName() == "loupeToggle"
+        assert win.loupe_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_coords_lbl.objectName() == "atlasCoordsLabel"
+
+        assert win.atlas_flip_x_check.objectName() == "atlasFlipXCheck"
+        assert win.atlas_flip_x_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_flip_y_check.objectName() == "atlasFlipYCheck"
+        assert win.atlas_flip_y_check.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_rotate_combobox.objectName() == "atlasRotateCombo"
+        assert win.atlas_rotate_combobox.cursor().shape() == Qt.PointingHandCursor
+        assert win.atlas_scale_slider_widget.objectName() == "atlasScaleSlider"
+        assert win.atlas_scale_lbl.objectName() == "atlasScaleLabel"
+        assert win.atlas_offset_x_slider_widget.objectName() == "atlasOffsetXSlider"
+        assert win.atlas_offset_x_lbl.objectName() == "atlasOffsetXLabel"
+        assert win.atlas_offset_y_slider_widget.objectName() == "atlasOffsetYSlider"
+        assert win.atlas_offset_y_lbl.objectName() == "atlasOffsetYLabel"
+
+        assert win.confidence_panel_toggle_btn.objectName() == "confidencePanelToggle"
+        assert win.confidence_panel_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.confidence_panel_frame.objectName() == "confidencePanel"
+        assert win.confidence_overlay_slice_viewer.objectName() == "confidenceOverlayViewer"
+        assert win.curation_slice_viewer.objectName() == "curationViewer"
+        assert win.atlas_slice_viewer.objectName() == "atlasViewer"
+
+        # Ergonomic state queries and setters
+        assert "All Confidences" in win.curation_confidence_filter()
+        win.set_curation_confidence_filter("High Only")
+        assert "High Only" in win.curation_confidence_filter()
+        win.set_curation_confidence_filter("All Confidences")
+
+        win.set_slice_note_text("Lesion area noted")
+        assert win.slice_note_text() == "Lesion area noted"
+
+        win.set_manual_ml_angle(1.5)
+        assert win.manual_ml_angle() == 1.5
+
+        win.set_manual_dv_angle(-2.0)
+        assert win.manual_dv_angle() == -2.0
+
+        win.set_anchor_depth(120.5)
+        assert win.anchor_depth() == 120.5
+
+        assert win.anchor_count() == 0
+
+        assert win.is_atlas_preview_enabled() is False
+        win.set_atlas_preview_enabled(True)
+        assert win.is_atlas_preview_enabled() is True
+        win.set_atlas_preview_enabled(False)
+
+        assert win.is_blend_overlay_enabled() is False
+        win.set_blend_overlay_enabled(True)
+        assert win.is_blend_overlay_enabled() is True
+        win.set_blend_overlay_enabled(False)
+
+        win.set_blend_opacity(50)
+        assert win.blend_opacity() == 50
+
+        assert win.is_before_after_overlay_enabled() is False
+        win.set_before_after_overlay_enabled(True)
+        assert win.is_before_after_overlay_enabled() is True
+        win.set_before_after_overlay_enabled(False)
+
+        assert win.is_loupe_enabled() is False
+        win.set_loupe_enabled(True)
+        assert win.is_loupe_enabled() is True
+        win.set_loupe_enabled(False)
+
+        assert win.is_atlas_flip_x_enabled() is False
+        win.set_atlas_flip_x_enabled(True)
+        assert win.is_atlas_flip_x_enabled() is True
+        win.set_atlas_flip_x_enabled(False)
+
+        assert win.is_atlas_flip_y_enabled() is False
+        win.set_atlas_flip_y_enabled(True)
+        assert win.is_atlas_flip_y_enabled() is True
+        win.set_atlas_flip_y_enabled(False)
+
+        win.set_atlas_scale_percent(120)
+        assert win.atlas_scale_percent() == 120
+
+        win.set_atlas_offset_x(10)
+        assert win.atlas_offset_x() == 10
+
+        win.set_atlas_offset_y(-5)
+        assert win.atlas_offset_y() == -5
+
+        assert win.is_confidence_panel_expanded() is False
+        win.set_confidence_panel_expanded(True)
+        assert win.is_confidence_panel_expanded() is True
+        win.set_confidence_panel_expanded(False)
+
+        # Triggers
+        assert isinstance(win.trigger_curation_prev_slice(), bool)
+        assert isinstance(win.trigger_curation_next_slice(), bool)
+        assert isinstance(win.trigger_move_slice_up(), bool)
+        assert isinstance(win.trigger_move_slice_down(), bool)
+        assert isinstance(win.trigger_detect_outliers(), bool)
+        assert isinstance(win.trigger_reset_flags(), bool)
+        assert isinstance(win.trigger_auto_flag_low_conf(), bool)
+        assert isinstance(win.trigger_interpolate_bad_depth(), bool)
+        assert isinstance(win.trigger_toggle_current_flag(), bool)
+        assert isinstance(win.trigger_save_slice_note(), bool)
+        assert isinstance(win.trigger_normalize_angles(), bool)
+        assert isinstance(win.trigger_enforce_order(), bool)
+        assert isinstance(win.trigger_enforce_spacing(), bool)
+        assert isinstance(win.trigger_apply_manual_angles(), bool)
+        assert isinstance(win.trigger_undo(), bool)
+        assert isinstance(win.trigger_redo(), bool)
+        assert isinstance(win.trigger_set_anchor(), bool)
+        assert isinstance(win.trigger_remove_anchor(), bool)
+        assert isinstance(win.trigger_apply_anchor_interpolation(), bool)
+        assert isinstance(win.trigger_clear_anchors(), bool)
+        assert isinstance(win.trigger_plot_zoom_fit(), bool)
+        assert isinstance(win.trigger_plot_zoom_in(), bool)
+        assert isinstance(win.trigger_plot_zoom_out(), bool)
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_top_bar_sidebar_guide_banner_and_status_bar_accessibility_and_ergonomics(qtbot):
+    win = DeepSliceMainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    try:
+        # TopBar metadata and properties
+        assert win.top_bar_widget.objectName() == "TopBar"
+        assert win.project_title_label.objectName() == "ProjectLabel"
+        assert win.session_status_lbl.objectName() == "SessionLabel"
+        assert win.hardware_mode_lbl.objectName() == "HardwareLabel"
+
+        assert win.hardware_health_btn.objectName() == "hardwareHealthBtn"
+        assert win.hardware_health_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.theme_toggle_btn.objectName() == "themeToggleBtn"
+        assert win.theme_toggle_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.new_session_btn.objectName() == "newSessionBtn"
+        assert win.new_session_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.save_session_btn.objectName() == "saveSessionBtn"
+        assert win.save_session_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.load_session_btn.objectName() == "loadSessionBtn"
+        assert win.load_session_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.session_io_spinner_widget.objectName() == "sessionIoSpinner"
+
+        assert win.shortcut_help_btn.objectName() == "shortcutHelpBtn"
+        assert win.shortcut_help_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.preferences_btn.objectName() == "preferencesBtn"
+        assert win.preferences_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.about_btn.objectName() == "aboutBtn"
+        assert win.about_btn.cursor().shape() == Qt.PointingHandCursor
+
+        assert win.error_menu_btn.objectName() == "ErrorMenuButton"
+        assert win.error_menu_btn.cursor().shape() == Qt.PointingHandCursor
+
+        # Sidebar metadata and properties
+        assert win.sidebar_container_widget.objectName() == "sidebarContainer"
+        assert win.sidebar_container_widget.accessibleName() == "Step Navigation Sidebar"
+        assert win.completion_lbl.objectName() == "CompletionLabel"
+        assert win.collapse_sidebar_btn.objectName() == "CollapseButton"
+        assert win.collapse_sidebar_btn.cursor().shape() == Qt.PointingHandCursor
+        assert win.step_list_widget.objectName() == "StepNavigator"
+
+        # GuideBanner metadata and properties
+        assert win.guide_banner_frame.objectName() == "GuideBanner"
+        assert win.guide_title_lbl.objectName() == "GuideTitle"
+        assert win.guide_text_lbl.objectName() == "GuideText"
+        assert win.guide_next_btn.objectName() == "GuideNextButton"
+        assert win.guide_next_btn.cursor().shape() == Qt.PointingHandCursor
+
+        # StatusBar metadata and properties
+        assert win.status_bar_widget.objectName() == "mainStatusBar"
+        assert win.status_bar_widget.accessibleName() == "Main Status Bar"
+        assert win.global_progress_bar.objectName() == "globalProgressBar"
+        assert win.global_progress_bar.accessibleName() == "Global Task Progress"
+
+        # Ergonomic queries and setters
+        assert "DeepSlice" in win.project_title_text()
+        assert "Session:" in win.session_status_text()
+        assert "Runs on:" in win.hardware_mode_text()
+
+        assert win.is_sidebar_collapsed() is False
+        win.set_sidebar_collapsed(True)
+        assert win.is_sidebar_collapsed() is True
+        win.set_sidebar_collapsed(False)
+        assert win.is_sidebar_collapsed() is False
+
+        assert "complete" in win.completion_percentage_text().lower()
+        assert isinstance(win.guide_title_text(), str)
+        assert isinstance(win.guide_body_text(), str)
+        assert isinstance(win.is_guide_next_visible(), bool)
+        assert win.status_bar_message() == "Ready"
+        assert win.is_global_progress_visible() is False
+
+        # Programmatic triggers
+        health_dialog = win.trigger_hardware_health()
+        assert health_dialog is not None
+
+        shortcuts_dialog = win.trigger_shortcuts_help()
+        assert shortcuts_dialog is not None
+
+        about_dialog = win.trigger_about_dialog()
+        assert about_dialog is not None
+
+        pref_dialog = win.trigger_open_preferences()
+        assert pref_dialog is not None
+        pref_dialog.close()
+
+        win.trigger_toggle_sidebar()
+        assert win.is_sidebar_collapsed() is True
+        win.trigger_toggle_sidebar()
+        assert win.is_sidebar_collapsed() is False
+
+        # Guide next trigger (locked when 0 images, advances when images present)
+        assert win.trigger_guide_next() is False
+        assert win.step_list_widget.currentRow() == 0
+
+        win.state.image_paths = ["dummy.png"]
+        assert win.trigger_guide_next() is True
+        assert win.step_list_widget.currentRow() == 1
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_file_io_session_actions_and_training_manifest_triggers(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # Headless guards: calling without parameters in offscreen test environment returns None without blocking
+        assert win.trigger_add_folder() is None
+        assert win.trigger_add_files() is None
+        assert win.trigger_browse_export_dir() is None
+        assert win.trigger_browse_quicknii_path() is None
+        assert win.trigger_save_session() is None
+        assert win.trigger_load_session() is None
+        assert win.trigger_save_training_split() is None
+        assert win.trigger_save_training_metadata() is None
+
+        # Browse triggers with explicit path parameter
+        export_dir = str(tmp_path / "custom_exports")
+        os.makedirs(export_dir, exist_ok=True)
+        res_dir = win.trigger_browse_export_dir(export_dir)
+        assert res_dir == export_dir
+        assert win.output_dir_line_edit.text() == export_dir
+
+        quicknii_exe = str(tmp_path / "QuickNII.exe")
+        with open(quicknii_exe, "w", encoding="utf-8") as f:
+            f.write("mock")
+        res_qnii = win.trigger_browse_quicknii_path(quicknii_exe)
+        assert res_qnii == quicknii_exe
+        assert win.quicknii_path_line_edit.text() == quicknii_exe
+
+        # Session saving and loading triggers
+        session_file = str(tmp_path / "test_run.deepslice-session.json")
+        saved_file = win.trigger_save_session(session_file)
+        assert saved_file == session_file
+        assert os.path.exists(session_file)
+
+        # Trigger new session
+        win.trigger_new_session()
+        assert "DeepSlice" in win.project_title_text()
+        assert win.session_status_text() == "Session: New"
+
+        # Trigger load session
+        loaded_file = win.trigger_load_session(session_file)
+        assert loaded_file == session_file
+
+        # Ingestion triggers with sample image
+        sample_img = str(tmp_path / "slice_001.png")
+        from PIL import Image
+        img = Image.new("RGB", (64, 64), color=(128, 128, 128))
+        img.save(sample_img)
+
+        imported = win.trigger_add_files([sample_img])
+        assert imported == [sample_img]
+        assert len(win.state.image_paths) == 1
+
+        # Training manifest triggers
+        split_path = str(tmp_path / "split_test.json")
+        saved_split = win.trigger_save_training_split(split_path)
+        assert saved_split == split_path
+        assert os.path.exists(split_path)
+
+        meta_path = str(tmp_path / "meta_test.json")
+        saved_meta = win.trigger_save_training_metadata(meta_path)
+        assert saved_meta == meta_path
+        assert os.path.exists(meta_path)
+    finally:
+        win.close()
+        win.deleteLater()
+
+
+def test_dialog_accessible_descriptions_and_triggers():
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # 1. Onboarding dialog trigger & accessibility
+        onboarding_dlg = win.trigger_onboarding_dialog()
+        assert onboarding_dlg.objectName() == "onboardingDialog"
+        assert onboarding_dlg.accessibleName() == "Onboarding Walkthrough Dialog"
+        assert "onboarding walkthrough" in onboarding_dlg.accessibleDescription().lower()
+        onboarding_ok = onboarding_dlg.findChild(QPushButton, "onboardingOkBtn")
+        assert onboarding_ok is not None
+        assert onboarding_ok.cursor().shape() == Qt.PointingHandCursor
+
+        # 2. What's New dialog trigger & accessibility
+        whats_new_dlg = win.trigger_whats_new_dialog("0.8.0")
+        assert whats_new_dlg.objectName() == "whatsNewDialog"
+        assert whats_new_dlg.accessibleName() == "What's New Highlights Dialog"
+        assert "highlights of changes" in whats_new_dlg.accessibleDescription().lower()
+        whats_new_ok = whats_new_dlg.findChild(QPushButton, "whatsNewOkBtn")
+        assert whats_new_ok is not None
+        assert whats_new_ok.cursor().shape() == Qt.PointingHandCursor
+
+        # 3. About dialog accessibility description
+        about_dlg = win.trigger_about_dialog()
+        assert about_dlg.objectName() == "aboutDialog"
+        assert about_dlg.accessibleName() == "About DeepSlice Information Dialog"
+        assert "citations, documentation" in about_dlg.accessibleDescription().lower()
+
+        # 4. Shortcuts dialog accessibility description
+        shortcuts_dlg = win.trigger_shortcuts_help()
+        assert shortcuts_dlg.objectName() == "shortcutsDialog"
+        assert shortcuts_dlg.accessibleName() == "Keyboard Shortcuts Help Dialog"
+        assert "keyboard shortcuts reference" in shortcuts_dlg.accessibleDescription().lower()
+
+        # 5. Theme toggle trigger
+        initial_theme = getattr(win, "_current_theme", "dark")
+        win.trigger_theme_toggle()
+        # Theme toggled
+        win.trigger_theme_toggle()
+
+        # 6. Export and report triggers without active predictions (headless warning safe)
+        win.trigger_export_predictions()
+        win.trigger_generate_report()
+    finally:
+        win.close()
+        win.deleteLater()
+
+

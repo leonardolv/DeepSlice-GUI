@@ -10,26 +10,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Deque, Dict, List, Optional
 
 
-def write_json_atomic(path: str, payload: object, **dump_kwargs) -> None:
-    """Write ``payload`` as JSON to ``path`` without ever truncating it first.
+from ..read_and_write.atomic_io import write_json_atomic  # noqa: F401  (re-exported)
 
-    The payload is serialised in memory and written to a sibling temp file,
-    then moved over ``path`` with ``os.replace``. A serialisation or I/O
-    failure therefore leaves any previous file at ``path`` untouched.
-    """
-    text = json.dumps(payload, **dump_kwargs)
-    directory = os.path.dirname(os.path.abspath(path))
-    tmp_path = os.path.join(directory, f".{os.path.basename(path)}.{os.getpid()}.tmp")
-    try:
-        with open(tmp_path, "w", encoding="utf-8") as handle:
-            handle.write(text)
-        os.replace(tmp_path, path)
-    except BaseException:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
-        raise
 
 _logger = logging.getLogger(__name__)
 

@@ -1,11 +1,152 @@
 # GUI & UX Maintenance Log
 
-
-
 ## In Progress
 
 
 ## Completed
+
+### Task: Dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers
+- **Completed**: 2026-11-18
+- **Owner**: Antigravity
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized accessible descriptions across `_show_about_dialog`, `_show_shortcuts_help`, `_show_onboarding_dialog`, and `_show_whats_new_dialog`.
+    - Added programmatic action triggers to `DeepSliceMainWindow`: `trigger_onboarding_dialog()`, `trigger_whats_new_dialog(previous_version=None)`, `trigger_theme_toggle()`, `trigger_export_predictions()`, and `trigger_generate_report()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_dialog_accessible_descriptions_and_triggers` verifying dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py tests/test_drop_event_toast.py -v` (44 passed in 11.35s, 0 errors).
+- **Status**: Completed
+
+### Task: File I/O and session action triggers, headless dialog safety guards, and training manifest export helpers
+- **Completed**: 2026-11-17
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added module-level `_is_headless()` utility checking offscreen and pytest runtime environments.
+    - Added headless execution safety guards and optional path parameters to file and directory dialog methods: `_add_folder(folder=None)`, `_add_files(files=None)`, `_save_training_split_manifest(filename=None)`, `_save_training_metadata_manifest(filename=None)`, `_browse_output_directory(directory=None)`, `_browse_quicknii_path(path=None)`, `_save_session(filename=None)`, `_load_session_or_quint(filename=None)`.
+    - Exposed 9 programmatic action triggers on `DeepSliceMainWindow`: `trigger_new_session()`, `trigger_save_session(filename=None)`, `trigger_load_session(filename=None)`, `trigger_add_folder(folder=None)`, `trigger_add_files(files=None)`, `trigger_save_training_split(filename=None)`, `trigger_save_training_metadata(filename=None)`, `trigger_browse_export_dir(directory=None)`, and `trigger_browse_quicknii_path(path=None)`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added comprehensive unit test `test_file_io_session_actions_and_training_manifest_triggers` asserting headless execution safety, path parameter injection, session serialization/deserialization roundtrip, image ingestion, and training manifest exports.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (43 passed in 11.62s, 0 errors).
+- **Status**: Completed
+
+### Task: PreferencesDialog accessible description, headless guards, and ergonomics helpers
+- **Completed**: 2026-11-17
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Configured explicit accessible description on `PreferencesDialog` (`preferencesDialog`).
+    - Added headless safety guards in `_browse_default_output_dir` and `_browse_default_quicknii_path` preventing blocking file picker dialogs during offscreen test execution.
+    - Added 10 ergonomic state queries and setters: `selected_species()`, `set_selected_species()`, `selected_theme()`, `set_selected_theme()`, `output_directory()`, `set_output_directory()`, `quicknii_path()`, `set_quicknii_path()`, `is_console_always_visible()`, and `set_console_always_visible()`.
+    - Added 5 programmatic action triggers: `trigger_reset_defaults()`, `trigger_save()`, `trigger_cancel()`, `trigger_browse_output_dir()`, and `trigger_browse_quicknii()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Expanded `test_preferences_dialog_accessibility_and_reset_to_defaults` asserting accessible description, query/setter ergonomics, headless browse guards, and programmatic save/cancel triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py -k test_preferences_dialog_accessibility_and_reset_to_defaults -v` (1 passed in 2.24s, 0 errors).
+- **Status**: Completed
+
+### Task: TopBar, Sidebar, GuideBanner, and StatusBar explicit object names, public properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across TopBar, Sidebar, GuideBanner, and StatusBar controls: `TopBar`, `ProjectLabel`, `SessionLabel`, `HardwareLabel`, `hardwareHealthBtn`, `themeToggleBtn`, `newSessionBtn`, `saveSessionBtn`, `loadSessionBtn`, `sessionIoSpinner`, `shortcutHelpBtn`, `preferencesBtn`, `aboutBtn`, `ErrorMenuButton`, `sidebarContainer`, `CompletionLabel`, `CollapseButton`, `StepNavigator`, `GuideBanner`, `GuideTitle`, `GuideText`, `GuideNextButton`, `mainStatusBar`, and `globalProgressBar`.
+    - Added pointing hand cursor affordances across all interactive buttons.
+    - Exposed 24 public widget properties on `DeepSliceMainWindow`: `top_bar_widget`, `project_title_label`, `session_status_lbl`, `hardware_mode_lbl`, `hardware_health_btn`, `theme_toggle_btn`, `new_session_btn`, `save_session_btn`, `load_session_btn`, `session_io_spinner_widget`, `shortcut_help_btn`, `preferences_btn`, `about_btn`, `error_menu_btn`, `sidebar_container_widget`, `completion_lbl`, `collapse_sidebar_btn`, `step_list_widget`, `guide_banner_frame`, `guide_title_lbl`, `guide_text_lbl`, `guide_next_btn`, `status_bar_widget`, and `global_progress_bar`.
+    - Added 17 ergonomic state queries, setters, and programmatic action triggers: `project_title_text()`, `session_status_text()`, `hardware_mode_text()`, `is_sidebar_collapsed()`, `set_sidebar_collapsed()`, `completion_percentage_text()`, `guide_title_text()`, `guide_body_text()`, `is_guide_next_visible()`, `status_bar_message()`, `is_global_progress_visible()`, `trigger_hardware_health()`, `trigger_shortcuts_help()`, `trigger_about_dialog()`, `trigger_open_preferences()`, `trigger_toggle_sidebar()`, and `trigger_guide_next()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added comprehensive unit test `test_top_bar_sidebar_guide_banner_and_status_bar_accessibility_and_ergonomics` validating control object names, accessible metadata, cursor affordances, public property accessors, ergonomic queries, sidebar toggling, step navigation, and modal-safe helper dialog triggers.
+- **Verification**: Verified headlessly with `pytest tests/test_ui_accessibility_and_startup.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py tests/test_drop_event_toast.py -v` (42 passed in 11.39s, 0 errors).
+- **Status**: Completed
+
+
+### Task: Curation Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across Curation Page controls: `curationPrevBtn`, `curationNextBtn`, `curationSelectAllBtn`, `curationDeselectAllBtn`, `confidenceFilterCombo`, `sliceFlagList`, `applyBadSectionsBtn`, `applyManualOrderBtn`, `moveSliceUpBtn`, `moveSliceDownBtn`, `detectOutliersBtn`, `resetFlagsBtn`, `autoFlagLowConfBtn`, `interpolateBadDepthBtn`, `toggleCurrentFlagBtn`, `sliceNoteEdit`, `saveSliceNoteBtn`, `curationQueueLabel`, `controlsGroupBox`, `normalizeAnglesBtn`, `enforceOrderBtn`, `enforceSpacingBtn`, `mlSpin`, `dvSpin`, `applyManualAnglesBtn`, `undoBtn`, `redoBtn`, `anchorGroupBox`, `anchorSummaryLabel`, `anchorDepthSpin`, `setAnchorBtn`, `removeAnchorBtn`, `applyAnchorInterpolationBtn`, `clearAnchorBtn`, `anchorList`, `linearityCanvas`, `zoomFitBtn`, `zoomInBtn`, `zoomOutBtn`, `histCanvas`, `enableAtlasPreviewCheck`, `atlasVolumeCombo`, `enableBlendOverlayCheck`, `blendSlider`, `blendPercentLabel`, `atlasSliceInfoLabel`, `beforeAfterToggle`, `loupeToggle`, `atlasCoordsLabel`, `atlasFlipXCheck`, `atlasFlipYCheck`, `atlasRotateCombo`, `atlasScaleSlider`, `atlasScaleLabel`, `atlasOffsetXSlider`, `atlasOffsetXLabel`, `atlasOffsetYSlider`, `atlasOffsetYLabel`, `confidencePanelToggle`, `confidencePanel`, `confidenceOverlayViewer`, `curationViewer`, `atlasViewer`.
+    - Standardized accessible names, descriptions, tooltips, and pointing hand cursor affordances across left panel list navigation, outlier detection, angle propagation, anchor alignment, linearity plot zoom toolbar, volume selection, blend overlays, and synchronized slice/atlas viewers.
+    - Exposed 65 public widget properties on `DeepSliceMainWindow`: `curation_prev_btn`, `curation_next_btn`, `curation_select_all_button`, `curation_deselect_all_button`, `confidence_filter_combobox`, `slice_flag_list_widget`, `apply_bad_sections_btn`, `apply_manual_order_btn`, `move_slice_up_btn`, `move_slice_down_btn`, `detect_outliers_btn`, `reset_flags_btn`, `auto_flag_low_conf_btn`, `interpolate_bad_depth_btn`, `toggle_current_flag_btn`, `slice_note_line_edit`, `save_slice_note_btn`, `curation_queue_lbl`, `controls_group_box`, `normalize_angles_btn`, `enforce_order_btn`, `enforce_spacing_btn`, `ml_angle_spin_box`, `dv_angle_spin_box`, `apply_manual_angles_btn`, `undo_curation_btn`, `redo_curation_btn`, `anchor_group_box`, `anchor_summary_lbl`, `anchor_depth_spin_box`, `set_anchor_btn`, `remove_anchor_btn`, `apply_anchor_interpolation_btn`, `clear_anchor_btn`, `anchor_list_widget`, `linearity_figure_canvas`, `zoom_fit_plot_btn`, `zoom_in_plot_btn`, `zoom_out_plot_btn`, `hist_figure_canvas`, `enable_atlas_preview_check`, `atlas_volume_combobox`, `enable_blend_overlay_check`, `blend_opacity_slider`, `blend_percent_lbl`, `atlas_slice_info_lbl`, `before_after_check`, `loupe_check`, `atlas_coords_lbl`, `atlas_flip_x_check`, `atlas_flip_y_check`, `atlas_rotate_combobox`, `atlas_scale_slider_widget`, `atlas_scale_lbl`, `atlas_offset_x_slider_widget`, `atlas_offset_x_lbl`, `atlas_offset_y_slider_widget`, `atlas_offset_y_lbl`, `confidence_panel_toggle_btn`, `confidence_panel_frame`, `confidence_overlay_slice_viewer`, `curation_slice_viewer`, `atlas_slice_viewer`.
+    - Added 46 ergonomic state queries, setters, and action triggers: `curation_confidence_filter()`, `set_curation_confidence_filter()`, `slice_note_text()`, `set_slice_note_text()`, `manual_ml_angle()`, `set_manual_ml_angle()`, `manual_dv_angle()`, `set_manual_dv_angle()`, `anchor_depth()`, `set_anchor_depth()`, `anchor_count()`, `is_atlas_preview_enabled()`, `set_atlas_preview_enabled()`, `is_blend_overlay_enabled()`, `set_blend_overlay_enabled()`, `blend_opacity()`, `set_blend_opacity()`, `is_before_after_overlay_enabled()`, `set_before_after_overlay_enabled()`, `is_loupe_enabled()`, `set_loupe_enabled()`, `is_atlas_flip_x_enabled()`, `set_atlas_flip_x_enabled()`, `is_atlas_flip_y_enabled()`, `set_atlas_flip_y_enabled()`, `atlas_scale_percent()`, `set_atlas_scale_percent()`, `atlas_offset_x()`, `set_atlas_offset_x()`, `atlas_offset_y()`, `set_atlas_offset_y()`, `is_confidence_panel_expanded()`, `set_confidence_panel_expanded()`, `trigger_curation_prev_slice()`, `trigger_curation_next_slice()`, `trigger_move_slice_up()`, `trigger_move_slice_down()`, `trigger_detect_outliers()`, `trigger_reset_flags()`, `trigger_auto_flag_low_conf()`, `trigger_interpolate_bad_depth()`, `trigger_toggle_current_flag()`, `trigger_save_slice_note()`, `trigger_normalize_angles()`, `trigger_enforce_order()`, `trigger_enforce_spacing()`, `trigger_apply_manual_angles()`, `trigger_undo()`, `trigger_redo()`, `trigger_set_anchor()`, `trigger_remove_anchor()`, `trigger_apply_anchor_interpolation()`, `trigger_clear_anchors()`, `trigger_plot_zoom_fit()`, `trigger_plot_zoom_in()`, `trigger_plot_zoom_out()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_curation_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, properties, and ergonomic setters, getters, and action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (41 passed in 10.73s, 0 errors).
+- **Status**: Completed
+
+### Task: Ingestion Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across Ingestion Page controls: `drop_area` (`ingestionDropArea`), `add_folder_button` (`addFolderBtn`), `add_files_button` (`addFilesBtn`), `clear_images_button` (`clearImagesBtn`), `enable_section_numbers_checkbox` (`enableSectionNumbersCheck`), `naming_helper_button` (`namingHelperBtn`), `legacy_parsing_checkbox` (`legacyParsingCheck`), `orientation_combo` (`orientationCombo`), `orientation_guide_button` (`orientationGuideBtn`), `slice_count_label` (`sliceCountLabel`), `file_size_summary_label` (`fileSizeSummaryLabel`), `index_table` (`indexTable`), `thumbnail_sort_combo` (`thumbnailSortCombo`), `thumbnail_filter_edit` (`thumbnailFilterEdit`), `thumbnail_list` (`ingestionThumbnailList`), `thumbnail_progress` (`thumbnailProgress`), `ingestion_preview` (`ingestionPreview`).
+    - Standardized accessible names, descriptions, tooltips, and pointing hand cursor affordances across file addition, option configuration, sorting, filtering, and preview controls.
+    - Exposed 19 public widget properties on `DeepSliceMainWindow`: `drop_area_widget`, `add_folder_btn`, `add_files_btn`, `clear_images_btn`, `enable_section_numbers_check`, `naming_helper_btn`, `legacy_parsing_check`, `orientation_combobox`, `orientation_guide_btn`, `slice_count_lbl`, `file_size_summary_lbl`, `ingestion_summary_banner_lbl`, `ingestion_warning_lbl`, `index_table_widget`, `thumbnail_sort_combobox`, `thumbnail_filter_input`, `thumbnail_list_widget`, `thumbnail_progress_bar`, `ingestion_preview_view`.
+    - Added 19 ergonomic state queries and triggers: `slice_count_text()`, `file_size_summary_text()`, `ingestion_summary_banner_text()`, `ingestion_warning_text()`, `is_section_number_detection_enabled()`, `set_section_number_detection_enabled()`, `is_legacy_parsing_enabled()`, `set_legacy_parsing_enabled()`, `cutting_plane_orientation()`, `set_cutting_plane_orientation()`, `thumbnail_sort_order()`, `set_thumbnail_sort_order()`, `thumbnail_filter_query()`, `set_thumbnail_filter_query()`, `clear_thumbnail_filter()`, `index_table_row_count()`, `trigger_clear_images()`, `trigger_naming_helper()`, `trigger_orientation_guide()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_ingestion_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, properties, and ergonomic setters, getters, and action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (40 passed in 11.89s, 0 errors).
+- **Status**: Completed
+
+
+### Task: Prediction Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across Prediction Page controls: `run_alignment_button` (`runAlignmentBtn`), `cancel_alignment_button` (`cancelAlignmentBtn`), `prediction_phase_label` (`predictionPhaseLabel`), `prediction_progress_label` (`predictionProgressLabel`), `prediction_elapsed_label` (`predictionElapsedLabel`), `prediction_eta_label` (`predictionEtaLabel`), `prediction_progress_bar` (`predictionProgressBar`), `predicted_thickness_label` (`predictedThicknessLabel`), `accept_predicted_thickness_button` (`acceptPredictedThicknessBtn`), `prediction_direction_label` (`predictionDirectionLabel`), `console_toggle` (`consoleToggle`), `console_autoscroll_toggle` (`consoleAutoscrollToggle`), `clear_console_button` (`clearConsoleButton`), `copy_console_button` (`copyConsoleButton`), `console_output` (`consoleOutput`), `run_blocker_label` (`WarningText`), `prediction_slice_selector` (`predictionSliceSelector`), `prediction_compare_checkbox` (`predictionCompareCheck`), `prediction_atlas_info_label` (`predictionAtlasInfoLabel`), `preprocessing_preview_info_label` (`preprocessingPreviewInfoLabel`), `preprocessing_preview_label` (`preprocessingPreviewLabel`), `prediction_viewer` (`predictionSliceViewer`), `prediction_atlas_viewer` (`predictionAtlasViewer`).
+    - Standardized accessible names, descriptions, tooltips, and pointing hand cursor affordances across execution, preview, and console controls.
+    - Exposed 23 public widget properties on `DeepSliceMainWindow`: `run_alignment_btn`, `cancel_alignment_btn`, `prediction_phase_lbl`, `prediction_progress_lbl`, `prediction_elapsed_lbl`, `prediction_eta_lbl`, `prediction_progress_bar_widget`, `predicted_thickness_lbl`, `accept_predicted_thickness_btn`, `prediction_direction_lbl`, `console_toggle_btn`, `console_autoscroll_toggle_btn`, `clear_console_btn`, `copy_console_btn`, `console_output_widget`, `run_blocker_lbl`, `prediction_slice_selector_combo`, `prediction_compare_check`, `prediction_atlas_info_lbl`, `preprocessing_preview_info_lbl`, `preprocessing_preview_lbl`, `prediction_slice_viewer`, `prediction_atlas_viewer_widget`.
+    - Added 22 ergonomic state queries and triggers: `prediction_phase_text()`, `prediction_progress_text()`, `prediction_elapsed_text()`, `prediction_eta_text()`, `prediction_progress_value()`, `predicted_thickness_text()`, `prediction_direction_text()`, `is_run_alignment_enabled()`, `is_cancel_alignment_enabled()`, `is_accept_predicted_thickness_enabled()`, `is_console_visible()`, `set_console_visible(visible)`, `is_console_autoscroll_enabled()`, `set_console_autoscroll_enabled(enabled)`, `console_text()`, `trigger_clear_console()`, `trigger_copy_console()`, `prediction_slice_count()`, `prediction_slice_texts()`, `selected_prediction_slice_index()`, `select_prediction_slice_index(index)`, `is_atlas_comparison_checked()`, `trigger_accept_predicted_thickness()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_prediction_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, properties, and ergonomic setters, getters, and action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (39 passed in 12.12s, 0 errors).
+- **Status**: Completed
+
+### Task: Export Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized explicit object names across Export Page controls: `output_dir_edit` (`outputDirEdit`), `browse_output_dir_button` (`browseOutputDirBtn`), `output_basename_edit` (`outputBasenameEdit`), `output_format_combo` (`outputFormatCombo`), `output_format_help_button` (`outputFormatHelpBtn`), `export_size_estimate_label` (`exportSizeEstimateLabel`), `export_button` (`exportBtn`), `open_export_dir_button` (`openExportDirBtn`), `copy_export_path_button` (`copyExportPathBtn`), `report_button` (`reportBtn`), `preview_report_button` (`previewReportBtn`), `pdf_content_group` (`pdfContentGroup`), `pdf_include_stats` (`pdfIncludeStatsCheck`), `pdf_include_plot` (`pdfIncludePlotCheck`), `pdf_include_images` (`pdfIncludeImagesCheck`), `pdf_include_angles` (`pdfIncludeAnglesCheck`), `quicknii_path_edit` (`quickniiPathEdit`), `quicknii_browse_button` (`quickniiBrowseBtn`), `open_quicknii_button` (`openQuickniiBtn`), `summary_label` (`exportSummaryLabel`), `deviation_label` (`exportDeviationLabel`).
+    - Exposed public widget properties on `DeepSliceMainWindow`: `output_dir_line_edit`, `browse_output_dir_btn`, `output_basename_line_edit`, `output_format_combobox`, `output_format_help_btn`, `export_size_estimate_lbl`, `export_btn`, `open_export_dir_btn`, `copy_export_path_btn`, `report_btn`, `preview_report_btn`, `pdf_content_group_box`, `pdf_include_stats_check`, `pdf_include_plot_check`, `pdf_include_images_check`, `pdf_include_angles_check`, `quicknii_path_line_edit`, `quicknii_browse_btn`, `open_quicknii_btn`, `export_summary_label`, `export_deviation_label`.
+    - Added ergonomic state queries and triggers: `export_output_dir()`, `set_export_output_dir(path)`, `export_base_filename()`, `set_export_base_filename(name)`, `export_format_name()`, `set_export_format_name(format_name)`, `is_pdf_stats_included()`, `set_pdf_stats_included(enabled)`, `is_pdf_plot_included()`, `set_pdf_plot_included(enabled)`, `is_pdf_images_included()`, `set_pdf_images_included(enabled)`, `is_pdf_angles_included()`, `set_pdf_angles_included(enabled)`, `export_summary_text()`, `export_deviation_text()`, `trigger_export_format_help()`, `trigger_copy_export_path()`, `trigger_preview_report()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_export_page_accessibility_properties_and_ergonomics` verifying object names, cursor affordances, properties, and ergonomic setters/getters/triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (38 passed in 15.09s, 0 errors).
+- **Status**: Completed
+
+### Task: Configuration Page accessibility, pointer affordances, object names, properties, and ergonomics helpers
+- **Completed**: 2026-11-08
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Configured explicit object names, accessible descriptions, tooltips, and pointing hand cursors across Configuration Page controls: `mouse_radio` (`mouseRadio`), `rat_radio` (`ratRadio`), `auto_thickness_checkbox` (`autoThicknessCheck`), `thickness_spin` (`thicknessSpin`), `suggest_thickness_button` (`suggestThicknessBtn`), `direction_override_combo` (`directionOverrideCombo`), `direction_guide_button` (`directionGuideBtn`), `advanced_options_toggle` (`advancedOptionsToggle`), `ensemble_checkbox` (`ensembleCheck`), `ensemble_help_button` (`ensembleHelpBtn`), `secondary_model_checkbox` (`secondaryModelCheck`), `legacy_from_config_checkbox` (`legacyParserCheck`), `outlier_sigma_spin` (`outlierSigmaSpin`), `confidence_high_spin` (`confidenceHighSpin`), `confidence_medium_spin` (`confidenceMediumSpin`), `inference_batch_spin` (`inferenceBatchSpin`), `quality_gate_checkbox` (`qualityGateCheck`), `tissue_crop_checkbox` (`tissueCropCheck`), `clahe_checkbox` (`claheCheck`), `stain_norm_combo` (`stainNormCombo`), `preserve_color_checkbox` (`preserveColorCheck`), `percentile_norm_checkbox` (`percentileNormCheck`), `bilateral_checkbox` (`bilateralCheck`), `gamma_spin` (`gammaSpin`), `min_resolution_spin` (`minResolutionSpin`), `blur_threshold_spin` (`blurThresholdSpin`), `tta_checkbox` (`ttaCheck`), `multiscale_checkbox` (`multiscaleCheck`), `fast_fp16_checkbox` (`fastFp16Check`), `section_dropout_spin` (`sectionDropoutSpin`), `conf_weighted_ensemble_checkbox` (`confWeightedEnsembleCheck`), `training_group_mode_combo` (`trainingGroupModeCombo`), `training_seed_spin` (`trainingSeedSpin`), `training_train_fraction_spin` (`trainingTrainFractionSpin`), `training_val_fraction_spin` (`trainingValFractionSpin`), `training_patience_spin` (`trainingPatienceSpin`), `training_lr_factor_spin` (`trainingLrFactorSpin`), `training_min_lr_spin` (`trainingMinLrSpin`), `training_mixed_precision_checkbox` (`trainingMixedPrecisionCheck`).
+    - Exposed public widget properties on `DeepSliceMainWindow`: `mouse_atlas_radio`, `rat_atlas_radio`, `auto_thickness_check`, `thickness_spin_box`, `suggest_thickness_btn`, `direction_override_combobox`, `direction_guide_btn`, `advanced_options_toggle_btn`, `ensemble_check`, `ensemble_help_btn`, `secondary_model_check`, `legacy_parser_check`, `outlier_sigma_spin_box`, `confidence_high_spin_box`, `confidence_medium_spin_box`, `inference_batch_spin_box`, `quality_gate_check`, `tissue_crop_check`, `clahe_check`, `stain_norm_combobox`, `preserve_color_check`, `percentile_norm_check`, `bilateral_check`, `gamma_spin_box`, `min_resolution_spin_box`, `blur_threshold_spin_box`, `tta_check`, `multiscale_check`, `fast_fp16_check`, `section_dropout_spin_box`, `conf_weighted_ensemble_check`, `training_group_mode_combobox`, `preview_training_split_btn`, `save_training_split_btn`, `save_training_metadata_btn`.
+    - Added ergonomic state queries and triggers: `is_auto_thickness_enabled()`, `set_auto_thickness_enabled()`, `section_thickness_um()`, `set_section_thickness_um()`, `direction_override_text()`, `set_direction_override()`, `is_advanced_options_expanded()`, `set_advanced_options_expanded()`, `is_ensemble_enabled()`, `set_ensemble_enabled()`, `is_quality_gate_enabled()`, `set_quality_gate_enabled()`, `is_tissue_crop_enabled()`, `set_tissue_crop_enabled()`, `is_clahe_enabled()`, `set_clahe_enabled()`, `trigger_suggest_thickness()`, `trigger_direction_guide()`, `trigger_ensemble_help()`, `trigger_preview_training_split()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_configuration_page_accessibility_properties_and_ergonomics` verifying object names, accessible metadata, cursor affordances, property aliases, and ergonomic setters/getters/triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (37 passed in 11.18s, 0 errors).
+- **Status**: Completed
+
+### Task: ThumbnailListWidget and FlagListWidget accessibility and curation ergonomics helpers
+- **Completed**: 2026-11-07
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added explicit object name (`thumbnailListWidget`), accessible description, and tooltip to `ThumbnailListWidget`.
+    - Added public query and selection helpers: `item_count()`, `has_items()`, `selected_index()`, `select_index()`, `item_texts()`, and `selected_text()`.
+    - Added explicit `__init__` on `FlagListWidget` setting object name (`flagListWidget`), accessible name, description, and spacebar tooltip.
+    - Added checklist queries and item manipulation helpers: `item_count()`, `has_items()`, `checked_count()`, `unchecked_count()`, `is_item_checked()`, `set_item_checked()`, `toggle_item()`, `checked_texts()`, `selected_index()`, `select_index()`, and `trigger_toggle_current()`.
+    - Added public count properties `thumbnail_count`, `curation_slice_count`, `curation_flagged_count` and action triggers `trigger_apply_bad_section_flags()`, `trigger_apply_manual_order()`, `trigger_curation_select_all()`, and `trigger_curation_deselect_all()` to `DeepSliceMainWindow`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_thumbnail_and_flag_list_widget_and_main_window_curation_ergonomics` validating accessibility metadata, item texts, selection, checkbox toggles, and curation triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (36 passed in 14.04s, 0 errors).
+- **Status**: Completed
+
+### Task: DropArea, ToastOverlay, and SliceGraphicsView accessibility and ergonomics helpers
+- **Completed**: 2026-11-07
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added accessible descriptions and explicit child label attributes (`icon_label`, `title_label`, `subtitle_label`) to `DropArea`.
+    - Added text query helpers `title_text()` and `subtitle_text()`.
+    - Configured accessible name, description, and child label metadata (`ToastMessageLabel`) on `ToastOverlay` with `message_text()` and `is_active()` query helpers.
+    - Configured accessibility metadata on `SliceGraphicsView` (`setObjectName("sliceGraphicsView")`, `setAccessibleName("Slice Interactive Canvas")`, accessible description) and added query helpers `zoom_level()`, `is_loupe_enabled()`, `has_sync_partner()`, and `is_mouse_tracking_active()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_drop_area_toast_overlay_and_slice_view_ergonomics` validating accessibility metadata, label object names, text readouts, loupe toggling, and query helper state.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_drop_event_toast.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py -v` (35 passed in 24.92s, 0 errors).
+- **Status**: Completed
+
 
 ### Task: DeepSliceMainWindow page step helpers, bad section queries, and species selection
 - **Completed**: 2026-11-05
