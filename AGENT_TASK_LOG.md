@@ -18,6 +18,12 @@ here.
 
 ## Completed
 
+### 2026-11-18 UTC - Dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Standardized accessible descriptions across `_show_about_dialog`, `_show_shortcuts_help`, `_show_onboarding_dialog`, and `_show_whats_new_dialog`; added programmatic action triggers to `DeepSliceMainWindow`: `trigger_onboarding_dialog()`, `trigger_whats_new_dialog(previous_version=None)`, `trigger_theme_toggle()`, `trigger_export_predictions()`, and `trigger_generate_report()`.
+- `tests/test_ui_accessibility_and_startup.py`: Added unit test `test_dialog_accessible_descriptions_and_triggers` verifying dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers.
+- Validation: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py tests/test_drop_event_toast.py -v` (44 passed in 11.35s, 0 errors).
+
 ### 2026-11-17 UTC - File I/O and session action triggers, headless dialog safety guards, and training manifest export helpers
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added module-level `_is_headless()` utility checking offscreen and pytest runtime environments; added headless execution safety guards and optional path parameters to file and directory dialog methods: `_add_folder(folder=None)`, `_add_files(files=None)`, `_save_training_split_manifest(filename=None)`, `_save_training_metadata_manifest(filename=None)`, `_browse_output_directory(directory=None)`, `_browse_quicknii_path(path=None)`, `_save_session(filename=None)`, `_load_session_or_quint(filename=None)`; exposed 9 programmatic action triggers on `DeepSliceMainWindow`: `trigger_new_session()`, `trigger_save_session(filename=None)`, `trigger_load_session(filename=None)`, `trigger_add_folder(folder=None)`, `trigger_add_files(files=None)`, `trigger_save_training_split(filename=None)`, `trigger_save_training_metadata(filename=None)`, `trigger_browse_export_dir(directory=None)`, and `trigger_browse_quicknii_path(path=None)`.

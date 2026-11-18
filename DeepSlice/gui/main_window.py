@@ -3694,6 +3694,27 @@ class DeepSliceMainWindow(QMainWindow):
         """Programmatically browse and set QuickNII executable path."""
         return self._browse_quicknii_path(path)
 
+    def trigger_onboarding_dialog(self) -> QMessageBox:
+        """Programmatically open onboarding walkthrough dialog."""
+        return self._show_onboarding_dialog()
+
+    def trigger_whats_new_dialog(self, previous_version: Optional[str] = None) -> QMessageBox:
+        """Programmatically open what's new highlights dialog."""
+        return self._show_whats_new_dialog(previous_version or "0.9.0")
+
+    def trigger_theme_toggle(self) -> None:
+        """Programmatically toggle application theme."""
+        next_theme = "light" if getattr(self, "_theme_name", "dark") == "dark" else "dark"
+        self._set_theme(next_theme)
+
+    def trigger_export_predictions(self) -> None:
+        """Programmatically trigger export predictions action."""
+        self._export_predictions()
+
+    def trigger_generate_report(self) -> None:
+        """Programmatically trigger PDF report generation action."""
+        self._generate_report()
+
 
 
 
@@ -6065,6 +6086,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("About DeepSlice Information Dialog")
 
+        msg_box.setAccessibleDescription("About DeepSlice version, citations, documentation, and license details")
+
         for btn in msg_box.buttons():
 
             btn.setObjectName("aboutOkBtn")
@@ -6313,6 +6336,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Keyboard Shortcuts Help Dialog")
 
+        msg_box.setAccessibleDescription("Keyboard shortcuts reference for navigation, curation, and zooming")
+
         for btn in msg_box.buttons():
 
             btn.setObjectName("shortcutsOkBtn")
@@ -6497,6 +6522,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Onboarding Walkthrough Dialog")
 
+        msg_box.setAccessibleDescription("Step-by-step first-run onboarding walkthrough dialog for new DeepSlice users")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -6556,6 +6583,8 @@ class DeepSliceMainWindow(QMainWindow):
         msg_box.setIcon(QMessageBox.Information)
 
         msg_box.setAccessibleName("What's New Highlights Dialog")
+
+        msg_box.setAccessibleDescription("Highlights of changes and new features introduced in this DeepSlice version")
 
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 

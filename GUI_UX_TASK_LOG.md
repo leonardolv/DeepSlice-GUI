@@ -5,6 +5,18 @@
 
 ## Completed
 
+### Task: Dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers
+- **Completed**: 2026-11-18
+- **Owner**: Antigravity
+- **Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Standardized accessible descriptions across `_show_about_dialog`, `_show_shortcuts_help`, `_show_onboarding_dialog`, and `_show_whats_new_dialog`.
+    - Added programmatic action triggers to `DeepSliceMainWindow`: `trigger_onboarding_dialog()`, `trigger_whats_new_dialog(previous_version=None)`, `trigger_theme_toggle()`, `trigger_export_predictions()`, and `trigger_generate_report()`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added unit test `test_dialog_accessible_descriptions_and_triggers` verifying dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers.
+- **Verification**: Verified headlessly with `python -m pytest tests/test_ui_accessibility_and_startup.py tests/test_top_bar_min_width.py tests/test_review_left_column_min_width.py tests/test_drop_event_toast.py -v` (44 passed in 11.35s, 0 errors).
+- **Status**: Completed
+
 ### Task: File I/O and session action triggers, headless dialog safety guards, and training manifest export helpers
 - **Completed**: 2026-11-17
 - **Changes**:

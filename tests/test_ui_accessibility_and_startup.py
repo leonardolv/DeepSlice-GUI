@@ -2133,3 +2133,51 @@ def test_file_io_session_actions_and_training_manifest_triggers(tmp_path):
         win.deleteLater()
 
 
+def test_dialog_accessible_descriptions_and_triggers():
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # 1. Onboarding dialog trigger & accessibility
+        onboarding_dlg = win.trigger_onboarding_dialog()
+        assert onboarding_dlg.objectName() == "onboardingDialog"
+        assert onboarding_dlg.accessibleName() == "Onboarding Walkthrough Dialog"
+        assert "onboarding walkthrough" in onboarding_dlg.accessibleDescription().lower()
+        onboarding_ok = onboarding_dlg.findChild(QPushButton, "onboardingOkBtn")
+        assert onboarding_ok is not None
+        assert onboarding_ok.cursor().shape() == Qt.PointingHandCursor
+
+        # 2. What's New dialog trigger & accessibility
+        whats_new_dlg = win.trigger_whats_new_dialog("0.8.0")
+        assert whats_new_dlg.objectName() == "whatsNewDialog"
+        assert whats_new_dlg.accessibleName() == "What's New Highlights Dialog"
+        assert "highlights of changes" in whats_new_dlg.accessibleDescription().lower()
+        whats_new_ok = whats_new_dlg.findChild(QPushButton, "whatsNewOkBtn")
+        assert whats_new_ok is not None
+        assert whats_new_ok.cursor().shape() == Qt.PointingHandCursor
+
+        # 3. About dialog accessibility description
+        about_dlg = win.trigger_about_dialog()
+        assert about_dlg.objectName() == "aboutDialog"
+        assert about_dlg.accessibleName() == "About DeepSlice Information Dialog"
+        assert "citations, documentation" in about_dlg.accessibleDescription().lower()
+
+        # 4. Shortcuts dialog accessibility description
+        shortcuts_dlg = win.trigger_shortcuts_help()
+        assert shortcuts_dlg.objectName() == "shortcutsDialog"
+        assert shortcuts_dlg.accessibleName() == "Keyboard Shortcuts Help Dialog"
+        assert "keyboard shortcuts reference" in shortcuts_dlg.accessibleDescription().lower()
+
+        # 5. Theme toggle trigger
+        initial_theme = getattr(win, "_current_theme", "dark")
+        win.trigger_theme_toggle()
+        # Theme toggled
+        win.trigger_theme_toggle()
+
+        # 6. Export and report triggers without active predictions (headless warning safe)
+        win.trigger_export_predictions()
+        win.trigger_generate_report()
+    finally:
+        win.close()
+        win.deleteLater()
+
+
