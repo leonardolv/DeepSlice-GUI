@@ -19469,7 +19469,19 @@ class DeepSliceMainWindow(QMainWindow):
 
         try:
 
-            import tensorflow as tf
+            try:
+
+                import tensorflow as tf
+
+            except ImportError:
+
+                raise
+
+            except Exception as import_exc:
+
+                # A broken TensorFlow install (e.g. numpy ABI mismatch) raises
+                # TypeError/OSError on import; treat it like a missing package.
+                raise ImportError(f"TensorFlow failed to import: {import_exc}") from import_exc
 
 
 

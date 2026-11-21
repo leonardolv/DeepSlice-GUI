@@ -2181,3 +2181,27 @@ def test_dialog_accessible_descriptions_and_triggers():
         win.deleteLater()
 
 
+
+
+def test_hardware_health_survives_broken_tensorflow_import(monkeypatch):
+    """A TensorFlow that raises a non-ImportError on import must not yield None."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def broken_import(name, *args, **kwargs):
+        if name == "tensorflow":
+            raise TypeError("simulated numpy ABI mismatch")
+        return real_import(name, *args, **kwargs)
+
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        monkeypatch.setattr(builtins, "__import__", broken_import)
+        box = win._show_hardware_health()
+        monkeypatch.setattr(builtins, "__import__", real_import)
+        assert box is not None
+        assert box.objectName() == "hardwareHealthDialog"
+        assert "Lightweight" in box.text()
+    finally:
+        win.close()

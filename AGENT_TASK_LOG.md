@@ -18,6 +18,12 @@ here.
 
 ## Completed
 
+### 2026-11-21 UTC - Hardware Health dialog returned None when TensorFlow import failed with a non-ImportError (Claude)
+Status: **done**
+- Root cause: `_show_hardware_health` only fell back to the lightweight CPU report on ImportError; a broken TensorFlow install (numpy ABI mismatch raises TypeError) hit the generic handler, which returned None, so callers and two existing tests crashed with AttributeError.
+- Fix: `DeepSlice/gui/main_window.py` converts any import-time failure of tensorflow into the existing lightweight fallback.
+- Validation: new test `test_hardware_health_survives_broken_tensorflow_import` (red before, green after); full suite 566 passed, 1 skipped; remaining failure `test_training_utils::test_build_training_callbacks_creates_checkpoint_template` and 8 errors are the same broken TF/numpy environment, unrelated.
+
 ### 2026-11-18 UTC - Dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Standardized accessible descriptions across `_show_about_dialog`, `_show_shortcuts_help`, `_show_onboarding_dialog`, and `_show_whats_new_dialog`; added programmatic action triggers to `DeepSliceMainWindow`: `trigger_onboarding_dialog()`, `trigger_whats_new_dialog(previous_version=None)`, `trigger_theme_toggle()`, `trigger_export_predictions()`, and `trigger_generate_report()`.
