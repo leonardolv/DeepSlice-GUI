@@ -18,6 +18,12 @@ here.
 
 ## Completed
 
+### 2026-11-22 UTC - Weight/atlas download wrote straight to the final path (Claude)
+Status: **done**
+- Root cause: `metadata_loader.download_file` streamed into the destination itself, so a retry failure removed a previously good file and a killed process left a truncated file that `get_data_path` later treated as present (no sha256 for some entries).
+- Fix: stream into `<path>.<pid>.part`, `os.replace` into place only after completion and checksum; cleanup targets the part file; `makedirs` handles bare filenames.
+- Validation: new `tests/test_download_file_atomic.py` (interrupted-download test red before, 4 green after); run with `-p no:pytest-qt` since libEGL is missing in the sandbox. PR: see merge commit.
+
 ### 2026-11-21 UTC - Hardware Health dialog returned None when TensorFlow import failed with a non-ImportError (Claude)
 Status: **done**
 - Root cause: `_show_hardware_health` only fell back to the lightweight CPU report on ImportError; a broken TensorFlow install (numpy ABI mismatch raises TypeError) hit the generic handler, which returned None, so callers and two existing tests crashed with AttributeError.
