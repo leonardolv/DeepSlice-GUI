@@ -75,7 +75,11 @@ def download_file(
     :param path: the path to save the file to
     :type path: str
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    # Stream into a sibling temp file and move it into place only once it is
+    # complete (and checksummed), so a killed process or dropped connection
+    # never leaves a truncated file at ``path`` that later reads as present.
+    part_path = f"{path}.{os.getpid()}.part"
 
     for attempt in range(1, retries + 1):
         try:
@@ -87,7 +91,7 @@ def download_file(
                 total_bytes = int(response.headers.get("content-length", 0))
                 downloaded_bytes = 0
 
-                with open(path, "wb") as output_file:
+                with open(part_path, "wb") as output_file:
                     for chunk in response.iter_content(chunk_size=chunk_size):
                         if not chunk:
                             continue
@@ -97,16 +101,17 @@ def download_file(
                             progress_callback(downloaded_bytes, total_bytes)
 
             if expected_sha256:
-                observed_sha256 = _file_sha256(path)
+                observed_sha256 = _file_sha256(part_path)
                 if observed_sha256.lower() != expected_sha256.lower():
                     raise ValueError(
                         f"Checksum mismatch for {path}. expected={expected_sha256}, observed={observed_sha256}"
                     )
+            os.replace(part_path, path)
             return
         except Exception as exc:
-            if os.path.exists(path):
+            if os.path.exists(part_path):
                 try:
-                    os.remove(path)
+                    os.remove(part_path)
                 except OSError:
                     pass
 
