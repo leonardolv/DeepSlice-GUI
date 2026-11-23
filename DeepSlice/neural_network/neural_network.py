@@ -123,7 +123,10 @@ def _estimate_tissue_mask(gray: np.ndarray) -> np.ndarray:
         mask = sorted(candidates, key=lambda item: item[0])[0][1]
 
     min_size = int(max(64, round(mask.size * 0.0005)))
-    mask = morphology.remove_small_objects(mask, min_size=min_size)
+    try:
+        mask = morphology.remove_small_objects(mask, max_size=min_size)
+    except TypeError:
+        mask = morphology.remove_small_objects(mask, min_size=min_size)
     if not np.any(mask):
         return np.ones_like(gray, dtype=bool)
     mask = morphology.closing(mask, morphology.disk(3))

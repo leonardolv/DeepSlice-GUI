@@ -2181,8 +2181,6 @@ def test_dialog_accessible_descriptions_and_triggers():
         win.deleteLater()
 
 
-
-
 def test_hardware_health_survives_broken_tensorflow_import(monkeypatch):
     """A TensorFlow that raises a non-ImportError on import must not yield None."""
     import builtins
@@ -2205,3 +2203,95 @@ def test_hardware_health_survives_broken_tensorflow_import(monkeypatch):
         assert "Lightweight" in box.text()
     finally:
         win.close()
+
+
+def test_action_verb_confirmations_and_dialog_accessible_descriptions(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    win = DeepSliceMainWindow()
+    try:
+        # 1. Action-verb confirmation dialog inspection
+        confirm_dlg = win.trigger_confirm_dialog(
+            title="Unsaved Changes",
+            message="You have unsaved changes. Start a new session anyway?",
+            confirm_text="Start New Session",
+            cancel_text="Cancel",
+            is_destructive=True,
+        )
+        assert confirm_dlg.objectName() == "confirmActionDialog"
+        assert confirm_dlg.accessibleName() == "Unsaved Changes Confirmation Dialog"
+        assert "unsaved changes" in confirm_dlg.accessibleDescription().lower()
+        assert confirm_dlg.confirm_btn.text() == "Start New Session"
+        assert confirm_dlg.confirm_btn.cursor().shape() == Qt.PointingHandCursor
+        assert confirm_dlg.cancel_btn.text() == "Cancel"
+        assert confirm_dlg.cancel_btn.cursor().shape() == Qt.PointingHandCursor
+
+        # 2. Helper dialog accessible descriptions
+        naming_dlg = win.trigger_naming_helper()
+        assert naming_dlg.objectName() == "namingHelperDialog"
+        assert "naming convention pattern" in naming_dlg.accessibleDescription().lower()
+
+        orientation_dlg = win.trigger_orientation_guide()
+        assert orientation_dlg.objectName() == "orientationGuideDialog"
+        assert "sectioning plane orientation" in orientation_dlg.accessibleDescription().lower()
+
+        direction_dlg = win.trigger_direction_guide_dialog()
+        assert direction_dlg.objectName() == "directionGuideDialog"
+        assert "rostral-caudal and caudal-rostral" in direction_dlg.accessibleDescription().lower()
+
+        ensemble_dlg = win.trigger_ensemble_help_dialog()
+        assert ensemble_dlg.objectName() == "ensembleExplanationDialog"
+        assert "primary and secondary ensemble" in ensemble_dlg.accessibleDescription().lower()
+
+        export_help_dlg = win.trigger_export_format_help_dialog()
+        assert export_help_dlg.objectName() == "exportFormatHelpDialog"
+        assert "quicknii, visualign json" in export_help_dlg.accessibleDescription().lower()
+
+        health_dlg = win.trigger_hardware_health()
+        assert health_dlg.objectName() == "hardwareHealthDialog"
+        assert "hardware acceleration diagnostics" in health_dlg.accessibleDescription().lower()
+
+        # 3. Validation trigger
+        val_dlg = win.trigger_validate_configuration()
+        if val_dlg is not None:
+            assert val_dlg.objectName() == "configurationValidationDialog"
+            assert "validation warnings" in val_dlg.accessibleDescription().lower()
+
+        # 4. Fullscreen thumbnail preview dialog with dummy image
+        dummy_img = tmp_path / "slice_001.png"
+        import numpy as np
+        from PIL import Image
+        Image.fromarray(np.full((128, 128, 3), 180, dtype=np.uint8)).save(str(dummy_img))
+
+        preview_dlg = win.trigger_fullscreen_thumbnail_preview(str(dummy_img))
+        assert preview_dlg is not None
+        assert preview_dlg.objectName() == "fullscreenThumbnailPreviewDialog"
+        assert preview_dlg.accessibleName() == "Fullscreen Section Thumbnail Preview Dialog"
+        assert "full screen interactive preview" in preview_dlg.accessibleDescription().lower()
+        assert preview_dlg.viewer.objectName() == "previewSliceViewer"
+        assert preview_dlg.info.objectName() == "previewImagePathLabel"
+        assert preview_dlg.close_btn.objectName() == "previewCloseBtn"
+        assert preview_dlg.close_btn.cursor().shape() == Qt.PointingHandCursor
+        assert preview_dlg.previewed_path() == str(dummy_img)
+
+        # Trigger preview close
+        preview_dlg.trigger_close()
+
+        # 5. Non-blocking headless execution of confirmation-guarded actions
+        win.state.is_dirty = True
+        win._reset_session()
+        assert win.state.is_dirty is False
+
+        # Quality gate error confirm action non-blocking
+        gate_started = []
+        win._start_prediction_worker = lambda: gate_started.append(True)
+        win._on_quality_gate_error("Test gate failure")
+        assert len(gate_started) == 1
+
+        # Quality gate finished with warnings non-blocking
+        win._build_quality_gate_warnings = lambda rep: ["Low resolution warning"]
+        win._on_quality_gate_finished({"issue_count": 1})
+        assert len(gate_started) == 2
+
+    finally:
+        win.close()
+        win.deleteLater()
