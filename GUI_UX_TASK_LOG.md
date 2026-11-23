@@ -5,6 +5,28 @@
 
 ## Completed
 
+### Task: Confirmation dialogs action-verb modernization, dialog accessible descriptions, fullscreen preview and validation triggers, and deprecation remediation
+- **Completed**: 2026-11-23
+- **Owner**: Antigravity
+- **Problem / Root Cause**:
+  - Modal confirmations across session reset, app close with unsaved changes, prediction re-run with curation changes, quality gate bypasses, partial ensemble recovery, and low-confidence exports relied on generic `QMessageBox.Yes | QMessageBox.No` prompts without explicit action verbs, lacking cursor affordances and accessible descriptions.
+  - Several informational and helper dialogs (`_show_naming_helper`, `_show_orientation_guide`, `_show_direction_guide`, `_show_ensemble_explanation`, `_show_configuration_validation`, `_show_export_format_help`, `_show_hardware_health`, `_preview_training_split`, `_open_fullscreen_thumbnail_preview`) lacked accessible descriptions (`setAccessibleDescription`) and consistent headless environment guards.
+  - `_open_fullscreen_thumbnail_preview` required a `QListWidgetItem` strictly and lacked path/string tolerance, public widget accessors, and ergonomic queries/triggers.
+  - Skimage 0.26+ emitted a `FutureWarning` in `DeepSlice/neural_network/neural_network.py` regarding deprecated `min_size` in `morphology.remove_small_objects`.
+- **Solution & Code Changes**:
+  - `DeepSlice/gui/main_window.py`:
+    - Added `_create_confirm_dialog`, `_confirm_action`, and `trigger_confirm_dialog` on `DeepSliceMainWindow` implementing human-centered action-verb buttons ("Start New Session", "Exit Without Saving", "Discard Curation & Re-run", "Proceed Anyway", "Skip Gate & Predict", "Proceed With Prediction", "Use Partial Result", "Export Anyway") with pointing hand cursors, accessible descriptions, and automatic non-blocking headless execution.
+    - Modernized confirmations across `_reset_session()`, `closeEvent()`, `_on_run_prediction_clicked()`, `_on_quality_gate_error()`, `_on_quality_gate_finished()`, `_on_prediction_ensemble_worker_finished()`, and `_export_predictions()`.
+    - Standardized accessible descriptions across `_show_naming_helper`, `_show_orientation_guide`, `_show_direction_guide`, `_show_ensemble_explanation`, `_show_configuration_validation`, `_show_export_format_help`, `_show_hardware_health`, `_preview_training_split`, and `_open_fullscreen_thumbnail_preview`.
+    - Enhanced `_open_fullscreen_thumbnail_preview` with item/string path polymorphism, public widget properties (`viewer`, `info`, `controls`, `close_btn`), and ergonomic query/triggers (`previewed_path()`, `trigger_close()`).
+    - Added programmatic action triggers: `trigger_fullscreen_thumbnail_preview(item_or_path=None)`, `trigger_validate_configuration()`, `trigger_direction_guide_dialog()`, `trigger_ensemble_help_dialog()`, `trigger_export_format_help_dialog()`, and `trigger_training_split_preview_dialog()`.
+  - `DeepSlice/neural_network/neural_network.py`:
+    - Dynamically call `morphology.remove_small_objects(mask, max_size=min_size)` with fallback to `min_size=min_size` on older skimage versions, eliminating `FutureWarning`.
+  - `tests/test_ui_accessibility_and_startup.py`:
+    - Added comprehensive unit test `test_action_verb_confirmations_and_dialog_accessible_descriptions` verifying action-verb confirmations, helper dialog descriptions, fullscreen preview ergonomics, and headless execution.
+- **Verification**: Verified headlessly with `python -m pytest tests/ -v` (573 passed, 9 skipped, 0 errors).
+- **Status**: Completed
+
 ### Task: Dialog accessible descriptions, theme toggle trigger, and walkthrough/export action triggers
 - **Completed**: 2026-11-18
 - **Owner**: Antigravity

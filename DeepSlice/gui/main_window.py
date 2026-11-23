@@ -3715,6 +3715,32 @@ class DeepSliceMainWindow(QMainWindow):
         """Programmatically trigger PDF report generation action."""
         self._generate_report()
 
+    def trigger_fullscreen_thumbnail_preview(
+        self, item_or_path: Optional[Union[QListWidgetItem, str]] = None
+    ) -> Optional[QDialog]:
+        """Programmatically trigger fullscreen thumbnail preview dialog."""
+        return self._open_fullscreen_thumbnail_preview(item_or_path)
+
+    def trigger_validate_configuration(self) -> Optional[QMessageBox]:
+        """Programmatically trigger configuration validation checks and return dialog if warnings/errors exist."""
+        return self._show_configuration_validation()
+
+    def trigger_direction_guide_dialog(self) -> QMessageBox:
+        """Programmatically trigger and return the Direction Guide dialog."""
+        return self._show_direction_guide()
+
+    def trigger_ensemble_help_dialog(self) -> QMessageBox:
+        """Programmatically trigger and return the Ensemble Help dialog."""
+        return self._show_ensemble_explanation()
+
+    def trigger_export_format_help_dialog(self) -> QMessageBox:
+        """Programmatically trigger and return the Export Format Help dialog."""
+        return self._show_export_format_help()
+
+    def trigger_training_split_preview_dialog(self) -> Optional[QMessageBox]:
+        """Programmatically trigger and return the Training Split Preview dialog."""
+        return self._preview_training_split()
+
 
 
 
@@ -6638,21 +6664,14 @@ class DeepSliceMainWindow(QMainWindow):
 
         if getattr(self.state, "is_dirty", False):
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-                reply = QMessageBox.question(
-
-                    self, "Unsaved Changes",
-
-                    "You have unsaved changes. Start a new session anyway?",
-
-                    QMessageBox.Yes | QMessageBox.No
-
-                )
-
-                if reply == QMessageBox.No:
-
-                    return
+            if not self._confirm_action(
+                title="Unsaved Changes",
+                message="You have unsaved changes. Start a new session anyway?",
+                confirm_text="Start New Session",
+                cancel_text="Cancel",
+                is_destructive=True,
+            ):
+                return
 
         self.state = DeepSliceAppState()
 
@@ -6694,35 +6713,17 @@ class DeepSliceMainWindow(QMainWindow):
 
         if getattr(self.state, "is_dirty", False):
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-                reply = QMessageBox.question(
-
-                    self, "Unsaved Changes",
-
-                    "You have unsaved changes. Are you sure you want to exit?",
-
-                    QMessageBox.Yes | QMessageBox.No,
-
-                    QMessageBox.No
-
-                )
-
-                if reply == QMessageBox.Yes:
-
-                    self._persist_window_preferences()
-
-                    event.accept()
-
-                else:
-
-                    event.ignore()
-
-            else:
-
+            if self._confirm_action(
+                title="Unsaved Changes",
+                message="You have unsaved changes. Are you sure you want to exit?",
+                confirm_text="Exit Without Saving",
+                cancel_text="Cancel",
+                is_destructive=True,
+            ):
                 self._persist_window_preferences()
-
                 event.accept()
+            else:
+                event.ignore()
 
         else:
 
@@ -7046,6 +7047,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         message_box.setAccessibleName(f"{title} - Error Dialog")
 
+        message_box.setAccessibleDescription(f"Logged application error report with pattern analysis and auto-fix options: {title}")
+
         message_box.setWindowTitle(title)
 
         message_box.setIcon(icon)
@@ -7114,7 +7117,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             message_box.exec()
 
@@ -7182,6 +7185,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         box.setAccessibleName(f"{title} - Warning Dialog")
 
+        box.setAccessibleDescription(f"Actionable warning dialog with remediation choices: {title}")
+
         box.setWindowTitle(title)
 
         box.setIcon(icon)
@@ -7220,7 +7225,7 @@ class DeepSliceMainWindow(QMainWindow):
 
         box.setDefaultButton(close_button)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             box.exec()
 
@@ -7245,6 +7250,87 @@ class DeepSliceMainWindow(QMainWindow):
                 return
 
         return box
+
+    def _create_confirm_dialog(
+        self,
+        title: str,
+        message: str,
+        confirm_text: str = "Continue",
+        cancel_text: str = "Cancel",
+        icon=QMessageBox.Question,
+        is_destructive: bool = False,
+    ) -> QMessageBox:
+        box = QMessageBox(self)
+        box.setObjectName("confirmActionDialog")
+        box.setWindowTitle(title)
+        box.setAccessibleName(f"{title} Confirmation Dialog")
+        box.setAccessibleDescription(message)
+        box.setIcon(icon)
+        box.setText(message)
+
+        confirm_btn = box.addButton(confirm_text, QMessageBox.AcceptRole)
+        confirm_btn.setObjectName("confirmActionAcceptBtn")
+        confirm_btn.setAccessibleName(confirm_text)
+        confirm_btn.setToolTip(f"Confirm: {confirm_text}")
+        confirm_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        cancel_btn = box.addButton(cancel_text, QMessageBox.RejectRole)
+        cancel_btn.setObjectName("confirmActionCancelBtn")
+        cancel_btn.setAccessibleName(cancel_text)
+        cancel_btn.setToolTip(f"Cancel: {cancel_text}")
+        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        box.setDefaultButton(cancel_btn if is_destructive else confirm_btn)
+
+        box.confirm_btn = confirm_btn
+        box.cancel_btn = cancel_btn
+        return box
+
+    def _confirm_action(
+        self,
+        title: str,
+        message: str,
+        confirm_text: str = "Continue",
+        cancel_text: str = "Cancel",
+        icon=QMessageBox.Question,
+        is_destructive: bool = False,
+    ) -> bool:
+        """Show an ergonomic confirmation dialog using explicit action verb buttons instead of generic Yes/No.
+
+        In headless/test environments, returns True automatically without blocking.
+        """
+        if _is_headless():
+            return True
+
+        box = self._create_confirm_dialog(
+            title=title,
+            message=message,
+            confirm_text=confirm_text,
+            cancel_text=cancel_text,
+            icon=icon,
+            is_destructive=is_destructive,
+        )
+        box.exec()
+        return box.clickedButton() == box.confirm_btn
+
+    def trigger_confirm_dialog(
+        self,
+        title: str = "Confirm Action",
+        message: str = "Are you sure you want to proceed?",
+        confirm_text: str = "Continue",
+        cancel_text: str = "Cancel",
+        icon=QMessageBox.Question,
+        is_destructive: bool = False,
+    ) -> QMessageBox:
+        """Create and return a configured action-verb confirmation dialog for inspection."""
+        return self._create_confirm_dialog(
+            title=title,
+            message=message,
+            confirm_text=confirm_text,
+            cancel_text=cancel_text,
+            icon=icon,
+            is_destructive=is_destructive,
+        )
 
 
 
@@ -7632,6 +7718,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Naming Convention Help Dialog")
 
+        msg_box.setAccessibleDescription("Naming convention pattern instructions and older naming fallback guidelines")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -7650,7 +7738,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             msg_box.exec()
 
@@ -7686,6 +7774,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Orientation Guide Dialog")
 
+        msg_box.setAccessibleDescription("Sectioning plane orientation instructions and CCFv3/Waxholm alignment guidance")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -7704,7 +7794,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             msg_box.exec()
 
@@ -7738,6 +7828,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Direction Guide Dialog")
 
+        msg_box.setAccessibleDescription("Rostral-caudal and caudal-rostral series order and AP depth inference guide")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -7756,7 +7848,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             msg_box.exec()
 
@@ -7788,6 +7880,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Ensemble Prediction Help Dialog")
 
+        msg_box.setAccessibleDescription("Primary and secondary ensemble prediction mechanism and trade-offs explanation")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -7806,7 +7900,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             msg_box.exec()
 
@@ -7854,6 +7948,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Configuration Validation Warnings Dialog")
 
+        msg_box.setAccessibleDescription("Pre-run configuration validation warnings and error checks dialog")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -7872,7 +7968,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             msg_box.exec()
 
@@ -7904,6 +8000,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Export Format Documentation Dialog")
 
+        msg_box.setAccessibleDescription("QuickNII, VisuAlign JSON and legacy XML export format specifications")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -7922,7 +8020,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             msg_box.exec()
 
@@ -8156,15 +8254,36 @@ class DeepSliceMainWindow(QMainWindow):
 
 
 
-    def _open_fullscreen_thumbnail_preview(self, item: QListWidgetItem):
+    def _open_fullscreen_thumbnail_preview(
+        self, item: Optional[Union[QListWidgetItem, str]] = None
+    ) -> Optional[QDialog]:
 
-        image_path = str(item.data(Qt.UserRole))
+        if isinstance(item, str):
+            image_path = item
+        elif hasattr(item, "data"):
+            image_path = str(item.data(Qt.UserRole))
+        else:
+            current = self.thumbnail_list.currentItem() or (
+                self.thumbnail_list.item(0) if self.thumbnail_list.count() > 0 else None
+            )
+            if current is not None:
+                image_path = str(current.data(Qt.UserRole))
+            elif getattr(self.state, "image_paths", None):
+                image_path = str(self.state.image_paths[0])
+            else:
+                image_path = ""
+
+        if not image_path:
+            self._show_toast("No section image selected for preview", timeout_ms=2500, level="warning")
+            return None
 
         dialog = QDialog(self)
 
         dialog.setObjectName("fullscreenThumbnailPreviewDialog")
 
         dialog.setAccessibleName("Fullscreen Section Thumbnail Preview Dialog")
+
+        dialog.setAccessibleDescription("Full screen interactive preview of histological section slice")
 
         dialog.setWindowTitle(f"Preview - {os.path.basename(image_path)}")
 
@@ -8178,15 +8297,20 @@ class DeepSliceMainWindow(QMainWindow):
 
         viewer.setAccessibleName("Full-screen section slice image view")
 
+        viewer.setAccessibleDescription("Interactive viewport for zooming and panning the section image")
+
         viewer.setToolTip("Zoom and pan the section image")
 
-        viewer.set_image(image_path)
+        if os.path.exists(image_path):
+            viewer.set_image(image_path)
 
         info = QLabel(image_path)
 
         info.setObjectName("previewImagePathLabel")
 
         info.setAccessibleName("Previewed section file path")
+
+        info.setAccessibleDescription("Full filesystem path to the currently previewed section image")
 
         info.setWordWrap(True)
 
@@ -8218,7 +8342,18 @@ class DeepSliceMainWindow(QMainWindow):
 
         root.addWidget(controls)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        # Expose public widget properties
+        dialog.viewer = viewer
+        dialog.info = info
+        dialog.controls = controls
+        dialog.close_btn = close_btn
+        dialog.image_path = image_path
+
+        # Ergonomic queries & triggers
+        dialog.previewed_path = lambda: image_path
+        dialog.trigger_close = dialog.reject
+
+        if not _is_headless():
 
             dialog.exec()
 
@@ -13274,6 +13409,8 @@ class DeepSliceMainWindow(QMainWindow):
 
         msg_box.setAccessibleName("Training Split Preview Dialog")
 
+        msg_box.setAccessibleDescription("Dataset training/validation/test group split distribution and leakage-free status preview")
+
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         ok_btn = msg_box.button(QMessageBox.StandardButton.Ok)
@@ -13292,7 +13429,7 @@ class DeepSliceMainWindow(QMainWindow):
 
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+        if not _is_headless():
 
             msg_box.exec()
 
@@ -13533,53 +13670,29 @@ class DeepSliceMainWindow(QMainWindow):
 
         if self._curation_modified and self._baseline_predictions is not None:
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-                confirm = QMessageBox.question(
-
-                    self,
-
-                    "Re-run Alignment",
-
-                    (
-
-                        "Running prediction again will discard your current curation "
-
-                        "edits (bad-section flags, anchors, angle overrides).\n\n"
-
-                        "Continue?"
-
-                    ),
-
-                    QMessageBox.Yes | QMessageBox.No,
-
-                    QMessageBox.No,
-
-                )
-
-                if confirm != QMessageBox.Yes:
-
-                    return
-
-
+            if not self._confirm_action(
+                title="Re-run Alignment",
+                message=(
+                    "Running prediction again will discard your current curation "
+                    "edits (bad-section flags, anchors, angle overrides).\n\n"
+                    "Continue?"
+                ),
+                confirm_text="Discard Curation & Re-run",
+                cancel_text="Cancel",
+                is_destructive=True,
+            ):
+                return
 
         if len(warnings) > 0:
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-                answer = QMessageBox.question(
-
-                    self,
-
-                    "Proceed With Warnings",
-
-                    "\n".join(warnings) + "\n\nContinue anyway?",
-
-                )
-
-                if answer != QMessageBox.Yes:
-
-                    return
+            if not self._confirm_action(
+                title="Proceed With Warnings",
+                message="\n".join(warnings) + "\n\nContinue anyway?",
+                confirm_text="Proceed Anyway",
+                cancel_text="Cancel",
+                icon=QMessageBox.Warning,
+            ):
+                return
 
 
 
@@ -13707,28 +13820,13 @@ class DeepSliceMainWindow(QMainWindow):
 
         )
 
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-            answer = QMessageBox.question(
-
-                self,
-
-                "Skip Quality Gate",
-
-                "Continue with prediction without the quality gate check?",
-
-                QMessageBox.Yes | QMessageBox.No,
-
-                QMessageBox.No,
-
-            )
-
-            if answer == QMessageBox.Yes:
-
-                self._start_prediction_worker()
-
-        else:
-
+        if self._confirm_action(
+            title="Skip Quality Gate",
+            message="Continue with prediction without the quality gate check?",
+            confirm_text="Skip Gate & Predict",
+            cancel_text="Cancel",
+            icon=QMessageBox.Warning,
+        ):
             self._start_prediction_worker()
 
 
@@ -13745,25 +13843,14 @@ class DeepSliceMainWindow(QMainWindow):
 
         if len(quality_warnings) > 0:
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-                proceed = QMessageBox.question(
-
-                    self,
-
-                    "Quality Gate Warning",
-
-                    "\n".join(quality_warnings) + "\n\nContinue with prediction?",
-
-                    QMessageBox.Yes | QMessageBox.No,
-
-                    QMessageBox.No,
-
-                )
-
-                if proceed != QMessageBox.Yes:
-
-                    return
+            if not self._confirm_action(
+                title="Quality Gate Warning",
+                message="\n".join(quality_warnings) + "\n\nContinue with prediction?",
+                confirm_text="Proceed With Prediction",
+                cancel_text="Cancel",
+                icon=QMessageBox.Warning,
+            ):
+                return
 
 
 
@@ -14443,35 +14530,17 @@ class DeepSliceMainWindow(QMainWindow):
 
                     reason = reason[:217] + "..."
 
-                if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-                    reply = QMessageBox.question(
-
-                        self,
-
-                        "Recover Partial Result",
-
-                        (
-
-                            "The secondary ensemble pass failed, but primary-model predictions are available.\n\n"
-
-                            f"Reason: {reason}\n\n"
-
-                            "Use the partial result now?"
-
-                        ),
-
-                        QMessageBox.Yes | QMessageBox.No,
-
-                        QMessageBox.Yes,
-
-                    )
-
-                    should_recover = (reply == QMessageBox.Yes)
-
-                else:
-
-                    should_recover = True
+                should_recover = self._confirm_action(
+                    title="Recover Partial Result",
+                    message=(
+                        "The secondary ensemble pass failed, but primary-model predictions are available.\n\n"
+                        f"Reason: {reason}\n\n"
+                        "Use the partial result now?"
+                    ),
+                    confirm_text="Use Partial Result",
+                    cancel_text="Discard",
+                    icon=QMessageBox.Question,
+                )
 
                 if should_recover:
 
@@ -18321,27 +18390,17 @@ class DeepSliceMainWindow(QMainWindow):
 
         if low_confidence_count > 0:
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
-
-                answer = QMessageBox.question(
-
-                    self,
-
-                    "Quality Warning",
-
-                    (
-
-                        f"{low_confidence_count} slice(s) are currently low confidence.\n"
-
-                        "Export anyway?"
-
-                    ),
-
-                )
-
-                if answer != QMessageBox.Yes:
-
-                    return
+            if not self._confirm_action(
+                title="Quality Warning",
+                message=(
+                    f"{low_confidence_count} slice(s) are currently low confidence.\n"
+                    "Export anyway?"
+                ),
+                confirm_text="Export Anyway",
+                cancel_text="Cancel",
+                icon=QMessageBox.Warning,
+            ):
+                return
 
 
 
@@ -19551,6 +19610,8 @@ class DeepSliceMainWindow(QMainWindow):
 
             msg_box.setAccessibleName("Hardware Health Diagnostics Dialog")
 
+            msg_box.setAccessibleDescription("TensorFlow and GPU/CPU hardware acceleration diagnostics and health report dialog")
+
             for btn in msg_box.buttons():
 
                 btn.setObjectName("hardwareHealthOkBtn")
@@ -19561,7 +19622,7 @@ class DeepSliceMainWindow(QMainWindow):
 
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            if not _is_headless():
 
                 msg_box.exec()
 
@@ -19603,6 +19664,8 @@ class DeepSliceMainWindow(QMainWindow):
 
             msg_box.setAccessibleName("Hardware Health Diagnostics Dialog")
 
+            msg_box.setAccessibleDescription("TensorFlow and GPU/CPU hardware acceleration diagnostics and health report dialog")
+
             for btn in msg_box.buttons():
 
                 btn.setObjectName("hardwareHealthOkBtn")
@@ -19613,7 +19676,7 @@ class DeepSliceMainWindow(QMainWindow):
 
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-            if os.environ.get("QT_QPA_PLATFORM") != "offscreen" and "PYTEST_CURRENT_TEST" not in os.environ:
+            if not _is_headless():
 
                 msg_box.exec()
 

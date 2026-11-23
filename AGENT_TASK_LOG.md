@@ -18,6 +18,13 @@ here.
 
 ## Completed
 
+### 2026-11-23 UTC - Confirmation dialogs action-verb modernization, dialog accessible descriptions, fullscreen preview and validation triggers, and deprecation remediation
+Status: **done** (Antigravity)
+- `DeepSlice/gui/main_window.py`: Added `_create_confirm_dialog`, `_confirm_action`, and `trigger_confirm_dialog` on `DeepSliceMainWindow` implementing human-centered action-verb buttons ("Start New Session", "Exit Without Saving", "Discard Curation & Re-run", "Proceed Anyway", "Skip Gate & Predict", "Proceed With Prediction", "Use Partial Result", "Export Anyway") with pointing hand cursors, accessible descriptions, and non-blocking headless execution; modernized confirmations across `_reset_session()`, `closeEvent()`, `_on_run_prediction_clicked()`, `_on_quality_gate_error()`, `_on_quality_gate_finished()`, `_on_prediction_ensemble_worker_finished()`, and `_export_predictions()`; standardized accessible descriptions across helper/informational dialogs; enhanced `_open_fullscreen_thumbnail_preview` with item/string path polymorphism, public widget properties (`viewer`, `info`, `controls`, `close_btn`), and ergonomic query/triggers (`previewed_path()`, `trigger_close()`); added programmatic action triggers: `trigger_fullscreen_thumbnail_preview(item_or_path=None)`, `trigger_validate_configuration()`, `trigger_direction_guide_dialog()`, `trigger_ensemble_help_dialog()`, `trigger_export_format_help_dialog()`, and `trigger_training_split_preview_dialog()`.
+- `DeepSlice/neural_network/neural_network.py`: Dynamically call `morphology.remove_small_objects(mask, max_size=min_size)` with fallback to `min_size=min_size` on older skimage versions, eliminating `FutureWarning`.
+- `tests/test_ui_accessibility_and_startup.py`: Added comprehensive unit test `test_action_verb_confirmations_and_dialog_accessible_descriptions` verifying action-verb confirmations, helper dialog descriptions, fullscreen preview ergonomics, and headless execution.
+- Validation: Verified headlessly with `python -m pytest tests/ -v` (573 passed, 9 skipped, 0 errors).
+
 ### 2026-11-22 UTC - Weight/atlas download wrote straight to the final path (Claude)
 Status: **done**
 - Root cause: `metadata_loader.download_file` streamed into the destination itself, so a retry failure removed a previously good file and a killed process left a truncated file that `get_data_path` later treated as present (no sha256 for some entries).
