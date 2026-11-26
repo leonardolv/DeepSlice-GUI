@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ..metadata import metadata_loader
+from ..read_and_write.atomic_io import write_json_atomic
 
 try:
     from ..neural_network.neural_network import XCEPTION_INPUT_SIZE
@@ -210,8 +211,7 @@ def prepare_training_run(
     )
 
     split_manifest_path = os.path.join(output_dir, str(split_manifest_name))
-    with open(split_manifest_path, "w", encoding="utf-8") as handle:
-        json.dump(split_manifest, handle, indent=2, sort_keys=True)
+    write_json_atomic(split_manifest_path, split_manifest, indent=2, sort_keys=True)
 
     config, _ = metadata_loader.load_config()
     model_version = str(
@@ -478,8 +478,7 @@ def _save_training_artifacts(
     history_path = os.path.join(output_dir, "training_history.json")
 
     model.save(model_path)
-    with open(history_path, "w", encoding="utf-8") as handle:
-        json.dump(history_dict, handle, indent=2, sort_keys=True)
+    write_json_atomic(history_path, history_dict, indent=2, sort_keys=True)
 
     return {
         "model_path": model_path,

@@ -11,6 +11,8 @@ from typing import Dict, Optional, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
+from ..read_and_write.atomic_io import write_json_atomic
+
 logger = logging.getLogger(__name__)
 
 
@@ -401,6 +403,5 @@ def save_training_run_metadata(output_path: str, metadata: dict) -> str:
     directory = os.path.dirname(os.path.abspath(output_path))
     if directory:
         os.makedirs(directory, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as handle:
-        json.dump(metadata, handle, indent=2, sort_keys=True)
+    write_json_atomic(output_path, metadata, indent=2, sort_keys=True)
     return output_path
