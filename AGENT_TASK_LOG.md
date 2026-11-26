@@ -18,6 +18,13 @@ here.
 
 ## Completed
 
+### 2026-11-26 UTC - Training metadata/split manifest/history JSON written atomically (Claude)
+Status: **done**
+- Root cause: `save_training_run_metadata`, the split manifest and `training_history.json` opened the target with "w" and streamed `json.dump`, so a failure left a truncated file over the previous one (same shape as the QUINT export fix).
+- Fix: all three use `atomic_io.write_json_atomic`.
+- Validation: new `tests/test_training_json_atomic.py` (previous file survives a failing write, no temp left); 58 training tests passed, 1 skipped (system python; the default python lacks pandas).
+
+
 ### 2026-11-23 UTC - Confirmation dialogs action-verb modernization, dialog accessible descriptions, fullscreen preview and validation triggers, and deprecation remediation
 Status: **done** (Antigravity)
 - `DeepSlice/gui/main_window.py`: Added `_create_confirm_dialog`, `_confirm_action`, and `trigger_confirm_dialog` on `DeepSliceMainWindow` implementing human-centered action-verb buttons ("Start New Session", "Exit Without Saving", "Discard Curation & Re-run", "Proceed Anyway", "Skip Gate & Predict", "Proceed With Prediction", "Use Partial Result", "Export Anyway") with pointing hand cursors, accessible descriptions, and non-blocking headless execution; modernized confirmations across `_reset_session()`, `closeEvent()`, `_on_run_prediction_clicked()`, `_on_quality_gate_error()`, `_on_quality_gate_finished()`, `_on_prediction_ensemble_worker_finished()`, and `_export_predictions()`; standardized accessible descriptions across helper/informational dialogs; enhanced `_open_fullscreen_thumbnail_preview` with item/string path polymorphism, public widget properties (`viewer`, `info`, `controls`, `close_btn`), and ergonomic query/triggers (`previewed_path()`, `trigger_close()`); added programmatic action triggers: `trigger_fullscreen_thumbnail_preview(item_or_path=None)`, `trigger_validate_configuration()`, `trigger_direction_guide_dialog()`, `trigger_ensemble_help_dialog()`, `trigger_export_format_help_dialog()`, and `trigger_training_split_preview_dialog()`.
