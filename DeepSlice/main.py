@@ -18,6 +18,7 @@ if __name__ == "__main__" and (__package__ is None or __package__ == ""):
 
 from .coord_post_processing import spacing_and_indexing, angle_methods
 from .read_and_write import QuickNII_functions
+from .read_and_write.atomic_io import write_file_atomic
 from .neural_network import neural_network
 from .metadata import metadata_loader
 from .diagnostics import log_issue
@@ -443,8 +444,14 @@ class DSModel:
         self._ensure_predictions_available("save_predictions()")
         target = self.config["target_volumes"][self.species]["name"]
         aligner = self.config["DeepSlice_version"]["prerelease"]
-        self.predictions.to_csv(filename + ".csv", index=False)
         output_format = output_format.lower()
+        if output_format not in ("json", "xml"):
+            # Validate before writing anything so a bad format leaves no stray CSV.
+            raise ValueError("output_format must be one of 'json' or 'xml'")
+        write_file_atomic(
+            filename + ".csv",
+            lambda tmp: self.predictions.to_csv(tmp, index=False),
+        )
         if output_format == "json":
             QuickNII_functions.write_QUINT_JSON(
                 df=self.predictions, filename=filename, aligner=aligner, target=target
