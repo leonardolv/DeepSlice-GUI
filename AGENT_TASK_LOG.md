@@ -24,6 +24,13 @@ Status: **done** (Claude)
 - Fix: only `ImportError` (TF optional) is silent; any other failure logs a warning naming the seed and error. Added two tests in `tests/test_training_utils.py` (warning logged on Keras failure; silent when TF missing); the first failed before the fix.
 - Validation: `pytest tests/test_training_utils.py tests/test_training_pipeline.py` 47 passed. Full suite: 3 pre-existing failures in `test_neural_network_utils.py` caused by scikit-image missing in this sandbox (unrelated). Ruff findings (67) are pre-existing, none introduced.
 
+### 2026-11-27 UTC - save_predictions wrote a stray CSV before rejecting a bad format, and wrote it non-atomically (Claude)
+Status: **done**
+- Root cause: `DSModel.save_predictions` wrote `<name>.csv` first and validated `output_format` afterwards, so an invalid format raised `ValueError` but left a CSV behind; the CSV was also written in place (truncate-then-write).
+- Fix: validate the format first; write the CSV through `atomic_io.write_file_atomic`.
+- Validation: new `tests/test_save_predictions_csv.py` (invalid-format test fails before the fix); with `test_quint_export_atomic.py` 6 passed (python3.13, pytest-qt plugin disabled: PySide6 unavailable in sandbox). PR: see GitHub branch `claude/bold-cray-e1xpw1`.
+
+
 ### 2026-11-26 UTC - Training metadata/split manifest/history JSON written atomically (Claude)
 Status: **done**
 - Root cause: `save_training_run_metadata`, the split manifest and `training_history.json` opened the target with "w" and streamed `json.dump`, so a failure left a truncated file over the previous one (same shape as the QUINT export fix).
